@@ -33,6 +33,9 @@ header{background:var(--brand);color:#fff;padding:calc(env(safe-area-inset-top) 
 .row{display:flex;align-items:center;justify-content:space-between;gap:8px}
 h1{font-size:18px;margin:0;font-weight:700}
 .date{font-size:13px;opacity:.85}
+.date select{font:inherit;color:inherit;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:8px;padding:3px 6px;max-width:170px}
+.date select option{color:#111;background:#fff}
+.arch{background:#fff3cd;color:#664d03;border-radius:10px;padding:6px 10px;margin:0 0 10px;font-size:13px}
 .kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:10px}
 .kpi{background:rgba(255,255,255,.12);border-radius:10px;padding:7px 8px;text-align:center}
 .kpi b{display:block;font-size:19px;line-height:1.1;white-space:nowrap}
@@ -143,7 +146,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
 
 <script>
 (function(){
-  var DATA=null, DRV=null, top='all', sub='deps', csub='type', dep=null, shift='d', q='', cdisp=0;
+  var DATA=null, DRV=null, DATES=null, curDay='', top='all', sub='deps', csub='type', dep=null, shift='d', q='', cdisp=0;
   // порядок типов техники внутри отдела (по префиксам); остальное — после, по количеству
   var ORDER=['35','35.1','35.2','31','28','30','63','29','22','23','22.1','34','47','46','49','62','27','50','53','13','13.1','20'];
   var LAT={A:'А',B:'В',C:'С',E:'Е',H:'Н',K:'К',M:'М',O:'О',P:'Р',T:'Т',X:'Х',Y:'У'};
@@ -153,12 +156,19 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
   function fmtDate(iso){var p=iso.split('-');return p[2]+'.'+p[1]+'.'+p[0]}
   function norm(s){return String(s).toUpperCase().replace(/[A-Z]/g,function(c){return LAT[c]||c}).replace(/[\s\-_.]/g,'')}
 
+  function base(){return curDay?'archive/'+curDay+'/':''}
   function loadDrivers(){
-    fetch('drivers.json?'+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null}).then(function(d){DRV=d}).catch(function(){DRV=null});
+    DRV=null;
+    fetch(base()+'drivers.json?'+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null}).then(function(d){DRV=d}).catch(function(){DRV=null});
+  }
+  function loadDates(){
+    fetch('archive/index.json?'+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null}).then(function(d){
+      if(d&&d.dates&&d.dates.length>1){DATES=d.dates;header()}
+    }).catch(function(){});
   }
   function load(){
     loadDrivers();
-    fetch('data.json?'+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){
+    fetch(base()+'data.json?'+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){
       DATA=d; DATA.veh.forEach(function(v,i){v._i=i});
       var names=depList().map(function(x){return x.name});
       var h=decodeURIComponent((location.hash||'').replace(/^#dep=/,''));
@@ -196,7 +206,10 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
 
   function header(){
     var t=DATA.totals;
-    $('#date').textContent='на '+fmtDate(DATA.date);
+    var de=$('#date');
+    if(DATES){
+      de.innerHTML='<select id="dsel">'+DATES.map(function(x,i){return '<option value="'+(i?x:'')+'"'+((i?x:'')===curDay?' selected':'')+'>'+(i?fmtDate(x):'Сегодня · '+fmtDate(x))+'</option>'}).join('')+'</select>';
+    }else de.textContent='на '+fmtDate(DATA.date);
     $('#kpis').innerHTML=
       '<div class="kpi"><b>'+t.plan+'</b><span>план</span></div>'+
       '<div class="kpi"><b>'+t.fact+'</b><span>факт</span></div>'+
@@ -431,7 +444,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     hidePop();
     header();
     var keepQ=document.activeElement&&document.activeElement.id==='q';
-    $('#app').innerHTML=(top==='all'?viewAll():(top==='cits'?viewCits():viewDisp()))+'<div class="foot">Данные диспетчерской сводки на '+fmtDate(DATA.date)+'</div>';
+    $('#app').innerHTML=(curDay?'<div class="arch">Архив: данные на '+fmtDate(DATA.date)+'. Для текущих данных выберите «Сегодня» вверху.</div>':'')+(top==='all'?viewAll():(top==='cits'?viewCits():viewDisp()))+'<div class="foot">Данные диспетчерской сводки на '+fmtDate(DATA.date)+'</div>';
     if(keepQ){var el=$('#q');el.focus();el.setSelectionRange(q.length,q.length)}
   }
 
@@ -465,7 +478,10 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
   });
 
   if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(function(){})}
-  load();
+  document.addEventListener('change',function(e){
+    if(e.target.id==='dsel'){curDay=e.target.value;dep=null;q='';sub='deps';$('#app').innerHTML='<div class="empty">Загрузка…</div>';load()}
+  });
+  load(); loadDates();
 })();
 </script>
 </body>
