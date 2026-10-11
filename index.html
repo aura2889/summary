@@ -33,8 +33,11 @@ header{background:var(--brand);color:#fff;padding:calc(env(safe-area-inset-top) 
 .row{display:flex;align-items:center;justify-content:space-between;gap:8px}
 h1{font-size:18px;margin:0;font-weight:700}
 .date{font-size:13px;opacity:.85}
-.date select{font:inherit;color:inherit;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:8px;padding:3px 6px;max-width:170px}
-.date select option{color:#111;background:#fff}
+.date{display:flex;align-items:center;gap:4px}
+.date input{font:inherit;color:#fff;color-scheme:dark;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:8px;padding:3px 6px;width:128px}
+.dnav{border:0;background:rgba(255,255,255,.14);color:#fff;border-radius:8px;width:28px;height:28px;font-size:18px;line-height:1;padding:0;cursor:pointer}
+.dnav:disabled{opacity:.3;cursor:default}
+.dnow{border:0;background:#fff;color:var(--brand);border-radius:8px;height:28px;padding:0 8px;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
 .arch{background:#fff3cd;color:#664d03;border-radius:10px;padding:6px 10px;margin:0 0 10px;font-size:13px}
 .kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:10px}
 .kpi{background:rgba(255,255,255,.12);border-radius:10px;padding:7px 8px;text-align:center}
@@ -129,6 +132,23 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
 .lrow b{font-size:17px;font-variant-numeric:tabular-nums;background:var(--blue-bg);color:var(--blue-ink);border-radius:8px;padding:1px 10px;min-width:38px;text-align:center}
 .lrow i{font-style:normal;font-size:12px;color:var(--muted);margin-left:6px}
 .lrow i u{text-decoration:none;background:var(--blue-bg);border-radius:5px;padding:0 5px;margin-left:4px;color:var(--brand2);font-weight:600}
+/* ---- только компьютер (широкий экран + мышь); телефон не затрагивается ---- */
+@media (min-width:900px) and (hover:hover) and (pointer:fine){
+  header{padding-left:max(24px,calc((100vw - 1180px)/2));padding-right:max(24px,calc((100vw - 1180px)/2))}
+  h1{font-size:22px}
+  .date{font-size:15px}.date input{width:150px;padding:5px 8px}.dnav,.dnow{height:34px}.dnav{width:34px}
+  .kpi{padding:10px}.kpi b{font-size:26px}.kpi:last-child b{font-size:22px;padding-top:2px}.kpi span{font-size:13px}
+  .tabs{gap:10px;margin-top:14px}
+  .tab{padding:15px 10px;font-size:17px;border-radius:12px}
+  main{max-width:1180px;padding:18px 0 48px}
+  .seg{max-width:420px}
+  .search{max-width:640px;font-size:16px;padding:13px 16px}
+  .depgrid{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .cg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 14px;align-items:start}
+  .cc .cells{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .card table{max-width:900px}
+  .v{font-size:15px;padding:6px 11px}
+}
 </style>
 </head>
 <body>
@@ -163,7 +183,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
   }
   function loadDates(){
     fetch('archive/index.json?'+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null}).then(function(d){
-      if(d&&d.dates&&d.dates.length>1){DATES=d.dates;header()}
+      if(d&&d.dates&&d.dates.length>0){DATES=d.dates;header()}
     }).catch(function(){});
   }
   function load(){
@@ -208,7 +228,11 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     var t=DATA.totals;
     var de=$('#date');
     if(DATES){
-      de.innerHTML='<select id="dsel">'+DATES.map(function(x,i){return '<option value="'+(i?x:'')+'"'+((i?x:'')===curDay?' selected':'')+'>'+(i?fmtDate(x):'Сегодня · '+fmtDate(x))+'</option>'}).join('')+'</select>';
+      var ix=DATES.indexOf(curDay||DATES[0]);
+      de.innerHTML=(curDay?'<button class="dnow" data-dnow="1">Сегодня</button>':'')+
+        '<button class="dnav" data-dnav="1" title="раньше"'+(ix>=DATES.length-1?' disabled':'')+'>‹</button>'+
+        '<input type="date" id="dsel" value="'+(curDay||DATES[0])+'" min="'+DATES[DATES.length-1]+'" max="'+DATES[0]+'">'+
+        '<button class="dnav" data-dnav="-1" title="позже"'+(ix<=0?' disabled':'')+'>›</button>';
     }else de.textContent='на '+fmtDate(DATA.date);
     $('#kpis').innerHTML=
       '<div class="kpi"><b>'+t.plan+'</b><span>план</span></div>'+
@@ -263,12 +287,13 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     f.forEach(function(v){var k=v.p;if(!g[k]){g[k]={p:v.p,t:v.t,a:[]};keys.push(k)}g[k].a.push(v)});
     function rank(k){var i=ORDER.indexOf(k);return i>-1?i:1000-g[k].a.length}
     keys.sort(function(a,b){return rank(a)-rank(b)});
+    html+='<div class="cg">';
     keys.forEach(function(k){
       var x=g[k];
       x.a.sort(function(a,b){return a.num.localeCompare(b.num,'ru',{numeric:true})});
       html+='<div class="card"><h3>'+esc(x.t)+'<em>— '+x.a.length+' ед.</em></h3><div class="nums">'+x.a.map(numChip).join('')+'</div></div>';
     });
-    return html;
+    return html+'</div>';
   }
 
   function driverHits(toks){
@@ -354,6 +379,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     var D=DATA.daily; if(!D||!D.rows.length) return '<div class="empty">Нет данных режимного листа</div>';
     var h=seg('data-csub',[['type','По технике'],['dep','По отделам']],csub);
     if(csub==='type'){
+      h+='<div class="cg">';
       D.rows.forEach(function(r){
         var keys=D.deps.filter(function(d){return r.cells[d]});
         h+='<div class="card cc"><h3>'+esc(r.name)+'</h3><div class="stats">'+
@@ -370,7 +396,9 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
         }else h+='<div class="empty" style="padding:6px">Не распределено по отделам</div>';
         h+='</div>';
       });
+      h+='</div>';
     }else{
+      h+='<div class="cg">';
       D.deps.forEach(function(d){
         var items=D.rows.filter(function(r){return r.cells[d]});
         if(!items.length) return;
@@ -380,6 +408,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
           return '<div class="lrow"><span>'+esc(r.name)+(ex?'<i>'+ex+'</i>':'')+'</span><b>'+c.v+'</b></div>';
         }).join('')+'</div>';
       });
+      h+='</div>';
     }
     return h;
   }
@@ -400,6 +429,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     if(!vs.length) return h+'<div class="empty">Нет техники</div>';
     h+=legend();
     var byDep={}; vs.forEach(function(v){(byDep[v.dep]=byDep[v.dep]||[]).push(v)});
+    h+='<div class="cg">';
     depList().map(function(x){return x.name}).filter(function(n){return byDep[n]}).forEach(function(d){
       var a=byDep[d], g={}, keys=[];
       a.forEach(function(v){var k=v.p;if(!g[k]){g[k]={t:v.t,a:[]};keys.push(k)}g[k].a.push(v)});
@@ -411,7 +441,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
       });
       h+='</div>';
     });
-    return h;
+    return h+'</div>';
   }
 
   /* ---------- окошко с водителем ---------- */
@@ -478,8 +508,18 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
   });
 
   if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(function(){})}
-  document.addEventListener('change',function(e){
-    if(e.target.id==='dsel'){curDay=e.target.value;dep=null;q='';sub='deps';$('#app').innerHTML='<div class="empty">Загрузка…</div>';load()}
+  function goDay(v){
+    if(!DATES) return;
+    if(DATES.indexOf(v)<0){alert('За эту дату данных нет');header();return}
+    curDay=(v===DATES[0])?'':v; dep=null; q=''; sub='deps';
+    $('#app').innerHTML='<div class="empty">Загрузка…</div>'; load();
+  }
+  document.addEventListener('change',function(e){ if(e.target.id==='dsel'&&e.target.value) goDay(e.target.value) });
+  document.addEventListener('click',function(e){
+    var b=e.target.closest('[data-dnav],[data-dnow]'); if(!b||!DATES) return;
+    if(b.dataset.dnow) return goDay(DATES[0]);
+    var ix=DATES.indexOf(curDay||DATES[0])+(+b.dataset.dnav);
+    if(ix>=0&&ix<DATES.length) goDay(DATES[ix]);
   });
   load(); loadDates();
 })();
