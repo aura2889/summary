@@ -77,7 +77,7 @@ def main():
             say(f'Загружен более старый день {date}; на сайте остаётся {dates[0]}')
         say(f'В архиве дней: {len(dates)}')
     elif not kinds.get('roster'):
-        say('В input/ нет подходящих файлов'); return 1
+        say('В input/ нет подходящих файлов - ничего не делаю'); return 0
     for ks in kinds.values():          # обработанные файлы убираем из папки
         for f in ks: os.remove(f)
     return 0
