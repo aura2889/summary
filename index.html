@@ -132,6 +132,26 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
 .lrow b{font-size:17px;font-variant-numeric:tabular-nums;background:var(--blue-bg);color:var(--blue-ink);border-radius:8px;padding:1px 10px;min-width:38px;text-align:center}
 .lrow i{font-style:normal;font-size:12px;color:var(--muted);margin-left:6px}
 .lrow i u{text-decoration:none;background:var(--blue-bg);border-radius:5px;padding:0 5px;margin-left:4px;color:var(--brand2);font-weight:600}
+/* вкладка НАЧ автоколонн */
+.vr{padding:9px 0;border-bottom:1px solid var(--line)}.vr:last-child{border:0}
+.vr .top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.vr .pl{font-weight:700;font-size:15px;font-variant-numeric:tabular-nums;background:var(--soft);border-radius:8px;padding:2px 9px}
+.vr .mk{color:var(--muted);font-size:13px;flex:1;min-width:0}
+.vr .dd{margin-left:auto;font-size:12.5px;font-weight:700;border-radius:8px;padding:2px 8px;background:var(--soft);color:var(--ink);white-space:nowrap}
+.vr .dd.w1{background:#fff3cd;color:#664d03}.vr .dd.w2{background:#ffd9a8;color:#8a4300}.vr .dd.w3{background:#f8c9c2;color:#8e1f12}
+.vr .wk{margin-top:3px;font-size:14px}
+.vr .ex{margin-top:3px;font-size:12.5px;color:var(--muted);display:flex;gap:4px 12px;flex-wrap:wrap}
+.vr .ex b{color:var(--ink);font-weight:600}
+.vr .tg{font-size:11px;font-weight:700;border-radius:6px;padding:1px 6px;background:var(--blue-bg);color:var(--blue-ink)}
+.gh{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin:12px 0 2px;padding-top:8px;border-top:2px solid var(--line);font-size:12.5px;font-weight:700;color:var(--brand2);text-transform:uppercase;letter-spacing:.03em}
+.gh:first-of-type{border-top:0;margin-top:0;padding-top:0}.gh small{color:var(--muted);text-transform:none;letter-spacing:0;font-weight:500;font-size:12px;text-align:right}
+.chief{color:var(--muted);font-size:13px;margin:-4px 0 6px}
+.rl{font-size:13px;margin-top:10px;padding:7px 10px;border-radius:10px;background:var(--soft)}.rl b{display:block;font-size:12px;color:var(--muted);margin-bottom:3px}
+.rl .nums{gap:5px}.rl .nums span{background:var(--card);border:1px solid var(--line);border-radius:7px;padding:1px 7px;font-weight:600}
+.pw{background:#fff3cd;color:#664d03;border-radius:10px;padding:6px 10px;margin:0 0 10px;font-size:13px}
+.tot6{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-bottom:10px}
+.tot6 div{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:6px 2px;text-align:center}.tot6 b{display:block;font-size:19px;line-height:1.1}.tot6 span{font-size:10.5px;color:var(--muted)}
+.ak-s{display:flex;gap:4px 8px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin:0 0 6px}.ak-s span{background:var(--soft);border-radius:6px;padding:0 6px}
 /* ---- только компьютер (широкий экран + мышь); телефон не затрагивается ---- */
 @media (min-width:900px) and (hover:hover) and (pointer:fine){
   header{padding-left:max(24px,calc((100vw - 1180px)/2));padding-right:max(24px,calc((100vw - 1180px)/2))}
@@ -159,6 +179,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     <button class="tab on" data-top="all">Для всех</button>
     <button class="tab" data-top="cits">Для ЦИТС</button>
     <button class="tab wide" data-top="disp">Для ДТТ диспетчеров</button>
+    <button class="tab wide" data-top="nach">Для НАЧ автоколонн</button>
   </div>
 </header>
 <div id="pop" role="dialog" aria-live="polite"></div>
@@ -193,7 +214,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     }).catch(function(){});
   }
   function load(){
-    loadDrivers();
+    loadDrivers(); loadRepair();
     fetch(base()+'data.json?'+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){
       DATA=d; DATA.veh.forEach(function(v,i){v._i=i});
       var names=depList().map(function(x){return x.name});
@@ -451,6 +472,96 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     return h+'</div>';
   }
 
+
+  /* ---------- Для НАЧ автоколонн ---------- */
+  var REP=null, REPOK=false, nsub='ak', nak=0, nq='';
+  var SECN={ak:'В автоколонне',oets:'ОЭТС (КПБ)',oto:'ОТО и РТС',wo:'Списание'}, SECO=['ak','oets','oto','wo'];
+  function loadRepair(){
+    REP=null; REPOK=false;
+    fetch(base()+'repair.json?'+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null}).then(function(d){
+      REP=d; REPOK=true; if(top==='nach'&&DATA) render();
+    }).catch(function(){REPOK=true; if(top==='nach'&&DATA) render()});
+  }
+  function dm(iso){if(!iso)return '';var p=iso.split('-');return p[2]+'.'+p[1]+'.'+p[0].slice(2)}
+  function rdays(n){var c=n>=60?'w3':(n>=30?'w2':(n>=14?'w1':''));return '<span class="dd '+c+'">'+n+' дн.</span>'}
+  function vrow(v,showAk){
+    var h='<div class="vr"><div class="top"><span class="pl">'+esc(v.num)+'</span><span class="mk">'+esc([v.make,v.type].filter(Boolean).join(' · '))+(v.year?' · '+esc(v.year)+' г.':'')+'</span>'+
+      (showAk?'<span class="tg">АК '+v.ak+(v.sec!=='ak'?' · '+SECN[v.sec]:'')+'</span>':'')+
+      (v.from?'<span class="dd" style="margin-left:0;background:none;font-weight:500;color:var(--muted)">с '+dm(v.from)+'</span>':'')+
+      (typeof v.days==='number'?rdays(v.days):'')+'</div>';
+    if(v.work) h+='<div class="wk">'+esc(v.work)+'</div>';
+    var ex=[];
+    if(v.repl) ex.push('замена: <b>'+esc(v.repl)+'</b>');
+    if(v.note) ex.push(esc(v.note));
+    if(v.exit) ex.push('выход: <b>'+esc(v.exit)+'</b>');
+    if(v.secTxt) ex.push(esc(v.secTxt));
+    if(ex.length) h+='<div class="ex">'+ex.map(function(x){return '<span>'+x+'</span>'}).join('')+'</div>';
+    return h+'</div>';
+  }
+  function allRep(){
+    var a=[]; ((REP&&REP.aks)||[]).forEach(function(k){k.vehs.forEach(function(v){v.ak=k.n;v._chief=k.chief;a.push(v)})}); return a;
+  }
+  function pref(num){var m=String(num).match(/^\s*(\d{2}(?:\.\d)?)/);return m?m[1]:'?'}
+  function byDays(a,b){return (b.days||0)-(a.days||0)}
+  function nachSearch(raw){
+    var s=raw.toLowerCase(), toks=s.split(/\s+/).filter(Boolean);
+    function lnum(x){return String(x).toUpperCase().replace(/[A-Z]/g,function(c){return LAT[c]||c})}
+    var f=allRep().filter(function(v){
+      var hay=(v.make+' '+v.type+' '+v.work+' '+v._chief+' '+(v.repl||'')).toLowerCase(), ln=lnum(v.num), nn=norm(v.num);
+      return toks.every(function(t){
+        if(/\*|-$/.test(t)){var re=lnum(t).replace(/[.+?^${}()|[\]\\]/g,'\\$&').replace(/\*/g,'.*');try{return new RegExp('^'+re).test(ln)}catch(e){return false}}
+        return hay.indexOf(t)>-1||nn.indexOf(norm(t))>-1||('ак'+v.ak).indexOf(t)>-1});
+    });
+    if(!f.length) return '<div class="empty">Ничего не найдено</div>';
+    f.sort(byDays);
+    return '<div class="sec">Найдено: '+f.length+'</div><div class="card">'+f.slice(0,80).map(function(v){return vrow(v,true)}).join('')+'</div>';
+  }
+  function nachBody(){
+    if(nq.trim().length>0) return nachSearch(nq.trim());
+    var aks=REP.aks, all=allRep(), h='';
+    if(nsub==='pref'){
+      var g={},keys=[]; all.forEach(function(v){var k=pref(v.num);if(!g[k]){g[k]=[];keys.push(k)}g[k].push(v)});
+      keys.sort(function(a,b){return g[b].length-g[a].length||parseFloat(a)-parseFloat(b)});
+      h+='<div class="cg">';
+      keys.forEach(function(k){
+        var a=g[k].sort(byDays), perAk={}; a.forEach(function(v){perAk[v.ak]=(perAk[v.ak]||0)+1});
+        h+='<div class="card"><h3>'+esc(k)+'-<em>— '+a.length+' ед.</em></h3><div class="ak-s">'+Object.keys(perAk).sort().map(function(n){return '<span>АК '+n+': '+perAk[n]+'</span>'}).join('')+'</div>'+a.map(function(v){return vrow(v,true)}).join('')+'</div>';
+      });
+      return h+'</div>';
+    }
+    var cnt={ak:0,oets:0,oto:0,wo:0}; all.forEach(function(v){cnt[v.sec]++});
+    h+='<div class="tot6"><div><b>'+all.length+'</b><span>всего</span></div><div><b>'+cnt.ak+'</b><span>в АК</span></div><div><b>'+(cnt.oets+cnt.oto)+'</b><span>ОЭТС / ОТО</span></div><div><b>'+cnt.wo+'</b><span>списание</span></div></div>';
+    var sel=aks.filter(function(k){return !nak||k.n===nak});
+    h+='<div class="chips g4">'+[1,2,3,4,5,6,7,8].map(function(n){
+      var k=aks.filter(function(x){return x.n===n})[0];
+      return '<button class="chip'+(nak===n?' on':'')+'" data-nak="'+n+'">АК '+n+'<small>'+(k?k.vehs.length:'—')+'</small></button>';
+    }).join('')+'</div>';
+    h+='<div class="cg">';
+    sel.forEach(function(k){
+      h+='<div class="card"><h3>Автоколонна №'+k.n+'<em>— '+k.vehs.length+' ед.</em></h3>'+(k.chief?'<div class="chief">Начальник: '+esc(k.chief)+'</div>':'');
+      SECO.forEach(function(sc){
+        var a=k.vehs.filter(function(v){return v.sec===sc}).sort(byDays); if(!a.length) return;
+        var tx={}; a.forEach(function(v){if(v.secTxt)tx[v.secTxt]=1});
+        h+='<div class="gh"><span>'+SECN[sc]+' — '+a.length+'</span><small>'+esc(Object.keys(tx).join('; '))+'</small></div>'+a.map(function(v){return vrow(v)}).join('');
+      });
+      if(!k.vehs.length) h+='<div class="empty" style="padding:8px">Нет машин в ремонте</div>';
+      function lst(t,a){return a&&a.length?'<div class="rl"><b>'+t+' — '+a.length+'</b><div class="nums">'+a.map(function(x){return '<span>'+esc(x)+'</span>'}).join('')+'</div></div>':''}
+      h+=lst('Вышли из ремонта / резерва',k.out)+lst('Готовы к выходу',k.ready)+lst('На замену',k.repl);
+      h+='</div>';
+    });
+    return h+'</div>';
+  }
+  function viewNach(){
+    if(!REPOK) return '<div class="empty">Загрузка…</div>';
+    if(!REP||!REP.aks||!REP.aks.length) return '<div class="empty">На эту дату нет отчётов автоколонн.<br><small>Они загружаются вместе со сводкой в папку input/</small></div>';
+    var w='';
+    if(REP.date!==DATA.date) w+='<div class="pw">Отчёты автоколонн на '+fmtDate(REP.date)+' (сводка выхода — на '+fmtDate(DATA.date)+')</div>';
+    var have=REP.aks.map(function(k){return k.n}), miss=[1,2,3,4,5,6,7,8].filter(function(n){return have.indexOf(n)<0});
+    if(miss.length) w+='<div class="pw">Нет отчёта: АК '+miss.join(', ')+'</div>';
+    return '<input class="search" id="rq" type="search" inputmode="search" enterkeyhint="search" placeholder="Поиск: номер машины, 13-, марка, причина" value="'+esc(nq)+'">'+
+      (nq.trim()?'':seg('data-nsub',[['ak','По автоколоннам'],['pref','По префиксам']],nsub))+w+'<div id="nres">'+nachBody()+'</div>';
+  }
+
   /* ---------- окошко с водителем ---------- */
   function hidePop(){var p=$('#pop');p.style.display='none';p.innerHTML=''}
   function tel(t){return '<a href="tel:'+esc(String(t).replace(/[^\d+]/g,''))+'">'+esc(t)+'</a>'}
@@ -480,9 +591,9 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
   function render(){
     hidePop();
     header();
-    var keepQ=document.activeElement&&document.activeElement.id==='q';
+    var keepQ=document.activeElement&&(document.activeElement.id==='q'||document.activeElement.id==='rq'),kq=document.activeElement&&document.activeElement.id==='rq'?nq:q;
     var oc=document.querySelector('.chips:not(.g4)'), sl=oc?oc.scrollLeft:null;
-    $('#app').innerHTML=(curDay?'<div class="arch">Архив: данные на '+fmtDate(DATA.date)+'. Для текущих данных выберите «Сегодня» вверху.</div>':'')+(top==='all'?viewAll():(top==='cits'?viewCits():viewDisp()))+'<div class="foot">Данные диспетчерской сводки на '+fmtDate(DATA.date)+'</div>';
+    $('#app').innerHTML=(curDay?'<div class="arch">Архив: данные на '+fmtDate(DATA.date)+'. Для текущих данных выберите «Сегодня» вверху.</div>':'')+(top==='all'?viewAll():(top==='cits'?viewCits():(top==='nach'?viewNach():viewDisp())))+'<div class="foot">Данные диспетчерской сводки на '+fmtDate(DATA.date)+'</div>';
     var nc=document.querySelector('.chips:not(.g4)');   // строка отделов: не сбрасывать прокрутку, выбранный отдел держать на виду
     if(nc){
       if(sl!==null) nc.scrollLeft=sl;
@@ -490,7 +601,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
       if(ac){var cr=nc.getBoundingClientRect(), ar=ac.getBoundingClientRect(), L=ar.left-cr.left+nc.scrollLeft;
         if(ar.left<cr.left||ar.right>cr.right) nc.scrollLeft=Math.max(0,L-(nc.clientWidth-ar.width)/2)}
     }
-        if(keepQ){var el=$('#q');el.focus();el.setSelectionRange(q.length,q.length)}
+        if(keepQ){var el=$('#q')||$('#rq');if(el){el.focus();el.setSelectionRange(kq.length,kq.length)}}
   }
 
   document.addEventListener('click',function(e){
@@ -499,12 +610,14 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     if(pl){var open=$('#pop').style.display==='block'&&$('#pop').dataset.for===pl.dataset.i;hidePop();
       if(!open){showPop(pl);$('#pop').dataset.for=pl.dataset.i;track('окно водителя')}else $('#pop').dataset.for='';return}
     if(!e.target.closest('#pop')) hidePop();
-    var t=e.target.closest('[data-top],[data-sub],[data-csub],[data-dep],[data-shift],[data-disp]'); if(!t) return;
+    var t=e.target.closest('[data-top],[data-sub],[data-csub],[data-dep],[data-shift],[data-disp],[data-nsub],[data-nak]'); if(!t) return;
     if(t.dataset.top){
       top=t.dataset.top;track('вкладка/'+top);
       document.querySelectorAll('.tab').forEach(function(b){b.classList.toggle('on',b.dataset.top===top)});
       window.scrollTo(0,0);
     }else if(t.dataset.disp!==undefined){track('диспетчер/'+t.dataset.disp);cdisp=+t.dataset.disp;store('disp',String(cdisp))}
+    else if(t.dataset.nsub){nsub=t.dataset.nsub;track('АК/'+nsub)}
+    else if(t.dataset.nak){var n=+t.dataset.nak;nak=nak===n?0:n;track('АК/'+n)}
     else if(t.dataset.sub){sub=t.dataset.sub}
     else if(t.dataset.csub){csub=t.dataset.csub}
     else if(t.dataset.dep!==undefined){
@@ -519,6 +632,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
   document.addEventListener('keydown',function(e){if(e.key==='Escape')hidePop()});
   window.addEventListener('resize',hidePop);
   document.addEventListener('input',function(e){
+    if(e.target.id==='rq'){nq=e.target.value;if(!searched&&nq.trim().length>=2){searched=true;track('поиск')}render();return}
     if(e.target.id==='q'){q=e.target.value;if(!searched&&q.trim().length>=2){searched=true;track('поиск')}var r=$('#dres');if(r){hidePop();r.innerHTML=depsBody()}else render()}
   });
 
@@ -526,7 +640,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
   function goDay(v){
     if(!DATES) return;
     if(DATES.indexOf(v)<0){alert('За эту дату данных нет');header();return}
-    track('архив');curDay=(v===DATES[0])?'':v; dep=null; q=''; sub='deps';
+    track('архив');curDay=(v===DATES[0])?'':v; dep=null; q=''; nq=''; nak=0; sub='deps';
     $('#app').innerHTML='<div class="empty">Загрузка…</div>'; load();
   }
   document.addEventListener('change',function(e){ if(e.target.id==='dsel'&&e.target.value) goDay(e.target.value) });
