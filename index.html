@@ -481,8 +481,16 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     hidePop();
     header();
     var keepQ=document.activeElement&&document.activeElement.id==='q';
+    var oc=document.querySelector('.chips:not(.g4)'), sl=oc?oc.scrollLeft:null;
     $('#app').innerHTML=(curDay?'<div class="arch">Архив: данные на '+fmtDate(DATA.date)+'. Для текущих данных выберите «Сегодня» вверху.</div>':'')+(top==='all'?viewAll():(top==='cits'?viewCits():viewDisp()))+'<div class="foot">Данные диспетчерской сводки на '+fmtDate(DATA.date)+'</div>';
-    if(keepQ){var el=$('#q');el.focus();el.setSelectionRange(q.length,q.length)}
+    var nc=document.querySelector('.chips:not(.g4)');   // строка отделов: не сбрасывать прокрутку, выбранный отдел держать на виду
+    if(nc){
+      if(sl!==null) nc.scrollLeft=sl;
+      var ac=nc.querySelector('.chip.on');
+      if(ac){var cr=nc.getBoundingClientRect(), ar=ac.getBoundingClientRect(), L=ar.left-cr.left+nc.scrollLeft;
+        if(ar.left<cr.left||ar.right>cr.right) nc.scrollLeft=Math.max(0,L-(nc.clientWidth-ar.width)/2)}
+    }
+        if(keepQ){var el=$('#q');el.focus();el.setSelectionRange(q.length,q.length)}
   }
 
   document.addEventListener('click',function(e){
