@@ -166,6 +166,12 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
 
 <script>
 (function(){
+  /* ---- статистика посещений (GoatCounter). Впишите свой код между кавычками, например 'kbm-tehnika' ---- */
+  var GC_CODE='kbm-tehnika';
+  if(GC_CODE){try{var gs=document.createElement('script');gs.async=true;gs.src='//gc.zgo.at/count.js';
+    gs.setAttribute('data-goatcounter','https://'+GC_CODE+'.goatcounter.com/count');document.head.appendChild(gs)}catch(e){}}
+  function track(p){try{if(window.goatcounter&&window.goatcounter.count)window.goatcounter.count({path:p,title:p,event:true})}catch(e){}}
+  var searched=false;
   var DATA=null, DRV=null, DATES=null, curDay='', top='all', sub='deps', csub='type', dep=null, shift='d', q='', cdisp=0;
   // порядок типов техники внутри отдела (по префиксам); остальное — после, по количеству
   var ORDER=['35','35.1','35.2','31','28','30','63','29','22','23','22.1','34','47','46','49','62','27','50','53','13','13.1','20'];
@@ -195,6 +201,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
       var saved=store('dep');
       dep=h&&names.indexOf(h)>-1?h:(saved&&names.indexOf(saved)>-1?saved:null);
       if(dep) fixShift();
+      if(!window._opened){window._opened=1;track(dep?'открытие/свой отдел':'открытие/главный экран')}
       var sd=+store('disp'); cdisp=(DATA.disp&&sd>=0&&sd<DATA.disp.length)?sd:0;
       render();
     }).catch(function(){
@@ -259,7 +266,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
   }
 
   function viewDeps(){
-    return '<input class="search" id="q" type="search" inputmode="search" enterkeyhint="search" placeholder="Поиск: отдел, номер машины, тип техники или водитель" value="'+esc(q)+'"><div id="dres">'+depsBody()+'</div>';
+    return '<input class="search" id="q" type="search" inputmode="search" enterkeyhint="search" placeholder="Поиск: отдел, номер (49-*), тип техники или водитель" value="'+esc(q)+'"><div id="dres">'+depsBody()+'</div>';
   }
   function depsBody(){
     var list=depList(), html='';
@@ -482,18 +489,18 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     if(!DATA) return;
     var pl=e.target.closest('[data-i]');
     if(pl){var open=$('#pop').style.display==='block'&&$('#pop').dataset.for===pl.dataset.i;hidePop();
-      if(!open){showPop(pl);$('#pop').dataset.for=pl.dataset.i}else $('#pop').dataset.for='';return}
+      if(!open){showPop(pl);$('#pop').dataset.for=pl.dataset.i;track('окно водителя')}else $('#pop').dataset.for='';return}
     if(!e.target.closest('#pop')) hidePop();
     var t=e.target.closest('[data-top],[data-sub],[data-csub],[data-dep],[data-shift],[data-disp]'); if(!t) return;
     if(t.dataset.top){
-      top=t.dataset.top;
+      top=t.dataset.top;track('вкладка/'+top);
       document.querySelectorAll('.tab').forEach(function(b){b.classList.toggle('on',b.dataset.top===top)});
       window.scrollTo(0,0);
-    }else if(t.dataset.disp!==undefined){cdisp=+t.dataset.disp;store('disp',String(cdisp))}
+    }else if(t.dataset.disp!==undefined){track('диспетчер/'+t.dataset.disp);cdisp=+t.dataset.disp;store('disp',String(cdisp))}
     else if(t.dataset.sub){sub=t.dataset.sub}
     else if(t.dataset.csub){csub=t.dataset.csub}
     else if(t.dataset.dep!==undefined){
-      dep=t.dataset.dep||null; q='';
+      dep=t.dataset.dep||null; q='';if(dep)track('отдел/'+dep);
       if(dep) fixShift(); else shift='d';
       store('dep',dep||'');
       try{history.replaceState(null,'',dep?'#dep='+encodeURIComponent(dep):location.pathname)}catch(_){}
@@ -504,14 +511,14 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
   document.addEventListener('keydown',function(e){if(e.key==='Escape')hidePop()});
   window.addEventListener('resize',hidePop);
   document.addEventListener('input',function(e){
-    if(e.target.id==='q'){q=e.target.value;var r=$('#dres');if(r){hidePop();r.innerHTML=depsBody()}else render()}
+    if(e.target.id==='q'){q=e.target.value;if(!searched&&q.trim().length>=2){searched=true;track('поиск')}var r=$('#dres');if(r){hidePop();r.innerHTML=depsBody()}else render()}
   });
 
   if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(function(){})}
   function goDay(v){
     if(!DATES) return;
     if(DATES.indexOf(v)<0){alert('За эту дату данных нет');header();return}
-    curDay=(v===DATES[0])?'':v; dep=null; q=''; sub='deps';
+    track('архив');curDay=(v===DATES[0])?'':v; dep=null; q=''; sub='deps';
     $('#app').innerHTML='<div class="empty">Загрузка…</div>'; load();
   }
   document.addEventListener('change',function(e){ if(e.target.id==='dsel'&&e.target.value) goDay(e.target.value) });
