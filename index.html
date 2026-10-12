@@ -152,10 +152,10 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
 .tot6{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-bottom:10px}
 .tot6 div{background:var(--blue-bg);border:1px solid var(--blue-line);border-radius:10px;padding:6px 2px;text-align:center}.tot6 b{display:block;font-size:19px;line-height:1.1;color:var(--blue-ink)}.tot6 span{font-size:10.5px;color:var(--blue-ink);opacity:.8}.tot6{margin-bottom:14px;padding-bottom:12px;border-bottom:2px solid var(--line)}
 .ak-s{display:flex;gap:4px 8px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin:0 0 6px}.ak-s span{background:var(--soft);border-radius:6px;padding:0 6px}
-.pfs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:12px}
-.pf{border:1px solid var(--blue-line);background:var(--blue-bg);color:var(--blue-ink);border-radius:10px;padding:7px 4px;font:inherit;text-align:center;cursor:pointer}
-.pf b{display:block;font-size:16px}.pf span{font-size:12px;opacity:.85}.pf.on{background:var(--brand2);border-color:var(--brand2);color:#fff}
-@media (min-width:900px) and (hover:hover) and (pointer:fine){.pfs{grid-template-columns:repeat(6,minmax(0,1fr))}}
+.pfs{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:4px;margin-bottom:12px}
+.pf{border:1px solid var(--blue-line);background:var(--blue-bg);color:var(--blue-ink);border-radius:8px;padding:5px 0;min-width:0;font:inherit;text-align:center;cursor:pointer}
+.pf b{display:block;font-size:13.5px;line-height:1.15}.pf span{display:block;font-size:13px;font-weight:700;line-height:1.2;margin:2px 6px 0;background:var(--card);color:var(--brand2);border-radius:6px}.pf.on span{background:#fff}.pf.on{background:var(--brand2);border-color:var(--brand2);color:#fff}
+@media (min-width:900px) and (hover:hover) and (pointer:fine){.pfs{grid-template-columns:repeat(12,minmax(0,1fr));gap:6px}}
 /* ---- только компьютер (широкий экран + мышь); телефон не затрагивается ---- */
 @media (min-width:900px) and (hover:hover) and (pointer:fine){
   header{padding-left:max(24px,calc((100vw - 1180px)/2));padding-right:max(24px,calc((100vw - 1180px)/2))}
@@ -526,8 +526,8 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     if(nsub==='pref'){
       var g={},keys=[]; all.forEach(function(v){var k=pref(v.num);if(!g[k]){g[k]=[];keys.push(k)}g[k].push(v)});
       keys.sort(function(a,b){return g[b].length-g[a].length||parseFloat(a)-parseFloat(b)});
-      h+='<div class="sec" style="margin-top:2px">Свод по префиксам — всего '+all.length+' ед.</div><div class="pfs">'+keys.map(function(k){
-        return '<button class="pf'+(npref===k?' on':'')+'" data-npref="'+esc(k)+'"><b>'+esc(k)+'-</b><span>'+g[k].length+' ед.</span></button>';
+      h+='<div class="sec" style="margin-top:2px">Свод по префиксам (число = ед.) — всего '+all.length+'</div><div class="pfs">'+keys.map(function(k){
+        return '<button class="pf'+(npref===k?' on':'')+'" data-npref="'+esc(k)+'"><b>'+esc(k)+'-</b><span>'+g[k].length+'</span></button>';
       }).join('')+'</div>';
       if(npref&&!g[npref]) npref='';
       h+='<div class="cg">';
