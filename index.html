@@ -214,10 +214,11 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     DRV=null;
     fetch(base()+'drivers.json?'+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null}).then(function(d){DRV=d}).catch(function(){DRV=null});
   }
+  var dtry=0;
   function loadDates(){
-    fetch('archive/index.json?'+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null}).then(function(d){
-      if(d&&d.dates&&d.dates.length>0){DATES=d.dates;header()}
-    }).catch(function(){});
+    fetch('archive/index.json?'+Date.now(),{cache:'no-store'}).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(d){
+      if(d&&d.dates&&d.dates.length>0){DATES=d.dates;if(DATA)header()}
+    }).catch(function(){if(++dtry<4)setTimeout(loadDates,3000*dtry)});
   }
   function load(){
     loadDrivers(); loadRepair();
@@ -482,13 +483,19 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
 
 
   /* ---------- Для НАЧ автоколонн ---------- */
-  var REP=null, REPOK=false, nsub='ak', nak=0, nq='', npref='';
+  var REP=null, REPOK=false, REPERR=false, nsub='ak', nak=0, nq='', npref='';
   var SECN={ak:'В автоколонне',oets:'ОЭТС (КПБ)',oto:'ОТО и РТС',wo:'Списание'}, SECO=['ak','oets','oto','wo'];
+  var rtry=0;
+  function getJ(u){return fetch(u+'?'+Date.now(),{cache:'no-store'}).then(function(r){if(!r.ok)throw 0;return r.json()})}
   function loadRepair(){
-    REP=null; REPOK=false;
-    fetch(base()+'repair.json?'+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null}).then(function(d){
-      REP=d; REPOK=true; if(top==='nach'&&DATA) render();
-    }).catch(function(){REPOK=true; if(top==='nach'&&DATA) render()});
+    REP=null; REPOK=false; var my=++rtry;
+    var done=function(d,err){if(my!==rtry)return;REP=d;REPOK=true;REPERR=!!err;if(top==='nach'&&DATA)render()};
+    getJ(base()+'repair.json').catch(function(){
+      if(!curDay) throw 0;
+      return getJ('repair.json')                         // в архивном дне своего отчёта нет - берём последний общий (показ только если он не позже дня)
+    }).then(function(d){done(d)}).catch(function(e){
+      if(curDay){done(null)}else{ if(my===rtry) setTimeout(function(){ if(my!==rtry)return; getJ('repair.json').then(function(d){done(d)}).catch(function(){done(null,1)}) },3000) }
+    });
   }
   function dm(iso){if(!iso)return '';var p=iso.split('-');return p[2]+'.'+p[1]+'.'+p[0].slice(2)}
   function rdays(n){var c=n>=60?'w3':(n>=30?'w2':(n>=14?'w1':''));return '<span class="dd '+c+'">'+n+' дн.</span>'}
@@ -565,6 +572,8 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
   }
   function viewNach(){
     if(!REPOK) return '<div class="empty">Загрузка…</div>';
+    if(REPERR) return '<div class="empty">Не удалось загрузить отчёты автоколонн.<br><small>Обновите страницу (потяните вниз) и откройте вкладку снова</small></div>';
+    if(REP&&REP.date>DATA.date) REP=null;
     if(!REP||!REP.aks||!REP.aks.length) return '<div class="empty">На эту дату нет отчётов автоколонн.<br><small>Они загружаются вместе со сводкой в папку input/</small></div>';
     var w='';
     if(REP.date!==DATA.date) w+='<div class="pw">Отчёты автоколонн на '+fmtDate(REP.date)+' (сводка выхода — на '+fmtDate(DATA.date)+')</div>';
