@@ -157,6 +157,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
 .pf b{display:block;font-size:13.5px;line-height:1.15}.pf span{display:block;font-size:13px;font-weight:700;line-height:1.2;margin:2px 6px 0;background:var(--card);color:var(--brand2);border-radius:6px}.pf.on span{background:#fff}.pf.on{background:var(--brand2);border-color:var(--brand2);color:#fff}
 @media (min-width:900px) and (hover:hover) and (pointer:fine){.pfs{grid-template-columns:repeat(12,minmax(0,1fr));gap:6px}}
 .chip.st{border-color:#e0b400;background:#fff3cd;color:#664d03}.chip.st.on{background:var(--brand2);border-color:var(--brand2);color:#fff}
+.updt{font-size:12px;color:var(--muted);padding:4px 2px 0}.updt.part{color:#9a6b00}
 .dlbar{margin:0 0 10px;text-align:right}.dlbar a{display:inline-block;font-size:13px;font-weight:600;color:var(--brand2);text-decoration:none;border:1px solid var(--blue-line);background:var(--blue-bg);border-radius:9px;padding:5px 10px}
 /* ---- только компьютер (широкий экран + мышь); телефон не затрагивается ---- */
 @media (min-width:900px) and (hover:hover) and (pointer:fine){
@@ -614,6 +615,8 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     var h='', st=DATA.stale||{}, ks=Object.keys(st), ab=DATA.absent||[];
     if((top==='all'||top==='cits')&&(ks.length||ab.length))
       h+='<div class="pw"><b>Частично обновлено.</b> Свежих файлов ещё нет: '+ks.map(function(k){return esc(k)+' (данные за '+dm2(st[k])+')'}).concat(ab.map(function(a){return esc(a)+' (нет данных)'})).join(', ')+'</div>';
+    if(DATA.upd&&top!=='nach'){var u=DATA.upd.split('T'),ud=u[0].split('-'),all=DATA.nf==null||DATA.nf>=7;
+      h+='<div class="updt'+(all?'':' part')+'">🕒 Свод обновлён '+ud[2]+'.'+ud[1]+' в '+u[1]+(DATA.nf!=null?' · свежих файлов: '+DATA.nf+' из 7':'')+'</div>';}
     if(DATA.xl&&top!=='nach'){var fd=DATA.date.split('-');
       h+='<div class="dlbar"><a href="archive/'+DATA.date+'/svod.xlsx" download="Свод_Диспетчер_'+fd[2]+'.'+fd[1]+'.'+fd[0]+'.xlsx" data-dl="1">⬇ Скачать свод (xlsx)</a></div>';}
     return h;
