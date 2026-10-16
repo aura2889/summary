@@ -126,6 +126,7 @@ def main():
             if stale: data['stale'] = stale
             if absent: data['absent'] = absent
             data['xl'] = 1
+            data['nf'] = len(svod_flow.ROLES) - len(stale) - len(absent)
             say(f'Свод на {data["date"]}: план {data["totals"]["plan"]}, факт {data["totals"]["fact"]}, машин {len(data["veh"])}; ' +
                 ('все файлы за сегодня' if not stale and not absent else f'частично: нет свежих файлов у {len(stale) + len(absent)} из 7'))
     elif exports:                                          # пришёл только экспорт: обновим водителей на сегодняшних данных
@@ -134,6 +135,7 @@ def main():
             if d0 and d0.get('date') == ref.isoformat(): data = d0; break
         if not data: say('⚠ экспорт получен, но данных свода за сегодня ещё нет - водители подставятся при сборке свода')
     if data is not None:
+        if svods or newroles: data['upd'] = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=5))).strftime('%Y-%m-%dT%H:%M')   # когда робот в последний раз обновил свод (время Актобе)
         data['xl'] = 1 if (svod_file or os.path.exists(os.path.join(ARC, data['date'], 'svod.xlsx'))) else data.get('xl')
         if not data['xl']: data.pop('xl', None)
         drv = None
