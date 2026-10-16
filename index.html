@@ -34,7 +34,17 @@ header{background:var(--brand);color:#fff;padding:calc(env(safe-area-inset-top) 
 h1{font-size:18px;margin:0;font-weight:700}
 .date{font-size:13px;opacity:.85}
 .date{display:flex;align-items:center;gap:4px}
-.date input{font:inherit;color:#fff;color-scheme:dark;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:8px;padding:3px 6px;width:128px}
+.dbtn{font:inherit;font-size:14px;color:#fff;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:8px;height:28px;padding:0 10px;cursor:pointer;white-space:nowrap}
+.cal{position:fixed;z-index:30;width:min(290px,calc(100vw - 24px));background:var(--card);color:var(--ink);border:1px solid var(--blue-line);border-radius:14px;box-shadow:0 10px 30px rgba(8,30,50,.35);padding:10px}
+.cal .ch{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.cal .ch b{font-size:14px}
+.cal .ch button{border:0;background:var(--blue-bg);color:var(--blue-ink);border-radius:8px;width:30px;height:30px;font-size:17px;cursor:pointer}
+.cal .ch button:disabled{opacity:.3;cursor:default}
+.cal .g{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;text-align:center}
+.cal .w{font-size:11px;color:var(--muted);padding:2px 0}
+.cal .d{height:34px;border:0;border-radius:9px;background:none;color:var(--muted);opacity:.45;font:inherit;font-size:14px}
+.cal .d.on{opacity:1;background:var(--blue-bg);color:var(--blue-ink);font-weight:700;cursor:pointer}
+.cal .d.cur{background:var(--brand);color:#fff}
 .dnav{border:0;background:rgba(255,255,255,.14);color:#fff;border-radius:8px;width:28px;height:28px;font-size:18px;line-height:1;padding:0;cursor:pointer}
 .dnav:disabled{opacity:.3;cursor:default}
 .dnow{border:0;background:#fff;color:var(--brand);border-radius:8px;height:28px;padding:0 8px;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
@@ -163,7 +173,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
 @media (min-width:900px) and (hover:hover) and (pointer:fine){
   header{padding-left:max(24px,calc((100vw - 1180px)/2));padding-right:max(24px,calc((100vw - 1180px)/2))}
   h1{font-size:22px}
-  .date{font-size:15px}.date input{width:150px;padding:5px 8px}.dnav,.dnow{height:34px}.dnav{width:34px}
+  .date{font-size:15px}.dbtn{height:34px;font-size:15px}.dnav,.dnow{height:34px}.dnav{width:34px}
   .kpi{padding:10px}.kpi b{font-size:26px}.kpi:last-child b{font-size:22px;padding-top:2px}.kpi span{font-size:13px}
   .tabs{gap:10px;margin-top:14px}
   .tab{padding:15px 10px;font-size:17px;border-radius:12px}
@@ -267,7 +277,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
       var ix=DATES.indexOf(curDay||DATES[0]);
       de.innerHTML=(curDay?'<button class="dnow" data-dnow="1">Сегодня</button>':'')+
         '<button class="dnav" data-dnav="1" title="раньше"'+(ix>=DATES.length-1?' disabled':'')+'>‹</button>'+
-        '<input type="date" id="dsel" value="'+(curDay||DATES[0])+'" min="'+DATES[DATES.length-1]+'" max="'+DATES[0]+'">'+
+        '<button class="dbtn" id="dsel" data-dopen="1">'+fmtDate(curDay||DATES[0])+' ▾</button>'+
         '<button class="dnav" data-dnav="-1" title="позже"'+(ix<=0?' disabled':'')+'>›</button>';
     }else de.textContent='на '+fmtDate(DATA.date);
     $('#kpis').innerHTML=
@@ -678,7 +688,35 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     track('архив');curDay=(v===DATES[0])?'':v; dep=null; q=''; nq=''; nak=0; sub='deps';
     $('#app').innerHTML='<div class="empty">Загрузка…</div>'; load();
   }
-  document.addEventListener('change',function(e){ if(e.target.id==='dsel'&&e.target.value) goDay(e.target.value) });
+  var calM=null;
+  function closeCal(){var c=document.querySelector('.cal');if(c)c.remove()}
+  function openCal(){
+    closeCal(); if(!DATES) return;
+    var cd=curDay||DATES[0]; if(!calM) calM=cd.slice(0,7);
+    var minM=DATES[DATES.length-1].slice(0,7), maxM=DATES[0].slice(0,7);
+    var y=+calM.slice(0,4), m=+calM.slice(5,7), first=new Date(y,m-1,1), dim=new Date(y,m,0).getDate(), off=(first.getDay()+6)%7;
+    var MN=['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+    var s='<div class="ch"><button data-cm="-1"'+(calM<=minM?' disabled':'')+'>‹</button><b>'+MN[m-1]+' '+y+'</b><button data-cm="1"'+(calM>=maxM?' disabled':'')+'>›</button></div><div class="g">';
+    ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'].forEach(function(w){s+='<div class="w">'+w+'</div>'});
+    for(var i=0;i<off;i++) s+='<div></div>';
+    for(var d=1;d<=dim;d++){
+      var iso=calM+'-'+(d<10?'0':'')+d, has=DATES.indexOf(iso)>=0;
+      s+='<button class="d'+(has?' on':'')+(iso===cd?' cur':'')+'"'+(has?' data-cd="'+iso+'"':' disabled')+'>'+d+'</button>';
+    }
+    var c=document.createElement('div'); c.className='cal'; c.innerHTML=s+'</div>';
+    document.body.appendChild(c);
+    var b=$('#dsel').getBoundingClientRect(); c.style.top=(b.bottom+6)+'px';
+    c.style.left=Math.max(12,Math.min(window.innerWidth-c.offsetWidth-12,b.right-c.offsetWidth))+'px';
+  }
+  document.addEventListener('click',function(e){
+    var t=e.target;
+    if(t.closest('[data-dopen]')){ if(document.querySelector('.cal')) closeCal(); else {calM=null;openCal()} return }
+    var cm=t.closest('[data-cm]');
+    if(cm){var y=+calM.slice(0,4),m=+calM.slice(5,7)+(+cm.dataset.cm); if(m<1){m=12;y--} if(m>12){m=1;y++} calM=y+'-'+(m<10?'0':'')+m; openCal(); return}
+    var cdb=t.closest('[data-cd]'); if(cdb){closeCal();goDay(cdb.dataset.cd);return}
+    if(!t.closest('.cal')) closeCal();
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')closeCal()});
   document.addEventListener('click',function(e){
     var b=e.target.closest('[data-dnav],[data-dnow]'); if(!b||!DATES) return;
     if(b.dataset.dnow) return goDay(DATES[0]);
