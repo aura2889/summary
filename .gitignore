@@ -1,0 +1,3 @@
+.build_failed
+.svod_tmp/
+__pycache__/
