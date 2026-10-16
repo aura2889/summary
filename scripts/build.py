@@ -89,7 +89,15 @@ def main():
     newroles = []
     for k, fl in sorted(kinds.items()):
         if not k.startswith('disp:'): continue
-        role = k[5:]; fl = sorted(fl, key=os.path.getmtime)
+        role = k[5:]
+        def _rank(f):                              # лишние/старые файлы той же роли: берём с листом на сегодня и сохранённый позже всех
+            try:
+                wb = openpyxl.load_workbook(conv[f], read_only=True)
+                fresh_sheet = 1 if svod_flow.pick_sheet(wb.sheetnames, ref)[1] else 0
+                mod = wb.properties.modified or datetime.datetime(2000, 1, 1); wb.close()
+                return (fresh_sheet, mod.timestamp(), os.path.getmtime(f))
+            except Exception: return (0, 0, os.path.getmtime(f))
+        fl = sorted(fl, key=_rank)
         if len(fl) > 1: say(f'⚠ {svod_flow.ROLE_DISP[role]}: пришло {len(fl)} файла(ов), взят самый новый ({os.path.basename(fl[-1])})')
         shutil.copy(conv[fl[-1]], os.path.join(RAW, role + '.xlsx')); state[role] = today.isoformat(); newroles.append(role)
         say(f'Получен файл: {svod_flow.ROLE_DISP[role]}')

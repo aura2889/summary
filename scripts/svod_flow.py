@@ -27,6 +27,8 @@ def _sheet_role(rows):
     r1 = [_n(c) for c in rows[0]] if rows else []
     r2 = [_n(c) for c in rows[1]] if len(rows) > 1 else []
     if r1 and r1[0].startswith('ДИСПЕТЧЕР№3'): return 'D3'
+    if r1 and r1[0].startswith('ДИСПЕТЧЕРА') and r2 and r2[0] == 'ПКРС' and any(c in ('РЕЗЕРВ', 'СПИСАНИЕ') for c in r2): return 'D7'   # новый вид файла диспетчера 7 (с 16.10)
+    if r1 and r1[0].startswith('ДИСПЕТЧЕРА') and any('ЦПП-МПГУ' in c for c in r2): return 'K8'                                          # новый вид файла К-8 (с 16.10)
     if any('ДБИПКРС' in c for c in r1): return 'D7'
     if r2 and r2[0] == '№': return 'MS'
     if r2 and r2[0] == 'СБ': return 'SB'
@@ -86,6 +88,16 @@ def sheet_date(si_name, ref):
     except ValueError: return None
 
 # ---------- сборка ----------
+def _adapt(cfg, ws):
+    """новые виды файлов (с 16.10): сверху добавлена строка-заголовок «Диспетчер ақпары…», у диспетчера 7 другая раскладка колонок"""
+    r1 = [_n(ws.cell(1, c).value) for c in range(1, 4)]; r2 = [_n(ws.cell(2, c).value) for c in range(1, 15)]
+    if not r1[0].startswith('ДИСПЕТЧЕРА'): return
+    if cfg['key'] == 'D7' and r2[0] == 'ПКРС':
+        cfg.update(rows=(3, 60), cols=(1, 14), hrow=2)
+    elif cfg['key'] == 'K8':
+        cfg.update(rows=(cfg['rows'][0] + 1, cfg['rows'][1] + 1), hrow=cfg.get('hrow', 1) + 1)
+
+
 KNOWN = json.load(open(os.path.join(SV, 'known.json'), encoding='utf-8')) if os.path.exists(os.path.join(SV, 'known.json')) else None
 
 def build(raw_dir, ref, fresh, out_dir):
@@ -96,7 +108,7 @@ def build(raw_dir, ref, fresh, out_dir):
         path = os.path.join(raw_dir, role + '.xlsx')
         if not os.path.exists(path):
             status[role] = dict(state='absent'); warns.append(f'{ROLE_DISP[role]}: файла ещё не было ни разу - в своде его нет'); continue
-        names = openpyxl.load_workbook(path, read_only=True).sheetnames
+        wbk = openpyxl.load_workbook(path); names = wbk.sheetnames
         sheet, exact, w = pick_sheet(names, ref)
         warns += [f'{ROLE_DISP[role]}: {x}' for x in w]
         if sheet is None:
@@ -113,6 +125,7 @@ def build(raw_dir, ref, fresh, out_dir):
             if sh is None: continue
             cfg = dict(key=role, name=f'{spec["base"]} ({short})', path=path, sheet=sh, rows=spec['rows'], cols=spec['cols'], mode='day')
             if 'hrow' in spec: cfg['hrow'] = spec['hrow']
+            _adapt(cfg, wbk[sh])
             out, exc, notes = PC.parse(cfg)
             if today and not out:
                 warns.append(f'{ROLE_DISP[role]}: лист {sh!r} за сегодня пустой - беру прошлый'); continue
