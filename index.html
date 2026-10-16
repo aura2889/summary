@@ -156,6 +156,8 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
 .pf{border:1px solid var(--blue-line);background:var(--blue-bg);color:var(--blue-ink);border-radius:8px;padding:5px 0;min-width:0;font:inherit;text-align:center;cursor:pointer}
 .pf b{display:block;font-size:13.5px;line-height:1.15}.pf span{display:block;font-size:13px;font-weight:700;line-height:1.2;margin:2px 6px 0;background:var(--card);color:var(--brand2);border-radius:6px}.pf.on span{background:#fff}.pf.on{background:var(--brand2);border-color:var(--brand2);color:#fff}
 @media (min-width:900px) and (hover:hover) and (pointer:fine){.pfs{grid-template-columns:repeat(12,minmax(0,1fr));gap:6px}}
+.chip.st{border-color:#e0b400;background:#fff3cd;color:#664d03}.chip.st.on{background:var(--brand2);border-color:var(--brand2);color:#fff}
+.dlbar{margin:0 0 10px;text-align:right}.dlbar a{display:inline-block;font-size:13px;font-weight:600;color:var(--brand2);text-decoration:none;border:1px solid var(--blue-line);background:var(--blue-bg);border-radius:9px;padding:5px 10px}
 /* ---- только компьютер (широкий экран + мышь); телефон не затрагивается ---- */
 @media (min-width:900px) and (hover:hover) and (pointer:fine){
   header{padding-left:max(24px,calc((100vw - 1180px)/2));padding-right:max(24px,calc((100vw - 1180px)/2))}
@@ -452,8 +454,10 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     var cnt=D.map(function(x,i){return DATA.veh.filter(function(v){return v.g===i}).length});
     var h='<div class="chips g4">'+D.map(function(x,i){
       var sp=(i===D.length-1&&4-(D.length-1)%4>1)?' style="grid-column:span '+(4-(D.length-1)%4)+'"':'';
-      return '<button class="chip'+(cdisp===i?' on':'')+'"'+sp+' data-disp="'+i+'">'+esc(x.name)+'<small>'+cnt[i]+'</small></button>';
+      return '<button class="chip'+(cdisp===i?' on':'')+((DATA.stale&&DATA.stale[x.name])||(DATA.absent&&DATA.absent.indexOf(x.name)>-1)?' st':'')+'"'+sp+' data-disp="'+i+'">'+esc(x.name)+'<small>'+cnt[i]+'</small></button>';
     }).join('')+'</div>';
+    var sd=DATA.stale&&DATA.stale[D[cdisp].name];
+    if(sd) h+='<div class="pw"><b>Файл этого диспетчера за сегодня ещё не пришёл.</b> Показаны данные за '+dm2(sd)+'.</div>';
     var vs=DATA.veh.filter(function(v){return v.g===cdisp});
     var dn=vs.filter(function(v){return v.d}).length, nn=vs.filter(function(v){return v.n}).length;
     h+='<div class="card"><div class="sum"><b>'+esc(D[cdisp].name)+'</b><span>'+vs.length+' ед. · день '+dn+' · ночь '+nn+'</span></div>'+
@@ -596,12 +600,21 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     p.style.setProperty('--ax',Math.max(14,Math.min(pw-14,r.left+r.width/2-left))+'px');
   }
 
+  function dm2(iso){var p=String(iso).split('-');return p[2]+'.'+p[1]}
+  function topNote(){
+    var h='', st=DATA.stale||{}, ks=Object.keys(st), ab=DATA.absent||[];
+    if((top==='all'||top==='cits')&&(ks.length||ab.length))
+      h+='<div class="pw"><b>Частично обновлено.</b> Свежих файлов ещё нет: '+ks.map(function(k){return esc(k)+' (данные за '+dm2(st[k])+')'}).concat(ab.map(function(a){return esc(a)+' (нет данных)'})).join(', ')+'</div>';
+    if(DATA.xl&&top!=='nach'){var fd=DATA.date.split('-');
+      h+='<div class="dlbar"><a href="archive/'+DATA.date+'/svod.xlsx" download="Свод_Диспетчер_'+fd[2]+'.'+fd[1]+'.'+fd[0]+'.xlsx" data-dl="1">⬇ Скачать свод (xlsx)</a></div>';}
+    return h;
+  }
   function render(){
     hidePop();
     header();
     var keepQ=document.activeElement&&(document.activeElement.id==='q'||document.activeElement.id==='rq'),kq=document.activeElement&&document.activeElement.id==='rq'?nq:q;
     var oc=document.querySelector('.chips:not(.g4)'), sl=oc?oc.scrollLeft:null;
-    $('#app').innerHTML=(curDay?'<div class="arch">Архив: данные на '+fmtDate(DATA.date)+'. Для текущих данных выберите «Сегодня» вверху.</div>':'')+(top==='all'?viewAll():(top==='cits'?viewCits():(top==='nach'?viewNach():viewDisp())))+'<div class="foot">Данные диспетчерской сводки на '+fmtDate(DATA.date)+'</div>';
+    $('#app').innerHTML=(curDay?'<div class="arch">Архив: данные на '+fmtDate(DATA.date)+'. Для текущих данных выберите «Сегодня» вверху.</div>':'')+topNote()+(top==='all'?viewAll():(top==='cits'?viewCits():(top==='nach'?viewNach():viewDisp())))+'<div class="foot">Данные диспетчерской сводки на '+fmtDate(DATA.date)+'</div>';
     var nc=document.querySelector('.chips:not(.g4)');   // строка отделов: не сбрасывать прокрутку, выбранный отдел держать на виду
     if(nc){
       if(sl!==null) nc.scrollLeft=sl;
@@ -618,6 +631,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     if(pl){var open=$('#pop').style.display==='block'&&$('#pop').dataset.for===pl.dataset.i;hidePop();
       if(!open){showPop(pl);$('#pop').dataset.for=pl.dataset.i;track('окно водителя')}else $('#pop').dataset.for='';return}
     if(!e.target.closest('#pop')) hidePop();
+    if(e.target.closest('[data-dl]')) return;
     var t=e.target.closest('[data-top],[data-sub],[data-csub],[data-dep],[data-shift],[data-disp],[data-nsub],[data-nak],[data-npref]'); if(!t) return;
     if(t.dataset.top){
       top=t.dataset.top;track('вкладка/'+top);
