@@ -5,11 +5,14 @@ import openpyxl
 PLATE = re.compile(r'^\s*\d{2}(?:\.\d)?\s*[-–]\s*\S')
 def clean(s): return re.sub(r'\s+', ' ', str(s)).strip() if s is not None else ''
 
+def _is_zip(path):
+    with open(path,'rb') as f: return f.read(4)==b'PK\x03\x04' and zipfile.is_zipfile(path)
+
 def to_xlsx(path):
     """Настоящий .xls (старый формат) -> .xlsx через LibreOffice. Возвращает путь, который читает openpyxl."""
-    if zipfile.is_zipfile(path) and path.lower().endswith(('.xlsx', '.xlsm')): return path, None
+    if _is_zip(path) and path.lower().endswith(('.xlsx', '.xlsm')): return path, None
     tmp = tempfile.mkdtemp()
-    if zipfile.is_zipfile(path):                 # файл .xls, но внутри уже xlsx
+    if _is_zip(path):                 # файл .xls, но внутри уже xlsx
         out = os.path.join(tmp, 'f.xlsx'); shutil.copyfile(path, out); return out, tmp
     subprocess.run(['soffice', '--headless', '--convert-to', 'xlsx', '--outdir', tmp, path], check=True,
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=300)

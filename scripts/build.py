@@ -20,7 +20,7 @@ def classify(path):
         if 'Исходные данные' in names and 'Выход ТС' in names: return 'svod'
         ws = wb[names[0]]
         first = next(ws.iter_rows(max_row=1, values_only=True), ())
-        if len(first) > 16 and 'Государственный' in str(first[16] or ''): return 'export'
+        if build_drivers.export_cols(first) and any(str(x or '').startswith('Путевой лист') for x in first): return 'export'
         a1 = next(ws.iter_rows(max_row=1, values_only=True), (None,))[0]
         if 'Мобил Сервис' in names or 'Вахта' in str(a1 or ''): return 'roster'
         if repair.is_repair_file(path): return 'repair'

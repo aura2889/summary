@@ -77,6 +77,15 @@ ALIAS = {'56-396ARE': '56-AKER396', '56-395ARE': '56-AKER395'}   # опечат�
 
 def key_noreg(p): return re.sub(r'(?<=[A-Z])\d{2}$', '', p)
 
+def export_cols(header):
+    """номера колонок экспорта по заголовкам: (гос№, ФИО1, ФИО2, вид оплаты) или None. Формат выгрузки менялся, поэтому ищем по названиям"""
+    h = [str(x or '').replace('\xa0', ' ').strip() for x in header]
+    plate = next((i for i, x in enumerate(h) if x.startswith('Государственный') or x == 'Гос №'), None)
+    fio = [i for i, x in enumerate(h) if x.startswith('Водитель Ф.И.О')]
+    pay = next((i for i, x in enumerate(h) if x.startswith('Вид оплаты')), None)
+    if plate is None or len(fio) < 1: return None
+    return plate, fio[0], (fio[1] if len(fio) > 1 else None), pay
+
 def build(data, export_path, contacts, mobil):
     """data - dict из svod2json; contacts - содержимое contacts.json; mobil - содержимое mobil.json
     -> (drivers_dict, список строк отчёта, список имён без телефона)"""
@@ -86,14 +95,18 @@ def build(data, export_path, contacts, mobil):
     idx1 = build_idx([(n, p) for n, p in contacts['rows1']])
     idx2 = build_idx([(n, p) for n, p in contacts['rows2']])
     ex = openpyxl.load_workbook(export_path, data_only=True).active
-    exrows = [r for r in ex.iter_rows(min_row=2, values_only=True) if len(r) > 16 and r[16]]
+    allrows = list(ex.iter_rows(values_only=True))
+    cp, c1, c2, cs = export_cols(allrows[0])
+    hh = [str(x or '').strip() for x in allrows[0]]
+    cd = next((i for i, x in enumerate(hh) if x == 'Дата' or x.startswith('Дата путевого')), None)
+    exrows = [r for r in allrows[1:] if len(r) > cp and r[cp]]
     E = collections.defaultdict(list)
     EP = collections.OrderedDict()
     for r in exrows:
-        plate = str(r[16]).strip(); pp = parse_plate(plate)
-        names = [str(x).strip() for x in (r[7], r[9]) if x and str(x).strip()]
+        plate = str(r[cp]).strip(); pp = parse_plate(plate)
+        names = [str(x).strip() for x in (r[c1], r[c2] if c2 is not None else None) if x and str(x).strip()]
         inf = EP.setdefault(plate, {'pp': pp, 'status': set(), 'names': []})
-        inf['status'].add(r[15])
+        inf['status'].add(r[cs] if cs is not None else None)
         for n in names:
             if n not in inf['names']: inf['names'].append(n)
     for plate, inf in EP.items():
@@ -153,7 +166,7 @@ def build(data, export_path, contacts, mobil):
     nofind = [v['num'] for v in veh if v['num'] not in mp and '-' in v['num']]
     dates = set()
     for r in exrows:
-        d = r[4]
+        d = r[cd] if cd is not None else None
         if hasattr(d, 'strftime'): dates.add(d.strftime('%Y-%m-%d'))
     L = [f'Машин в своде: {len(veh)}; водитель найден у {len(mp)} (из них Mobil {mob_added})',
          f'Записей водителей: {allrec}, с телефоном: {withp}',
