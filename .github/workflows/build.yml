@@ -25,24 +25,36 @@ jobs:
 
       - run: pip install openpyxl
 
-      - name: Собрать data.json и drivers.json
+      - name: LibreOffice (пересчёт формул свода, чтение старых .xls)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libreoffice-calc
+
+      - name: Собрать свод, data.json, drivers.json
         run: python scripts/build.py
 
       - name: Сохранить результат
         run: |
           git config user.name "robot"
           git config user.email "robot@users.noreply.github.com"
-          git add -A
+          git add -A -- . ':!.build_failed'
           git diff --cached --quiet || git commit -m "Авто: данные на $(date +%Y-%m-%d)"
           git pull --rebase
           git push
+
+      - name: Если сборка не удалась - показать причину (красный крестик)
+        run: |
+          if [ -f .build_failed ]; then
+            echo "::error::$(cat .build_failed)"
+            exit 1
+          fi
 
       - name: При ошибке очистить input/ (чтобы не мешали следующей загрузке)
         if: failure()
         run: |
           git config user.name "robot"
           git config user.email "robot@users.noreply.github.com"
-          git rm -q --ignore-unmatch input/*.xlsx input/*.XLSX input/*.xlsm || true
+          git rm -q --ignore-unmatch input/*.xlsx input/*.XLSX input/*.xlsm input/*.xls input/*.XLS || true
           git diff --cached --quiet || git commit -m "Авто: очистка input/ после ошибки"
           git pull --rebase || true
           git push || true
