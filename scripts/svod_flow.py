@@ -100,6 +100,18 @@ def _adapt(cfg, ws):
 
 KNOWN = json.load(open(os.path.join(SV, 'known.json'), encoding='utf-8')) if os.path.exists(os.path.join(SV, 'known.json')) else None
 
+def unknown_items(path, role, ref):
+    """новые (неизвестные правилам) отделы/префиксы в файле роли - чтобы не принять за файл диспетчера чужой файл похожего вида"""
+    if not KNOWN: return set()
+    wbk = openpyxl.load_workbook(path); sh = pick_sheet(wbk.sheetnames, ref)[0]
+    if sh is None: return set()
+    spec = ROLES[role]
+    cfg = dict(key=role, name='x', path=path, sheet=sh, rows=spec['rows'], cols=spec['cols'], mode='day')
+    if 'hrow' in spec: cfg['hrow'] = spec['hrow']
+    _adapt(cfg, wbk[sh])
+    out = PC.parse(cfg)[0]
+    return ({x['dept'] for x in out} - set(KNOWN['depts']) - {'ПЧ'}) | ({x['code'] for x in out} - set(KNOWN['codes']))
+
 def build(raw_dir, ref, fresh, out_dir):
     """raw_dir/<ROLE>.xlsx; fresh = {ROLE: True если файл пришёл сегодня}. -> (путь к xlsx, статусы ролей, предупреждения, ошибки)"""
     ds = ref.strftime('%d.%m.%Y'); short = ref.strftime('%d.%m')

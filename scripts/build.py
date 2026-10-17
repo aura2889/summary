@@ -64,6 +64,11 @@ def publish(data, drv, svod_file):
 def main():
     files = [f for f in glob.glob(os.path.join(INP, '*')) if f.lower().endswith(('.xlsx', '.xlsm', '.xls')) and not os.path.basename(f).startswith('~$')]
     kinds, conv, tmps, junk = {}, {}, [], []
+    ign_p = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ignore.txt')      # части названий файлов, которые не нужны (по строке)
+    ign = [l.strip().lower() for l in open(ign_p, encoding='utf-8') if l.strip() and not l.startswith('#')] if os.path.exists(ign_p) else []
+    for f in list(files):
+        if any(x in os.path.basename(f).lower() for x in ign):
+            say(f'Файл {os.path.basename(f)} в списке ненужных (scripts/ignore.txt) - пропущен'); junk.append(f); files.remove(f)
     for f in files:
         try:
             xp, tmp = repair.to_xlsx(f)          # старые .xls -> .xlsx
@@ -97,7 +102,14 @@ def main():
                 mod = wb.properties.modified or datetime.datetime(2000, 1, 1); wb.close()
                 return (fresh_sheet, mod.timestamp(), os.path.getmtime(f))
             except Exception: return (0, 0, os.path.getmtime(f))
-        fl = sorted(fl, key=_rank)
+        fl = sorted(fl, key=_rank, reverse=True)           # лучший кандидат первый
+        if len(fl) > 1:                                    # чужой файл похожего вида (напр. «Гараж 2 …») даёт неизвестные отделы - берём первого «чистого»
+            for i, f in enumerate(fl):
+                try: bad = svod_flow.unknown_items(conv[f], role, ref)
+                except Exception: bad = {'?'}
+                if not bad: fl.insert(len(fl), fl.pop(i)); break     # чистый - в конец (дальше берётся fl[-1])
+            else: fl = fl[::-1]
+        else: fl = fl[::-1]
         if len(fl) > 1: say(f'⚠ {svod_flow.ROLE_DISP[role]}: пришло {len(fl)} файла(ов), взят самый новый ({os.path.basename(fl[-1])})')
         shutil.copy(conv[fl[-1]], os.path.join(RAW, role + '.xlsx')); state[role] = today.isoformat(); newroles.append(role)
         say(f'Получен файл: {svod_flow.ROLE_DISP[role]}')
