@@ -36,6 +36,9 @@ def dump(obj, p):
     os.makedirs(os.path.dirname(p), exist_ok=True)
     json.dump(obj, open(p, 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
 
+def aq_now():
+    return datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=5)))
+
 def aq_today():
     return datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=5))).date()
 
@@ -112,6 +115,7 @@ def main():
         else: fl = fl[::-1]
         if len(fl) > 1: say(f'⚠ {svod_flow.ROLE_DISP[role]}: пришло {len(fl)} файла(ов), взят самый новый ({os.path.basename(fl[-1])})')
         shutil.copy(conv[fl[-1]], os.path.join(RAW, role + '.xlsx')); state[role] = today.isoformat(); newroles.append(role)
+        state.setdefault('t', {})[role] = aq_now().strftime('%Y-%m-%dT%H:%M')           # когда пришёл файл роли
         say(f'Получен файл: {svod_flow.ROLE_DISP[role]}')
     svods, exports = kinds.get('svod', []), kinds.get('export', [])
     if exports:
@@ -139,6 +143,11 @@ def main():
             if absent: data['absent'] = absent
             data['xl'] = 1
             data['nf'] = len(svod_flow.ROLES) - len(stale) - len(absent)
+            nowt = aq_now().strftime('%H:%M'); rd = ref.isoformat()
+            if state.get('full', {}).get('d') != rd: state.pop('full', None); state.pop('re', None)      # новый день - счёт заново
+            if 'full' not in state:
+                if data['nf'] >= len(svod_flow.ROLES): state['full'] = {'d': rd, 't': nowt}                 # момент, когда набрались все 7 файлов
+            else: state['re'] = {'d': rd, 't': nowt, 'n': len(newroles)}                                 # последнее дополнительное обновление после этого
             say(f'Свод на {data["date"]}: план {data["totals"]["plan"]}, факт {data["totals"]["fact"]}, машин {len(data["veh"])}; ' +
                 ('все файлы за сегодня' if not stale and not absent else f'частично: нет свежих файлов у {len(stale) + len(absent)} из 7'))
     elif exports:                                          # пришёл только экспорт: обновим водителей на сегодняшних данных
@@ -147,6 +156,10 @@ def main():
             if d0 and d0.get('date') == ref.isoformat(): data = d0; break
         if not data: say('⚠ экспорт получен, но данных свода за сегодня ещё нет - водители подставятся при сборке свода')
     if data is not None:
+        rd0 = ref.isoformat()
+        if state.get('full', {}).get('d') == rd0 and data.get('date') == rd0:
+            data['full'] = state['full']['t']
+            if state.get('re', {}).get('d') == rd0: data['re'] = {'t': state['re']['t'], 'n': state['re']['n']}
         if svods or newroles: data['upd'] = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=5))).strftime('%Y-%m-%dT%H:%M')   # когда робот в последний раз обновил свод (время Актобе)
         data['xl'] = 1 if (svod_file or os.path.exists(os.path.join(ARC, data['date'], 'svod.xlsx'))) else data.get('xl')
         if not data['xl']: data.pop('xl', None)
