@@ -141,6 +141,7 @@ def main():
             absent = [svod_flow.ROLE_DISP[r] for r, st in status.items() if st['state'] == 'absent']
             if stale: data['stale'] = stale
             if absent: data['absent'] = absent
+            data['okd'] = [svod_flow.ROLE_DISP[r] for r, st in status.items() if st['state'] == 'ok']          # у кого файл за сегодня (для плашки)
             data['xl'] = 1
             data['nf'] = len(svod_flow.ROLES) - len(stale) - len(absent)
             nowt = aq_now().strftime('%H:%M'); rd = ref.isoformat()
