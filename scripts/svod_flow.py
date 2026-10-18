@@ -74,10 +74,21 @@ def pick_sheet(names, ref):
         use = (plain or cands)[-1]
         if len(cands) > 1: warns.append('несколько листов за сегодня (' + ', '.join(repr(c['name']) for c in cands) + f'), взят {use["name"]!r}')
         return use['name'], True, warns
-    for x in reversed(infos):
-        if x['day'] < ref.day and x['mon'] in (None, ref.month): return x['name'], False, warns
+    lb = latest_before(names, ref)
+    if lb: return lb, False, warns
     if infos: return infos[-1]['name'], False, warns
     return None, False, warns
+
+def latest_before(names, ref):
+    """самый свежий по ДАТЕ лист раньше ref (порядок листов в книге не важен: книга годовая, листы могут идти не по порядку); при равных датах - последний по порядку (напр. «17-пер» после «17,10»)"""
+    best = None
+    for i, n in enumerate(names):
+        si = sheet_info(n)
+        if not si: continue
+        d = sheet_date(n, ref)
+        if d is None or d >= ref: continue
+        if best is None or d >= best[0]: best = (d, n)
+    return best[1] if best else None
 
 def sheet_date(si_name, ref):
     si = sheet_info(si_name)
@@ -129,8 +140,7 @@ def build(raw_dir, ref, fresh, out_dir):
         if exact and fresh.get(role, False): plans.append((sheet, True))
         elif exact: warns.append(f'{ROLE_DISP[role]}: файл за {short} ещё не приходил (в старом файле лист за сегодня не считается)')
         if exact:
-            prev = [n for n in names if (si := sheet_info(n)) and (si['day'] < ref.day or (si['mon'] and si['mon'] != ref.month))]
-            plans.append((prev[-1] if prev else None, False))
+            plans.append((latest_before(names, ref), False))
         else: plans.append((sheet, False))
         used = None
         for sh, today in plans:
