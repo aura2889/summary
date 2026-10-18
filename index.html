@@ -168,6 +168,19 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
 @media (min-width:900px) and (hover:hover) and (pointer:fine){.pfs{grid-template-columns:repeat(12,minmax(0,1fr));gap:6px}}
 .chip.st{border-color:#e0b400;background:#fff3cd;color:#664d03}.chip.st.on{background:var(--brand2);border-color:var(--brand2);color:#fff}
 .updt{font-size:12px;color:var(--muted);padding:4px 2px 0}.updt.part{color:#9a6b00}.updt.re{color:var(--ink);font-weight:600;padding-top:2px}
+
+.tapk{cursor:pointer}.tapk:active{background:rgba(255,255,255,.2)}
+#dev{position:fixed;inset:0;z-index:60;background:rgba(6,18,30,.55);display:none;align-items:flex-end;justify-content:center}
+#dev .sh{background:var(--card);color:var(--ink);width:100%;max-width:640px;max-height:88vh;border-radius:18px 18px 0 0;display:flex;flex-direction:column;box-shadow:0 -10px 30px rgba(0,0,0,.3)}
+#dev .shh{padding:14px 16px 8px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+#dev .shh b{font-size:18px}#dev .shx{border:0;background:var(--bg);color:var(--ink);width:32px;height:32px;border-radius:16px;font-size:18px;cursor:pointer}
+#dev .shs{padding:0 16px 8px}
+#dev .shb{overflow:auto;padding:0 16px 22px;-webkit-overflow-scrolling:touch}
+.dv-t{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:14px 0 4px}
+.dv-r{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+.dv-r .n{font-weight:600}.dv-r small{display:block;color:var(--muted);font-weight:400;font-size:12px;margin-top:1px;line-height:1.35}
+.dv-r .d{font-weight:800;white-space:nowrap}.dv-neg{color:#d2452f}.dv-pos{color:#1d8a4e}.dv-z{color:var(--muted)}
+.dv-sum{background:var(--bg);border-radius:10px;padding:9px 11px;margin:6px 0 2px;font-size:14px}
 .dlbar{margin:0 0 10px;text-align:right}.dlbar a{display:inline-block;font-size:13px;font-weight:600;color:var(--brand2);text-decoration:none;border:1px solid var(--blue-line);background:var(--blue-bg);border-radius:9px;padding:5px 10px}
 /* ---- только компьютер (широкий экран + мышь); телефон не затрагивается ---- */
 @media (min-width:900px) and (hover:hover) and (pointer:fine){
@@ -283,7 +296,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     $('#kpis').innerHTML=
       '<div class="kpi"><b>'+t.plan+'</b><span>план</span></div>'+
       '<div class="kpi"><b>'+t.fact+'</b><span>факт</span></div>'+
-      '<div class="kpi'+(t.diff<0?' neg':'')+'"><b>'+(t.diff>0?'+':'')+t.diff+'</b><span>откл.</span></div>'+
+      '<div class="kpi tapk'+(t.diff<0?' neg':'')+'" data-dev="1" role="button" tabindex="0"><b>'+(t.diff>0?'+':'')+t.diff+'</b><span>откл. ›</span></div>'+
       '<div class="kpi"><b>'+t.day+' / '+t.night+'</b><span>день / ночь</span></div>';
   }
 
@@ -690,6 +703,85 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     track('архив');curDay=(v===DATES[0])?'':v; dep=null; q=''; nq=''; nak=0; sub='deps';
     $('#app').innerHTML='<div class="empty">Загрузка…</div>'; load();
   }
+
+  // ---- отклонение: от плана и со вчера
+  var PREV={}, devMode='plan';
+  function sg(n){return n>0?'+'+n:(n<0?'−'+Math.abs(n):'0')}
+  function sgc(n){return n>0?'dv-pos':(n<0?'dv-neg':'dv-z')}
+  function pkey(s){return String(s).toUpperCase().replace(/\s+/g,'').replace(/(Д\/Н|Д|Н)$/,'')}
+  function devShell(){
+    var el=$('#dev');
+    if(!el){el=document.createElement('div');el.id='dev';document.body.appendChild(el)}
+    return el;
+  }
+  function devClose(){var el=$('#dev');if(el){el.style.display='none';el.innerHTML=''}document.body.style.overflow=''}
+  function prevDate(){
+    if(!DATES) return null;
+    var ix=DATES.indexOf(curDay||DATES[0]);
+    return ix>=0&&ix<DATES.length-1?DATES[ix+1]:null;
+  }
+  function devOpen(mode){
+    devMode=mode||devMode; var t=DATA.totals, el=devShell();
+    el.style.display='flex'; document.body.style.overflow='hidden';
+    el.innerHTML='<div class="sh"><div class="shh"><b>Отклонение '+sg(t.diff)+' ед.</b><button class="shx" data-devx="1" aria-label="Закрыть">×</button></div>'+
+      '<div class="shs">'+seg('data-devm',[['plan','От плана'],['prev','Со вчера']],devMode)+'</div><div class="shb" id="devb"></div></div>';
+    if(devMode==='plan') $('#devb').innerHTML=devPlan(); else devPrev();
+  }
+  function tname(x){return esc(x.p+' · '+x.name)}
+  function devPlan(){
+    var ty=(DATA.types||[]).slice(), lo=ty.filter(function(x){return x.diff<0}).sort(function(a,b){return a.diff-b.diff}), hi=ty.filter(function(x){return x.diff>0}).sort(function(a,b){return b.diff-a.diff});
+    function row(x){return '<div class="dv-r"><div class="n">'+tname(x)+'<small>план '+x.plan+' · факт '+x.fact+'</small></div><div class="d '+sgc(x.diff)+'">'+sg(x.diff)+' ед</div></div>'}
+    var sl=lo.reduce(function(a,x){return a+x.diff},0), sh=hi.reduce(function(a,x){return a+x.diff},0);
+    var s='<div class="dv-sum">План '+DATA.totals.plan+' · факт '+DATA.totals.fact+'</div>';
+    s+='<div class="dv-t">Не хватает до плана ('+sg(sl)+')</div>'+(lo.length?lo.map(row).join(''):'<div class="empty">Нет</div>');
+    if(hi.length) s+='<div class="dv-t">Больше плана ('+sg(sh)+')</div>'+hi.map(row).join('');
+    return s;
+  }
+  function devPrev(){
+    var pd=prevDate(), b=$('#devb');
+    if(!pd){b.innerHTML='<div class="empty">Нет данных за предыдущий день</div>';return}
+    if(PREV[pd]){b.innerHTML=devPrevBody(pd,PREV[pd]);return}
+    b.innerHTML='<div class="empty">Загрузка…</div>';
+    fetch('archive/'+pd+'/data.json?'+Date.now(),{cache:'no-store'}).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(d){
+      PREV[pd]=d; if($('#dev')&&devMode==='prev') $('#devb').innerHTML=devPrevBody(pd,d);
+    }).catch(function(){var bb=$('#devb');if(bb)bb.innerHTML='<div class="empty">Не удалось загрузить данные за '+fmtDate(pd)+'</div>'});
+  }
+  function devPrevBody(pd,P){
+    var T=DATA.totals, PT=P.totals;
+    var s='<div class="dv-sum">Сравнение с '+fmtDate(pd)+'<br>Факт: <b>'+T.fact+'</b> (было '+PT.fact+', <span class="'+sgc(T.fact-PT.fact)+'">'+sg(T.fact-PT.fact)+'</span>) · план: '+T.plan+(T.plan!==PT.plan?' (было '+PT.plan+')':'')+'</div>';
+    // по типам техники (факт)
+    var pm={}; (P.types||[]).forEach(function(x){pm[x.p+'|'+x.name]=x});
+    var tr=(DATA.types||[]).map(function(x){var o=pm[x.p+'|'+x.name];return {x:x,d:x.fact-(o?o.fact:0),was:o?o.fact:0}}).filter(function(r){return r.d!==0});
+    (P.types||[]).forEach(function(o){if(!(DATA.types||[]).some(function(x){return x.p===o.p&&x.name===o.name})&&o.fact) tr.push({x:o,d:-o.fact,was:o.fact,gone:1})});
+    tr.sort(function(a,b){return a.d-b.d});
+    s+='<div class="dv-t">По типам техники (факт)</div>'+(tr.length?tr.map(function(r){return '<div class="dv-r"><div class="n">'+tname(r.x)+'<small>было '+r.was+' → стало '+(r.gone?0:r.x.fact)+'</small></div><div class="d '+sgc(r.d)+'">'+sg(r.d)+' ед</div></div>'}).join(''):'<div class="empty">Без изменений</div>');
+    // по отделам
+    function grp(V){var m={};V.forEach(function(v){var o=m[v.dep]||(m[v.dep]={n:0,t:{},k:{}});o.n++;o.t[v.t]=(o.t[v.t]||0)+1;o.k[pkey(v.num)]=v.num});return m}
+    var A=grp(DATA.veh), B=grp(P.veh), names={}; Object.keys(A).concat(Object.keys(B)).forEach(function(k){names[k]=1});
+    var rows=Object.keys(names).map(function(d){
+      var a=A[d]||{n:0,t:{},k:{}}, b=B[d]||{n:0,t:{},k:{}};
+      var tt={};Object.keys(a.t).concat(Object.keys(b.t)).forEach(function(k){tt[k]=1});
+      var td=Object.keys(tt).map(function(k){return [k,(a.t[k]||0)-(b.t[k]||0)]}).filter(function(z){return z[1]!==0}).sort(function(x,y){return x[1]-y[1]});
+      var add=Object.keys(a.k).filter(function(k){return !(k in b.k)}).map(function(k){return a.k[k]});
+      var del=Object.keys(b.k).filter(function(k){return !(k in a.k)}).map(function(k){return b.k[k]});
+      return {d:d,a:a.n,b:b.n,td:td,add:add,del:del};
+    }).filter(function(r){return r.add.length||r.del.length||r.a!==r.b}).sort(function(x,y){return Math.abs(y.a-y.b)-Math.abs(x.a-x.b)||(x.d<y.d?-1:1)});
+    function lst(a){return a.slice(0,6).map(esc).join(', ')+(a.length>6?' и ещё '+(a.length-6):'')}
+    s+='<div class="dv-t">По отделам</div>'+(rows.length?rows.map(function(r){
+      var dd=r.a-r.b, tl=r.td.map(function(z){return esc(z[0])+' '+sg(z[1])}).join(' · ');
+      var pl=(r.add.length?'<br>＋ '+lst(r.add):'')+(r.del.length?'<br>− '+lst(r.del):'');
+      return '<div class="dv-r"><div class="n">'+esc(r.d)+'<small>'+(tl||'состав изменился при том же количестве')+pl+'</small></div><div class="d '+sgc(dd)+'">'+r.b+' → '+r.a+' ('+sg(dd)+')</div></div>';
+    }).join(''):'<div class="empty">Без изменений</div>');
+    return s;
+  }
+  document.addEventListener('click',function(e){
+    var t=e.target;
+    if(t.closest('[data-dev]')){track('отклонение');devOpen('plan');return}
+    if(t.closest('[data-devx]')||t.id==='dev'){devClose();return}
+    var m=t.closest('[data-devm]');
+    if(m){devOpen(m.dataset.devm)}
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')devClose();if((e.key==='Enter'||e.key===' ')&&e.target.dataset&&e.target.dataset.dev){e.preventDefault();devOpen('plan')}});
   var calM=null;
   function closeCal(){var c=document.querySelector('.cal');if(c)c.remove()}
   function openCal(){
