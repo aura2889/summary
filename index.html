@@ -223,7 +223,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     gs.setAttribute('data-goatcounter','https://'+GC_CODE+'.goatcounter.com/count');document.head.appendChild(gs)}catch(e){}}
   function track(p){try{if(window.goatcounter&&window.goatcounter.count)window.goatcounter.count({path:p,title:p,event:true})}catch(e){}}
   var searched=false;
-  var DATA=null, DRV=null, DATES=null, curDay='', top='all', sub='deps', csub='type', dep=null, shift='d', q='', cdisp=0;
+  var DATA=null, DRV=null, DATES=null, curDay='', top='all', sub='deps', csub='type', dep=null, shift='d', q='', dq='', cdisp=0;
   // порядок типов техники внутри отдела (по префиксам); остальное — после, по количеству
   var ORDER=['35','35.1','35.2','31','28','30','63','29','22','23','22.1','34','47','46','49','62','27','50','53','13','13.1','20'];
   var LAT={A:'А',B:'В',C:'С',E:'Е',H:'Н',K:'К',M:'М',O:'О',P:'Р',T:'Т',X:'Х',Y:'У'};
@@ -374,9 +374,9 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
       });
     }).sort(function(a,b){return a.n.localeCompare(b.n,'ru')});
   }
-  function viewSearch(raw,list){
+  function viewSearch(raw,list,byDisp){
     var s=raw.toLowerCase(), n=norm(raw), h='';
-    var ds=/\*|-$/.test(raw)?[]:list.filter(function(x){return norm(x.name).indexOf(n)>-1});
+    var ds=(byDisp||/\*|-$/.test(raw))?[]:list.filter(function(x){return norm(x.name).indexOf(n)>-1});
     if(ds.length){
       h+='<div class="sec">Отделы</div><div class="depgrid">';
       ds.forEach(function(x){
@@ -408,7 +408,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
       h+='<div class="sec">Техника'+(f.length>60?' (первые 60 из '+f.length+')':'')+'</div><div class="card">';
       f.slice(0,60).forEach(function(v){
         var sh=v.d&&v.n?'день+ночь':(v.d?'день':'ночь');
-        h+='<div class="hit" data-i="'+v._i+'"><div><b>'+esc(v.num)+'</b><br><small>'+esc(v.t)+'</small></div><div style="text-align:right"><b>'+esc(v.dep)+'</b><br><small>'+sh+'</small></div></div>';
+        h+='<div class="hit" data-i="'+v._i+'"><div><b>'+esc(v.num)+'</b><br><small>'+esc(v.t)+'</small></div><div style="text-align:right"><b>'+esc(v.dep)+'</b><br><small>'+(byDisp&&DATA.disp&&DATA.disp[v.g]?esc(DATA.disp[v.g].name)+' · ':'')+sh+'</small></div></div>';
       });
       h+='</div>';
     }
@@ -475,6 +475,10 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
   /* ---------- Для ДТТ диспетчеров ---------- */
   function viewDisp(){
     var D=DATA.disp||[]; if(!D.length) return '<div class="empty">Нет данных по диспетчерам</div>';
+    return '<input class="search" id="dq" type="search" inputmode="search" enterkeyhint="search" placeholder="Поиск: номер машины, тип техники, отдел или водитель" value="'+esc(dq)+'"><div id="dbody">'+dispBody()+'</div>';
+  }
+  function dispBody(){
+    var D=DATA.disp||[]; if(dq.trim()) return viewSearch(dq.trim(),[],true);
     if(cdisp<0||cdisp>=D.length) cdisp=0;
     var cnt=D.map(function(x,i){return DATA.veh.filter(function(v){return v.g===i}).length});
     var h='<div class="chips g4">'+D.map(function(x,i){
@@ -600,7 +604,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     if(REP&&REP.date>DATA.date) REP=null;
     if(!REP||!REP.aks||!REP.aks.length) return '<div class="empty">На эту дату нет отчётов автоколонн.<br><small>Они загружаются вместе со сводкой в папку input/</small></div>';
     var w='';
-    if(REP.date!==DATA.date) w+='<div class="pw">Отчёты автоколонн на '+fmtDate(REP.date)+' (сводка выхода — на '+fmtDate(DATA.date)+')</div>';
+    if(REP.date!==DATA.date) w+='<div class="pw">Отчёты автоколонн на '+fmtDate(REP.date)+' не обновлены</div>';
     var have=REP.aks.map(function(k){return k.n}), miss=[1,2,3,4,5,6,7,8].filter(function(n){return have.indexOf(n)<0});
     if(miss.length) w+='<div class="pw">Нет отчёта: АК '+miss.join(', ')+'</div>';
     return '<input class="search" id="rq" type="search" inputmode="search" enterkeyhint="search" placeholder="Поиск: номер машины, марка, причина" value="'+esc(nq)+'">'+
@@ -636,11 +640,12 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
   function dm2(iso){var p=String(iso).split('-');return p[2]+'.'+p[1]}
   function topNote(){
     var h='', st=DATA.stale||{}, ks=Object.keys(st), ab=DATA.absent||[];
+    var hasX=!!DATA.exp, xOld=hasX&&DATA.exp<DATA.date;     // 8-й файл — выгрузка путевых листов (водители)
     function sn(n){return n.replace('Диспетчер ','Дисп ').replace('Мобил Сервис','Мобил')}
-    if((top==='all'||top==='cits')&&(ks.length||ab.length))
-      h+='<div class="pw"><b>Частично обновлено:</b> '+ks.map(function(k){return esc(sn(k))+' ('+dm2(st[k])+')'}).concat(ab.map(function(a){return esc(sn(a))+' (нет данных)'})).concat((DATA.okd||[]).map(function(k){return esc(sn(k))+' ('+dm2(DATA.date)+')'})).join(', ')+'</div>';
-    if(DATA.upd&&top!=='nach'){var u=DATA.upd.split('T'),ud=u[0].split('-'),all=DATA.nf==null||DATA.nf>=7;
-      h+='<div class="updt'+(all?'':' part')+'">🕒 Свод обновлён '+ud[2]+'.'+ud[1]+' в '+(DATA.full&&DATA.nf>=7?DATA.full:u[1])+(DATA.nf!=null?' · файлов за сегодня: '+DATA.nf+' из 7':'')+'</div>';
+    if((top==='all'||top==='cits')&&(ks.length||ab.length||xOld))
+      h+='<div class="pw"><b>Частично обновлено:</b> '+ks.map(function(k){return esc(sn(k))+' ('+dm2(st[k])+')'}).concat(ab.map(function(a){return esc(sn(a))+' (нет данных)'})).concat(xOld?['Выгрузка ('+dm2(DATA.exp)+')']:[]).concat((DATA.okd||[]).map(function(k){return esc(sn(k))+' ('+dm2(DATA.date)+')'})).concat(hasX&&!xOld?['Выгрузка ('+dm2(DATA.date)+')']:[]).join(', ')+'</div>';
+    if(DATA.upd&&top!=='nach'){var u=DATA.upd.split('T'),ud=u[0].split('-'),all=DATA.nf==null||(DATA.nf>=7&&!xOld);
+      h+='<div class="updt'+(all?'':' part')+'">🕒 Свод обновлён '+ud[2]+'.'+ud[1]+' в '+(DATA.full&&DATA.nf>=7?DATA.full:u[1])+(DATA.nf!=null?' · файлов за сегодня: '+(DATA.nf+(hasX&&!xOld?1:0))+' из '+(hasX?8:7):'')+'</div>';
       if(DATA.re) h+='<div class="updt re">🔄 Дополнительно обновлено в '+DATA.re.t+' · обновились '+DATA.re.n+' из 7</div>';}
     if(DATA.xl&&top!=='nach'){var fd=DATA.date.split('-');
       h+='<div class="dlbar"><a href="archive/'+DATA.date+'/svod.xlsx" download="Свод_Диспетчер_'+fd[2]+'.'+fd[1]+'.'+fd[0]+'.xlsx" data-dl="1">⬇ Скачать свод (xlsx)</a></div>';}
@@ -649,7 +654,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
   function render(){
     hidePop();
     header();
-    var keepQ=document.activeElement&&(document.activeElement.id==='q'||document.activeElement.id==='rq'),kq=document.activeElement&&document.activeElement.id==='rq'?nq:q;
+    var keepQ=document.activeElement&&(document.activeElement.id==='q'||document.activeElement.id==='rq'||document.activeElement.id==='dq'),kq=document.activeElement&&document.activeElement.id==='rq'?nq:(document.activeElement&&document.activeElement.id==='dq'?dq:q);
     var oc=document.querySelector('.chips:not(.g4)'), sl=oc?oc.scrollLeft:null;
     $('#app').innerHTML=(curDay?'<div class="arch">Архив: данные на '+fmtDate(DATA.date)+'. Для текущих данных выберите «Сегодня» вверху.</div>':'')+topNote()+(top==='all'?viewAll():(top==='cits'?viewCits():(top==='nach'?viewNach():viewDisp())))+'<div class="foot">Данные диспетчерской сводки на '+fmtDate(DATA.date)+'</div>';
     var nc=document.querySelector('.chips:not(.g4)');   // строка отделов: не сбрасывать прокрутку, выбранный отдел держать на виду
@@ -659,7 +664,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
       if(ac){var cr=nc.getBoundingClientRect(), ar=ac.getBoundingClientRect(), L=ar.left-cr.left+nc.scrollLeft;
         if(ar.left<cr.left||ar.right>cr.right) nc.scrollLeft=Math.max(0,L-(nc.clientWidth-ar.width)/2)}
     }
-        if(keepQ){var el=$('#q')||$('#rq');if(el){el.focus();el.setSelectionRange(kq.length,kq.length)}}
+        if(keepQ){var el=$('#q')||$('#rq')||$('#dq');if(el){el.focus();el.setSelectionRange(kq.length,kq.length)}}
   }
 
   document.addEventListener('click',function(e){
@@ -693,6 +698,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
   window.addEventListener('resize',hidePop);
   document.addEventListener('input',function(e){
     if(e.target.id==='rq'){nq=e.target.value;if(!searched&&nq.trim().length>=2){searched=true;track('поиск')}hidePop();var nr=$('#nres');if(nr)nr.innerHTML=nachBody();return}
+    if(e.target.id==='dq'){dq=e.target.value;if(!searched&&dq.trim().length>=2){searched=true;track('поиск')}hidePop();var db=$('#dbody');if(db)db.innerHTML=dispBody();return}
     if(e.target.id==='q'){q=e.target.value;if(!searched&&q.trim().length>=2){searched=true;track('поиск')}var r=$('#dres');if(r){hidePop();r.innerHTML=depsBody()}else render()}
   });
 
@@ -700,7 +706,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
   function goDay(v){
     if(!DATES) return;
     if(DATES.indexOf(v)<0){alert('За эту дату данных нет');header();return}
-    track('архив');curDay=(v===DATES[0])?'':v; dep=null; q=''; nq=''; nak=0; sub='deps';
+    track('архив');curDay=(v===DATES[0])?'':v; dep=null; q=''; dq=''; nq=''; nak=0; sub='deps';
     $('#app').innerHTML='<div class="empty">Загрузка…</div>'; load();
   }
 

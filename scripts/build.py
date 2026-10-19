@@ -120,6 +120,7 @@ def main():
     svods, exports = kinds.get('svod', []), kinds.get('export', [])
     if exports:
         shutil.copy(conv[sorted(exports, key=os.path.getmtime)[-1]], os.path.join(RAW, 'export.xlsx')); state['export'] = today.isoformat()
+        state.setdefault('t', {})['export'] = aq_now().strftime('%Y-%m-%dT%H:%M')
         say('Получен экспорт путевых листов')
     data, svod_file = None, None
     if svods:                                              # готовый свод (старый способ)
@@ -127,7 +128,7 @@ def main():
         else:
             data = convert(conv[svods[0]]); svod_file = conv[svods[0]]
             say(f'Свод на {data["date"]}: план {data["totals"]["plan"]}, факт {data["totals"]["fact"]}, машин {len(data["veh"])}')
-    elif newroles:                                         # свод собирается из файлов диспетчеров
+    elif newroles or os.environ.get('SVOD_REBUILD'):       # свод собирается из файлов диспетчеров (SVOD_REBUILD=1 - пересобрать из уже лежащих raw/ без новых файлов)
         fresh = {r: state.get(r) == ref.isoformat() for r in svod_flow.ROLES}
         tmpd = os.path.join(ROOT, '.svod_tmp')
         xl, status, warns, errs = svod_flow.build(RAW, ref, fresh, tmpd)
@@ -142,13 +143,16 @@ def main():
             if stale: data['stale'] = stale
             if absent: data['absent'] = absent
             data['okd'] = [svod_flow.ROLE_DISP[r] for r, st in status.items() if st['state'] == 'ok']          # у кого файл за сегодня (для плашки)
+            if not newroles:                                   # пересборка без новых файлов - время последнего обновления не трогаем
+                pv = load(os.path.join(ARC, ref.isoformat(), 'data.json')) or {}
+                if pv.get('upd'): data['upd'] = pv['upd']
             data['xl'] = 1
             data['nf'] = len(svod_flow.ROLES) - len(stale) - len(absent)
             nowt = aq_now().strftime('%H:%M'); rd = ref.isoformat()
             if state.get('full', {}).get('d') != rd: state.pop('full', None); state.pop('re', None)      # новый день - счёт заново
             if 'full' not in state:
                 if data['nf'] >= len(svod_flow.ROLES): state['full'] = {'d': rd, 't': nowt}                 # момент, когда набрались все 7 файлов
-            else: state['re'] = {'d': rd, 't': nowt, 'n': len(newroles)}                                 # последнее дополнительное обновление после этого
+            elif newroles: state['re'] = {'d': rd, 't': nowt, 'n': len(newroles)}                                 # последнее дополнительное обновление после этого
             say(f'Свод на {data["date"]}: план {data["totals"]["plan"]}, факт {data["totals"]["fact"]}, машин {len(data["veh"])}; ' +
                 ('все файлы за сегодня' if not stale and not absent else f'частично: нет свежих файлов у {len(stale) + len(absent)} из 7'))
     elif exports:                                          # пришёл только экспорт: обновим водителей на сегодняшних данных
@@ -158,6 +162,7 @@ def main():
         if not data: say('⚠ экспорт получен, но данных свода за сегодня ещё нет - водители подставятся при сборке свода')
     if data is not None:
         rd0 = ref.isoformat()
+        if state.get('export'): data['exp'] = state['export']                   # за какое число последний экспорт путевых листов (8-й файл для плашки)
         if state.get('full', {}).get('d') == rd0 and data.get('date') == rd0:
             data['full'] = state['full']['t']
             if state.get('re', {}).get('d') == rd0: data['re'] = {'t': state['re']['t'], 'n': state['re']['n']}
