@@ -146,6 +146,7 @@ def main():
             if not newroles:                                   # пересборка без новых файлов - время последнего обновления не трогаем
                 pv = load(os.path.join(ARC, ref.isoformat(), 'data.json')) or {}
                 if pv.get('upd'): data['upd'] = pv['upd']
+            if svod_flow.LAST_TRAIN: data['tr'] = len(svod_flow.LAST_TRAIN); data['trl'] = svod_flow.LAST_TRAIN       # на обучении (не в выходе)
             data['xl'] = 1
             data['nf'] = len(svod_flow.ROLES) - len(stale) - len(absent)
             nowt = aq_now().strftime('%H:%M'); rd = ref.isoformat()

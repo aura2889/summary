@@ -19,6 +19,7 @@ ROLES = {
 ROLE_DISP = {'SB': 'Диспетчер 1', 'SVOD': 'Диспетчер 2', 'D3': 'Диспетчер 3', 'BUS': 'Диспетчер 4',
              'D7': 'Диспетчер 7', 'K8': 'Диспетчер 8', 'MS': 'Мобил Сервис'}
 ROLE_TITLE = {k: v for k, v in ROLE_DISP.items()}
+LAST_TRAIN = []
 
 def _n(x): return re.sub(r'[\s.]', '', str(x or '')).upper()
 
@@ -161,6 +162,8 @@ def build(raw_dir, ref, fresh, out_dir):
         status[role] = dict(state='ok' if today else 'stale', sheet=sheet, date=d.isoformat())
         if not today: warns.append(f'{ROLE_DISP[role]}: нет свежего файла за {short}, взят лист {sheet!r} ({d.strftime("%d.%m")})')
         ALL += out; EXC += [(role,) + x for x in exc]; NOTES += [(role,) + x for x in notes]
+    global LAST_TRAIN
+    LAST_TRAIN = [dict(num=re.split(r'\s{2,}', e[2].strip())[0].strip(), dep=e[3], disp=ROLE_DISP[e[0]]) for e in EXC if 'обучение' in str(e[4])]   # машины на обучении (жёлтая заливка при «Оқу»): в выход не входят
     if not ALL: return None, status, warns, ['нет ни одного распознанного файла диспетчера']
     # ---- проверки (строгий режим): новое незнакомое - не публиковать
     if KNOWN:

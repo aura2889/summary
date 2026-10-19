@@ -55,6 +55,8 @@ h1{font-size:18px;margin:0;font-weight:700}
 .kpi:last-child b{font-size:15px;padding-top:3px}
 .kpi span{font-size:11px;opacity:.8}
 .kpi.neg b{color:#ffb4a8}
+.kpis.k5{grid-template-columns:1fr 1fr 1fr .9fr 1.3fr;gap:6px}.kpis.k5 .kpi{padding:7px 4px}.kpi.sm b{font-size:15px;padding-top:3px;color:#ffe08a}
+.kpi.sm span{font-size:10px;white-space:nowrap}
 .tabs{display:flex;gap:6px;margin-top:10px}
 .tab{flex:1;border:0;border-radius:9px;padding:8px 4px;font:inherit;font-size:13.5px;font-weight:600;line-height:1.15;background:rgba(255,255,255,.12);color:#fff}
 .tab.wide{flex:1.35}
@@ -293,10 +295,13 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
         '<button class="dbtn" id="dsel" data-dopen="1">'+fmtDate(curDay||DATES[0])+' ▾</button>'+
         '<button class="dnav" data-dnav="-1" title="позже"'+(ix<=0?' disabled':'')+'>›</button>';
     }else de.textContent='на '+fmtDate(DATA.date);
+    var tr=DATA.tr||0, dv=t.diff+tr;     // машины на обучении в выходе не считаем, но и в отклонение не включаем
+    $('#kpis').className='kpis'+(tr?' k5':'');
     $('#kpis').innerHTML=
       '<div class="kpi"><b>'+t.plan+'</b><span>план</span></div>'+
       '<div class="kpi"><b>'+t.fact+'</b><span>факт</span></div>'+
-      '<div class="kpi tapk'+(t.diff<0?' neg':'')+'" data-dev="1" role="button" tabindex="0"><b>'+(t.diff>0?'+':'')+t.diff+'</b><span>откл. ›</span></div>'+
+      '<div class="kpi tapk'+(dv<0?' neg':'')+'" data-dev="1" role="button" tabindex="0"><b>'+(dv>0?'+':'')+dv+'</b><span>откл. ›</span></div>'+
+      (tr?'<div class="kpi sm" data-dev="1" role="button" tabindex="0"><b>'+tr+'</b><span>в обучении</span></div>':'')+
       '<div class="kpi"><b>'+t.day+' / '+t.night+'</b><span>день / ночь</span></div>';
   }
 
@@ -729,7 +734,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
   function devOpen(mode){
     devMode=mode||devMode; var t=DATA.totals, el=devShell();
     el.style.display='flex'; document.body.style.overflow='hidden';
-    el.innerHTML='<div class="sh"><div class="shh"><b>Отклонение '+sg(t.diff)+' ед.</b><button class="shx" data-devx="1" aria-label="Закрыть">×</button></div>'+
+    el.innerHTML='<div class="sh"><div class="shh"><b>Отклонение '+sg(t.diff+(DATA.tr||0))+' ед.</b><button class="shx" data-devx="1" aria-label="Закрыть">×</button></div>'+
       '<div class="shs">'+seg('data-devm',[['plan','От плана'],['prev','Со вчера']],devMode)+'</div><div class="shb" id="devb"></div></div>';
     if(devMode==='plan') $('#devb').innerHTML=devPlan(); else devPrev();
   }
@@ -738,7 +743,8 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     var ty=(DATA.types||[]).slice(), lo=ty.filter(function(x){return x.diff<0}).sort(function(a,b){return a.diff-b.diff}), hi=ty.filter(function(x){return x.diff>0}).sort(function(a,b){return b.diff-a.diff});
     function row(x){return '<div class="dv-r"><div class="n">'+tname(x)+'<small>план '+x.plan+' · факт '+x.fact+'</small></div><div class="d '+sgc(x.diff)+'">'+sg(x.diff)+' ед</div></div>'}
     var sl=lo.reduce(function(a,x){return a+x.diff},0), sh=hi.reduce(function(a,x){return a+x.diff},0);
-    var s='<div class="dv-sum">План '+DATA.totals.plan+' · факт '+DATA.totals.fact+'</div>';
+    var s='<div class="dv-sum">План '+DATA.totals.plan+' · факт '+DATA.totals.fact+(DATA.tr?' · в обучении '+DATA.tr+'<br>Отклонение: '+sg(DATA.totals.diff+DATA.tr)+' (с обучением было бы '+sg(DATA.totals.diff)+')':'')+'</div>';
+    if(DATA.trl&&DATA.trl.length) s+='<div class="dv-t">В обучении ('+DATA.trl.length+') — в выход не входят</div>'+DATA.trl.map(function(x){return '<div class="dv-r"><div class="n">'+esc(x.num)+'<small>'+esc(x.dep)+' · '+esc(x.disp)+'</small></div></div>'}).join('');
     s+='<div class="dv-t">Не хватает до плана ('+sg(sl)+')</div>'+(lo.length?lo.map(row).join(''):'<div class="empty">Нет</div>');
     if(hi.length) s+='<div class="dv-t">Больше плана ('+sg(sh)+')</div>'+hi.map(row).join('');
     return s;
