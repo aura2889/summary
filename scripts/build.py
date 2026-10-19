@@ -204,6 +204,23 @@ def main():
             aks[res['n']] = res
             say(f'АК №{res["n"]}: машин в ремонте {len(res["vehs"])} (лист {res["sheet"]})')
         for w in warns: say('⚠ ' + w)
+        # прошлые дни: в файле АК есть листы за каждое число - заполняем ими архив (только листы ровно на эту дату, не копии)
+        try:
+            for dd in sorted(os.listdir(ARC), reverse=True):
+                try: dt = datetime.date.fromisoformat(dd)
+                except ValueError: continue
+                if dt >= ref or (ref - dt).days > 31 or not os.path.isdir(os.path.join(ARC, dd)): continue
+                drp = os.path.join(ARC, dd, 'repair.json')
+                dcur = load(drp, {'aks': []}); daks = {a['n']: a for a in dcur['aks'] if a.get('n')}; got = []
+                for f in kinds['repair']:
+                    try: r2, _ = repair.read_ak(conv[f], dt)
+                    except Exception: continue
+                    if r2 and r2.get('n') and r2.get('date') == dt.isoformat(): daks[r2['n']] = r2; got.append(r2['n'])
+                if got:
+                    dump({'date': dd, 'aks': [daks[k] for k in sorted(daks)]}, drp)
+                    say(f'Архив {dd}: отчёты АК обновлены для автоколонн ' + ', '.join(str(i) for i in sorted(got)))
+        except Exception as e:
+            say(f'⚠ не удалось обновить прошлые дни отчётов АК: {e}')
         out = {'date': ref.isoformat(), 'aks': [aks[k] for k in sorted(aks)]}
         dump(out, rp)
         say(f'Автоколонн в отчёте на {ref.isoformat()}: {len(aks)} из 8' + ('' if len(aks) == 8 else ' (не хватает: ' + ', '.join(str(i) for i in range(1, 9) if i not in aks) + ')'))
