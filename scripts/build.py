@@ -175,7 +175,7 @@ def main():
         exp = os.path.join(RAW, 'export.xlsx')
         if not contacts: errors.append('нет data/contacts.json'); say('❌ нет data/contacts.json')
         elif os.path.exists(exp):
-            drv, rep, miss = build_drivers.build(data, exp, contacts, mobil)
+            drv, rep, miss = build_drivers.build(data, exp, contacts, mobil, load(os.path.join(ROOT, 'data', 'manual.json'), {}))
             for l in rep: say(l)
             if miss: say(f'Без телефона ({len(miss)}): ' + '; '.join(miss))
             if state.get('export') and state['export'] != data['date']:
