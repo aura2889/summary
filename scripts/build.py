@@ -119,7 +119,12 @@ def main():
         say(f'Получен файл: {svod_flow.ROLE_DISP[role]}')
     svods, exports = kinds.get('svod', []), kinds.get('export', [])
     if exports:
+        again = state.get('export') == today.isoformat()                         # выгрузка за сегодня уже приходила
         shutil.copy(conv[sorted(exports, key=os.path.getmtime)[-1]], os.path.join(RAW, 'export.xlsx')); state['export'] = today.isoformat()
+        if again and state.get('full', {}).get('d') == today.isoformat():
+            pr = state.get('re') if state.get('re', {}).get('d') == today.isoformat() else {}
+            rl = sorted(set(pr.get('roles', [])) | {'export'})
+            state['re'] = {'d': today.isoformat(), 't': aq_now().strftime('%H:%M'), 'n': len(rl), 'roles': rl}
         state.setdefault('t', {})['export'] = aq_now().strftime('%Y-%m-%dT%H:%M')
         say('Получен экспорт путевых листов')
     data, svod_file = None, None
@@ -153,7 +158,10 @@ def main():
             if state.get('full', {}).get('d') != rd: state.pop('full', None); state.pop('re', None)      # новый день - счёт заново
             if 'full' not in state:
                 if data['nf'] >= len(svod_flow.ROLES): state['full'] = {'d': rd, 't': nowt}                 # момент, когда набрались все 7 файлов
-            elif newroles: state['re'] = {'d': rd, 't': nowt, 'n': len(newroles)}                                 # последнее дополнительное обновление после этого
+            elif newroles:                                                                                  # дополнительные обновления считаем накопительно: сколько разных файлов обновилось после полного набора
+                pr = state.get('re') if state.get('re', {}).get('d') == rd else {}
+                rl = sorted(set(pr.get('roles', [])) | set(newroles))
+                state['re'] = {'d': rd, 't': nowt, 'n': len(rl), 'roles': rl}                                 # последнее дополнительное обновление после этого
             say(f'Свод на {data["date"]}: план {data["totals"]["plan"]}, факт {data["totals"]["fact"]}, машин {len(data["veh"])}; ' +
                 ('все файлы за сегодня' if not stale and not absent else f'частично: нет свежих файлов у {len(stale) + len(absent)} из 7'))
     elif exports:                                          # пришёл только экспорт: обновим водителей на сегодняшних данных
