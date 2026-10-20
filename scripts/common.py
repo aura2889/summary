@@ -13,9 +13,12 @@ def lat(s): return ''.join(CYR2LAT.get(c, c) for c in s)
 
 def parse_plate(raw):
     """-> (prefix, digits, series, rest_norm) или None"""
-    s = re.sub(r'\s+', '', str(raw or ''))
+    t = str(raw or '').split()
+    if len(t) > 1 and '-' in t[0] and len(t[1]) >= 5 and re.search(r'\d', t[1]): t = t[:1]    # «35.1-H267812 37DEA12»: тягач и прицеп в одной ячейке - берём тягач
+    s = ''.join(t)
     if '-' not in s: return None
     pref, rest = s.split('-', 1)
+    pref = pref.replace(',', '.')                          # 35,2 -> 35.2
     rest = re.sub(r'(d/n|д/н|д|н|d|n)$', '', rest)          # пометки смены у диспетчеров (строчные)
     rest = lat(rest.upper())
     rest = re.sub(r'[/\-_.]', '', rest)

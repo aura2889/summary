@@ -86,7 +86,7 @@ def export_cols(header):
     if plate is None or len(fio) < 1: return None
     return plate, fio[0], (fio[1] if len(fio) > 1 else None), pay
 
-def build(data, export_path, contacts, mobil, manual=None):
+def build(data, export_path, contacts, mobil):
     """data - dict из svod2json; contacts - содержимое contacts.json; mobil - содержимое mobil.json
     -> (drivers_dict, список строк отчёта, список имён без телефона)"""
     global junk, idx1, idx2
@@ -161,12 +161,6 @@ def build(data, export_path, contacts, mobil, manual=None):
             if len(ph) > 1: d['t2'] = ph[1]
             out.append(d)
         drv['map'][num] = out; mob_added += 1
-    man = {}
-    for dd in sorted(manual or {}):                    # ручной список действует на все дни, пока машина без путевого листа; новее - главнее
-        man.update(manual[dd] or {})
-    for num, lst in man.items():          # водители, введённые вручную (data/manual.json, по датам): для машин, которых нет в экспорте путевых листов
-        if num in drv['map'] or not lst: continue
-        if any(v['num'] == num for v in data['veh']): drv['map'][num] = [dict(x) for x in lst]
     veh = data['veh']; mp = drv['map']
     allrec = sum(len(l) for l in mp.values()); withp = sum(1 for l in mp.values() for d in l if d.get('t'))
     nofind = [v['num'] for v in veh if v['num'] not in mp and '-' in v['num']]
