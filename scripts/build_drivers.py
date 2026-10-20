@@ -161,7 +161,7 @@ def build(data, export_path, contacts, mobil, manual=None):
             if len(ph) > 1: d['t2'] = ph[1]
             out.append(d)
         drv['map'][num] = out; mob_added += 1
-    for num, lst in (manual or {}).items():          # водители, введённые вручную (data/manual.json): для машин, которых нет в экспорте путевых листов
+    for num, lst in ((manual or {}).get(data['date']) or {}).items():          # водители, введённые вручную (data/manual.json, по датам): для машин, которых нет в экспорте путевых листов
         if num in drv['map'] or not lst: continue
         if any(v['num'] == num for v in data['veh']): drv['map'][num] = [dict(x) for x in lst]
     veh = data['veh']; mp = drv['map']
