@@ -651,7 +651,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
       h+='<div class="pw"><b>Частично обновлено:</b> '+ks.map(function(k){return esc(sn(k))+' ('+dm2(st[k])+')'}).concat(ab.map(function(a){return esc(sn(a))+' (нет данных)'})).concat(xOld?['Выгрузка ('+dm2(DATA.exp)+')']:[]).concat((DATA.okd||[]).map(function(k){return esc(sn(k))+' ('+dm2(DATA.date)+')'})).concat(hasX&&!xOld?['Выгрузка ('+dm2(DATA.date)+')']:[]).join(', ')+'</div>';
     if(DATA.upd&&top!=='nach'){var u=DATA.upd.split('T'),ud=u[0].split('-'),all=DATA.nf==null||(DATA.nf>=7&&!xOld);
       h+='<div class="updt'+(all?'':' part')+'">🕒 Свод обновлён '+ud[2]+'.'+ud[1]+' в '+(DATA.full&&DATA.nf>=7?DATA.full:u[1])+(DATA.nf!=null?' · файлов за сегодня: '+(DATA.nf+(hasX&&!xOld?1:0))+' из '+(hasX?8:7):'')+'</div>';
-      if(DATA.re) h+='<div class="updt re">🔄 Дополнительно обновлено в '+DATA.re.t+' · обновились '+DATA.re.n+' из '+(hasX?8:7)+'</div>'';}
+      if(DATA.re) h+='<div class="updt re">🔄 Дополнительно обновлено в '+DATA.re.t+' · обновились '+DATA.re.n+' из '+(hasX?8:7)+'</div>';}
     if(DATA.xl&&top!=='nach'){var fd=DATA.date.split('-');
       h+='<div class="dlbar"><a href="archive/'+DATA.date+'/svod.xlsx" download="Свод_Диспетчер_'+fd[2]+'.'+fd[1]+'.'+fd[0]+'.xlsx" data-dl="1">⬇ Скачать свод (xlsx)</a></div>';}
     return h;
