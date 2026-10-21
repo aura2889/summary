@@ -101,7 +101,12 @@ def parse(cfg):
             if v and 'очь' in str(v) and 'выход' in str(v): night_start=r;break
     out=[];excl=[];notes=[]
     YEL=('FFFF00','FFFF66','FFFF99','FFFFCC')
-    oqu=any(('оқу' in str(c.value).lower() or 'оку' in str(c.value).lower()) and (fillhex(c) in YEL or cfg['key']=='D7') for row in ws.iter_rows() for c in row if c.value)   # у диспетчера 7 подпись «Оқу» без заливки, но жёлтые ячейки = обучение
+    def _isoqu(t): t=str(t).lower(); return 'оқу' in t or 'оку' in t
+    def _lg(c): return ws.cell(c.row, c.column-1) if c.column>1 else None
+    # легенда «Оқу»: сама подпись жёлтая, либо жёлтая ячейка-образец слева от подписи (диспетчер 7)
+    oqu=any(_isoqu(c.value) and (fillhex(c) in YEL or (_lg(c) is not None and fillhex(_lg(c)) in YEL)) for row in ws.iter_rows() for c in row if c.value)
+    def _cmt(c):   # примечание к ячейке «сабақ»/«оқу» (диспетчер 2)
+        t=(c.comment.text if c.comment else '').lower(); return 'сабақ' in t or 'сабак' in t or 'оқу' in t or 'оку' in t
     # header row 2
     hdr={}
     for c in range(c0,c1+1):
@@ -150,7 +155,7 @@ def parse(cfg):
                 if d=='IGN': excl.append((cell.coordinate,s.strip(),rawhdr.get(c),'колонка «выход/ремонт/резерв/списание»'))
                 else: notes.append(('нет шапки',cell.coordinate,s.strip()))
                 continue
-            if oqu and fillhex(cell) in YEL: excl.append((cell.coordinate,s.strip(),d,'жёлтая заливка при «Оқу» на листе (обучение)')); continue
+            if (oqu or _cmt(cell)) and fillhex(cell) in YEL: excl.append((cell.coordinate,s.strip(),d,'жёлтая заливка при «Оқу» на листе (обучение)')); continue
             fk=fontkind(cell)
             if fk=='red': excl.append((cell.coordinate,s.strip(),d,'красный шрифт (ремонт)')); continue
             if fk=='green' and not (cfg['key']=='K8' and c==5 and r<=13): excl.append((cell.coordinate,s.strip(),d,'зелёный шрифт (резерв)')); continue
