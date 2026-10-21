@@ -101,7 +101,7 @@ def parse(cfg):
             if v and 'очь' in str(v) and 'выход' in str(v): night_start=r;break
     out=[];excl=[];notes=[]
     YEL=('FFFF00','FFFF66','FFFF99','FFFFCC')
-    oqu=any(('оқу' in str(c.value).lower() or 'оку' in str(c.value).lower()) and fillhex(c) in YEL for row in ws.iter_rows() for c in row if c.value)
+    oqu=any(('оқу' in str(c.value).lower() or 'оку' in str(c.value).lower()) and (fillhex(c) in YEL or cfg['key']=='D7') for row in ws.iter_rows() for c in row if c.value)   # у диспетчера 7 подпись «Оқу» без заливки, но жёлтые ячейки = обучение
     # header row 2
     hdr={}
     for c in range(c0,c1+1):
