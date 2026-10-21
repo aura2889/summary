@@ -6,7 +6,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from common import *
 PHONE_RE = re.compile(r'(?:\+?7|8)[\s\-()]*\d{3}[\s\-()]*\d{3}[\s\-]*\d{2}[\s\-]*\d{2}')
-SKIP = re.compile(r'резерв|ремонт|место|^\s*$', re.I)
+SKIP = re.compile(r'резерв|ремонт|место|орны|орын|^\s*$', re.I)
 LETT = r'[A-Za-zА-Яа-яӘәҒғҚқҢңӨөҰұҮүІіҺһ]'
 def split_cell(c):
     c = str(c or '').strip()
