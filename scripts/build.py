@@ -231,11 +231,14 @@ def main():
         except Exception as e:
             say(f'⚠ не удалось обновить прошлые дни отчётов АК: {e}')
         out = {'date': ref.isoformat(), 'aks': [aks[k] for k in sorted(aks)]}
-        dump(out, rp)
-        say(f'Автоколонн в отчёте на {ref.isoformat()}: {len(aks)} из 8' + ('' if len(aks) == 8 else ' (не хватает: ' + ', '.join(str(i) for i in range(1, 9) if i not in aks) + ')'))
-        idx = load(os.path.join(ARC, 'index.json'), {'dates': []})
-        if not idx['dates'] or ref.isoformat() >= idx['dates'][0]:
-            dump(out, os.path.join(ROOT, 'repair.json'))
+        if not aks:
+            say('Отчётов автоколонн в файлах не найдено - repair.json не трогаю (файл ошибочно принят за отчёт АК)')
+        else:
+            dump(out, rp)
+            say(f'Автоколонн в отчёте на {ref.isoformat()}: {len(aks)} из 8' + ('' if len(aks) == 8 else ' (не хватает: ' + ', '.join(str(i) for i in range(1, 9) if i not in aks) + ')'))
+            idx = load(os.path.join(ARC, 'index.json'), {'dates': []})
+            if not idx['dates'] or ref.isoformat() >= idx['dates'][0]:
+                dump(out, os.path.join(ROOT, 'repair.json'))
     elif not (kinds.get('roster') or svods or exports or newroles):
         say('В input/ нет подходящих файлов - ничего не делаю')
     for t in tmps: shutil.rmtree(t, ignore_errors=True)
