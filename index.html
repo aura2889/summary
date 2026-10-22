@@ -401,19 +401,19 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
         return hay.indexOf(t)>-1||nn.indexOf(norm(t))>-1});
     });
     var drs=driverHits(toks);
-    if(drs.length){
-      h+='<div class="sec">Водители'+(drs.length>40?' (первые 40 из '+drs.length+')':'')+'</div><div class="card">';
-      drs.slice(0,40).forEach(function(d){
-        h+='<div class="drc"><b>'+esc(d.n)+'</b>'+(d.t||d.t2?'<div class="ph">'+(d.t?tel(d.t):'')+(d.t2?tel(d.t2):'')+(d.s?' <small style="opacity:.6">(общий номер)</small>':'')+'</div>':'<div class="ph"><small style="opacity:.6">номер не найден</small></div>')+
-          '<div class="vs">'+d.v.map(function(v){return numChip(v)+'<small>'+esc(v.t)+' · '+esc(v.dep)+'</small>'}).join(' ')+'</div></div>';
-      });
-      h+='</div>';
-    }
     if(f.length){
       h+='<div class="sec">Техника'+(f.length>60?' (первые 60 из '+f.length+')':'')+'</div><div class="card">';
       f.slice(0,60).forEach(function(v){
         var sh=v.d&&v.n?'день+ночь':(v.d?'день':'ночь');
         h+='<div class="hit" data-i="'+v._i+'"><div><b>'+esc(v.num)+'</b><br><small>'+esc(v.t)+'</small></div><div style="text-align:right"><b>'+esc(v.dep)+'</b><br><small>'+(byDisp&&DATA.disp&&DATA.disp[v.g]?esc(DATA.disp[v.g].name)+' · ':'')+sh+'</small></div></div>';
+      });
+      h+='</div>';
+    }
+    if(drs.length){
+      h+='<div class="sec">Водители'+(drs.length>40?' (первые 40 из '+drs.length+')':'')+'</div><div class="card">';
+      drs.slice(0,40).forEach(function(d){
+        h+='<div class="drc"><b>'+esc(d.n)+'</b>'+(d.t||d.t2?'<div class="ph">'+(d.t?tel(d.t):'')+(d.t2?tel(d.t2):'')+(d.s?' <small style="opacity:.6">(общий номер)</small>':'')+'</div>':'<div class="ph"><small style="opacity:.6">номер не найден</small></div>')+
+          '<div class="vs">'+d.v.map(function(v){return numChip(v)+'<small>'+esc(v.t)+' · '+esc(v.dep)+'</small>'}).join(' ')+'</div></div>';
       });
       h+='</div>';
     }
