@@ -32,6 +32,7 @@ for _c in [c for c in PLAN if c not in types]:
     if _b in types: types.insert(types.index(_b)+1,_c)
     else: types.append(_c)
 types.remove('23'); types.insert(types.index('50')+1,'23')
+types[14:]=sorted(types[14:],key=lambda c:float(c))   # строки 17 и ниже - по возрастанию номера позиции
 dvol=collections.Counter()
 for x in ALL: dvol[x['dept']]+=x['day']+x['night']
 depts=[d for d in TPL_D if dvol[d]>0 and d!='ПЧ']+[d for d,_ in dvol.most_common() if d not in TPL_D and d!='ПЧ']+['ПЧ']
