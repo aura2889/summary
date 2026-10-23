@@ -4,9 +4,9 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter as L
 DATE_STR=sys.argv[1] if len(sys.argv)>1 else '05.10.2026'
 ALL,EXC,NOTES=pickle.load(open('res.pkl','rb'))
-FINAL={'ПЧ-Семсер':'ПЧ','ЦИТС.':'ЦИТС','Газ.цех':'ГЦ','РСУ':'РСЦ','Экология':'ГООС','оппоIR':'IR'}
+FINAL={'ПЧ-Семсер':'ОБиОТ','ПЧ':'ОБиОТ','ЧАКУР мед':'ОБиОТ','ЧАКУР мед.':'ОБиОТ','УПТОК':'БМТС','ГУ':'ГЦ','БПО 2':'ЦПКРС-2','РМУ 2':'ЦПКРС-2','ЦИТС.':'ЦИТС','Газ.цех':'ГЦ','РСУ':'РСЦ','Экология':'ГООС','оппоIR':'IR'}
 for _x in ALL: _x['dept']=FINAL.get(_x['dept'],_x['dept'])
-for _i in range(6): ALL.append(dict(cell='—',src='MAN',srcname='Добавлено вручную (пожарные машины)',hdr='ПЧ',dept='ПЧ',plate='Пожарная машина %d'%(_i+1),code='10',day=1 if _i<3 else 0,night=0 if _i<3 else 1,note='пожарные: 3 день + 3 ночь (по указанию, в диспетчерских файлах нет)',raw='',pid=''))
+for _i in range(6): ALL.append(dict(cell='—',src='MAN',srcname='Добавлено вручную (пожарные машины)',hdr='ПЧ',dept='ОБиОТ',plate='Пожарная машина %d'%(_i+1),code='10',day=1 if _i<3 else 0,night=0 if _i<3 else 1,note='пожарные: 3 день + 3 ночь (по указанию, в диспетчерских файлах нет)',raw='',pid=''))
 TPLF="resources/template_first_day.xlsm"
 TPL=openpyxl.load_workbook(TPLF).active
 tpl_types=[(str(TPL.cell(r,1).value),TPL.cell(r,2).value) for r in range(3,47)]
@@ -35,7 +35,7 @@ types.remove('23'); types.insert(types.index('50')+1,'23')
 types[14:]=sorted(types[14:],key=lambda c:float(c))   # строки 17 и ниже - по возрастанию номера позиции
 dvol=collections.Counter()
 for x in ALL: dvol[x['dept']]+=x['day']+x['night']
-depts=[d for d in TPL_D if dvol[d]>0 and d!='ПЧ']+[d for d,_ in dvol.most_common() if d not in TPL_D and d!='ПЧ']+['ПЧ']
+depts=[d for d in TPL_D if dvol[d]>0 and d!='ОБиОТ']+[d for d,_ in dvol.most_common() if d not in TPL_D and d!='ОБиОТ']+['ОБиОТ']
 PRI={'34','47','49','28','22','27','31','35','50'}
 thin=Side(style='thin'); B=Border(left=thin,right=thin,top=thin,bottom=thin)
 YEL=PatternFill('solid',fgColor='FFFF00'); ORG=PatternFill('solid',fgColor='FFC000'); GRY=PatternFill('solid',fgColor='F2F2F2')

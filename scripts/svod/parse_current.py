@@ -44,9 +44,13 @@ PLATE=re.compile(r'^\s*([СCсc]?)\s*(?:(60)\s*-\s*(?=\d{2}\s*-))?(\d{2}(?:[.,]\
 NUMLESS=re.compile(r'^\s*[СCсc]?\s*\d{2}\s*[-]?\s*(д\s*/\s*н|д|н)?\s*$', re.I)
 IGN=re.compile(r'(выход|ремонт|резерв|списан|^рем$|^рез$|^спис$|жөндеу|общи|на линии|день/ночь|в ожидании|тех простой|префикс|уақыты|оқу|есептен|желіге|шықты|план|факт|разница|причина|всего)', re.I)
 FINAL={'ПЧ-Семсер':'ПЧ','ЦИТС.':'ЦИТС','Газ.цех':'ГЦ','РСУ':'РСЦ','Экология':'ГООС','оппоIR':'IR'}
+# объединение отделов (правила 23.10): итоговое название отдела в своде
+MERGE={'УПТОК':'БМТС','ГУ':'ГЦ','БПО2':'ЦПКРС-2','РМУ2':'ЦПКРС-2','ПЧ':'ОБиОТ','ПЧСЕМСЕР':'ОБиОТ','ЧАКУРМЕД':'ОБиОТ'}
+def merge_dept(d):
+    return MERGE.get(re.sub(r'[\s\-.]','',str(d)).upper(),d)
 def norm_dept(raw, gar2=False):
     d=_norm_dept(raw,gar2)
-    return FINAL.get(d,d)
+    return merge_dept(FINAL.get(d,d))
 def _norm_dept(raw, gar2=False):
     s=re.sub(r'\s+',' ',str(raw)).strip()
     U0=s.upper()
@@ -183,6 +187,7 @@ def parse(cfg):
             dept=norm_dept(d,gar2)
             if cfg.get('alias'): dept=cfg['alias'].get(re.sub(r'[\s.№]','',str(d)).upper(),dept)
             if c in cfg.get('dept_over',{}) and d==hdr[c]: dept=cfg['dept_over'][c]
+            dept=merge_dept(dept)
             if fk is None and fillhex(cell) in ('FF66FF',): note=(note+'; ' if note else '')+'розовая заливка (одна машина в двух отделах)'
             if re.search(r'[Хх]\s*$',tail): pass
             # plate id
