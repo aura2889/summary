@@ -185,7 +185,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
 .dv-t{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:14px 0 4px}
 .dv-r{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
 .dv-r .n{font-weight:600}.dv-r small{display:block;color:var(--muted);font-weight:400;font-size:12px;margin-top:1px;line-height:1.35}
-.dv-r .d{font-weight:800;white-space:nowrap}.dv-neg{color:#d2452f}.dv-pos{color:#1d8a4e}.dv-z{color:var(--muted)}
+.dv-r .d{font-weight:800;white-space:nowrap}.dv-y{color:#c98400}@media (prefers-color-scheme:dark){.dv-y{color:#f2c94c}}.dv-neg{color:#d2452f}.dv-pos{color:#1d8a4e}.dv-z{color:var(--muted)}
 .dv-sum{background:var(--bg);border-radius:10px;padding:9px 11px;margin:6px 0 2px;font-size:14px}
 .dv-g{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:4px 0}.dv-g.c2{grid-template-columns:repeat(2,1fr)}
 .dv-tl{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:7px 6px 6px;text-align:center;cursor:pointer;display:flex;flex-direction:column;justify-content:space-between;gap:2px;min-width:0}
@@ -765,9 +765,9 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
       var g={},nm={}; (DATA.types||[]).forEach(function(x){nm[x.p]=x.name});
       DATA.trl.forEach(function(x){var m=String(x.num).match(/(\d{2}(?:[.,]\d)?)\s*[-\s]/),p=m?m[1].replace(',','.'):'?';(g[p]=g[p]||[]).push(x)});
       var keys=Object.keys(g).sort(function(a,b){return parseFloat(a)-parseFloat(b)});
-      s+='<div class="dv-t">В обучении ('+DATA.trl.length+') — в выход не входят</div>'+dvGrid('tr',keys.map(function(p){
-        return {t:esc(p+(nm[p]?' · '+nm[p]:'')),v:g[p].length+' ед.',det:g[p].map(function(x){return '<div class="dv-r"><div class="n">'+esc(x.num)+'<small>'+esc(x.dep)+' · '+esc(x.disp)+'</small></div></div>'}).join('')};
-      }));
+      s+='<div class="dv-t">В обучении ('+DATA.trl.length+')</div>'+dvGrid('tr',keys.map(function(p){
+        return {t:esc(p+(nm[p]?' · '+nm[p]:'')),v:g[p].length+' ед.',c:'dv-y',det:g[p].map(function(x){return '<div class="dv-r"><div class="n">'+esc(x.num)+'<small>'+esc(x.dep)+' · '+esc(x.disp)+'</small></div></div>'}).join('')};
+      }),true);
     }
     s+='<div class="dv-t">Не хватает до плана ('+sg(sl)+')</div>'+(lo.length?dvGrid('lo',lo.map(tile),true):'<div class="empty">Нет</div>');
     if(hi.length) s+='<div class="dv-t">Больше плана ('+sg(sh)+')</div>'+dvGrid('hi',hi.map(tile),true);
