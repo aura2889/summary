@@ -104,7 +104,8 @@ def parse(cfg):
     def _isoqu(t): t=str(t).lower(); return 'оқу' in t or 'оку' in t
     def _lg(c): return ws.cell(c.row, c.column-1) if c.column>1 else None
     # легенда «Оқу»: сама подпись жёлтая, либо жёлтая ячейка-образец слева от подписи (диспетчер 7)
-    oqu=any(_isoqu(c.value) and (fillhex(c) in YEL or (_lg(c) is not None and fillhex(_lg(c)) in YEL)) for row in ws.iter_rows() for c in row if c.value)
+    def _up(c): return ws.cell(c.row-1, c.column) if c.row>1 else None
+    oqu=any(_isoqu(c.value) and (fillhex(c) in YEL or (_lg(c) is not None and fillhex(_lg(c)) in YEL) or (_up(c) is not None and fillhex(_up(c)) in YEL)) for row in ws.iter_rows() for c in row if c.value)   # + жёлтый образец НАД подписью (объединённый файл Гаража-2)
     def _cmt(c):   # примечание к ячейке «сабақ»/«оқу» (диспетчер 2)
         t=(c.comment.text if c.comment else '').lower(); return 'сабақ' in t or 'сабак' in t or 'оқу' in t or 'оку' in t
     # header row 2
@@ -180,6 +181,7 @@ def parse(cfg):
             elif isnight_blk: night=1; note='ночной блок'
             else: day=1
             dept=norm_dept(d,gar2)
+            if cfg.get('alias'): dept=cfg['alias'].get(re.sub(r'[\s.№]','',str(d)).upper(),dept)
             if c in cfg.get('dept_over',{}) and d==hdr[c]: dept=cfg['dept_over'][c]
             if fk is None and fillhex(cell) in ('FF66FF',): note=(note+'; ' if note else '')+'розовая заливка (одна машина в двух отделах)'
             if re.search(r'[Хх]\s*$',tail): pass

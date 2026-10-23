@@ -23,6 +23,70 @@ LAST_TRAIN = []
 
 def _n(x): return re.sub(r'[\s.]', '', str(x or '')).upper()
 
+# ---------- объединённый файл «Гараж-2 техника шығу ақпары» (диспетчеры 7 и 8 вместе, с 23.10) ----------
+GAR2 = dict(rows=(2, 66), cols=(1, 13), hrow=1,
+            alias={'ПКРС(2)': 'ЦПКРС-2', 'БПОКРС-2': 'БПО', 'ОБИКРС': 'ОБиПКРС', 'ГАЗУЧАСТОК': 'ГУ', 'ЦТТГАРАЖ2': 'Гараж-1', 'РМУГАРАЖ2': 'РМУ', 'ДБИПКРС(1)': 'ЦПКРС-1'})
+
+def plate_key(raw):
+    """ключ машины для сопоставления между файлами (без «С»-префикса, пометок смены, регистра/раскладки)"""
+    from common import parse_plate
+    from build_drivers import ALIAS
+    t = re.sub(r'\s+', '', str(raw or ''))
+    t = ALIAS.get(t.upper(), t)
+    r = parse_plate(t)
+    if not r: return t.upper()
+    pref, digits, ser, rest = r
+    return re.sub(r'^[СC]', '', pref) + '|' + digits + ser
+
+def _split_path(raw_dir): return os.path.join(raw_dir, '..', 'data', 'gar2_split.json')
+
+def _load_split(raw_dir, ref):
+    """{ключ машины: 'D7'|'K8'} - кто из двух диспетчеров вёл машину; при первом разе берётся из последних отдельных файлов Д7 и К-8"""
+    p = _split_path(raw_dir)
+    if os.path.exists(p): return json.load(open(p, encoding='utf-8'))
+    m = {}
+    for role in ('D7', 'K8'):
+        f = os.path.join(raw_dir, role + '.xlsx')
+        if not os.path.exists(f): continue
+        wbk = openpyxl.load_workbook(f); sh = latest_before(wbk.sheetnames, ref) or pick_sheet(wbk.sheetnames, ref)[0]
+        spec = ROLES[role]; cfg = dict(key=role, name='x', path=f, sheet=sh, rows=spec['rows'], cols=spec['cols'], mode='day')
+        if 'hrow' in spec: cfg['hrow'] = spec['hrow']
+        _adapt(cfg, wbk[sh]); out, exc, _ = PC.parse(cfg)
+        for x in out: m[plate_key(x['plate'])] = role
+        for e in exc: m.setdefault(plate_key(re.split(r'\s{2,}', str(e[1]).strip())[0]), role)
+    return m
+
+def parse_gar2(raw_dir, ref, today):
+    """-> (out_D7, out_K8, exc_D7, exc_K8, warns, sheet) или None, если листа за сегодня нет/пусто"""
+    f = os.path.join(raw_dir, 'GAR2.xlsx')
+    if not os.path.exists(f): return None
+    wbk = openpyxl.load_workbook(f); sheet, exact, w = pick_sheet(wbk.sheetnames, ref)
+    if sheet is None or not exact: return None
+    cfg = dict(key='GAR2', name='x', path=f, sheet=sheet, rows=GAR2['rows'], cols=GAR2['cols'], mode='day', hrow=GAR2['hrow'], alias=GAR2['alias'])
+    out, exc, notes = PC.parse(cfg)
+    if not out: return None
+    warns = [f'Гараж-2 (Д7+К-8): {x}' for x in w]
+    split = _load_split(raw_dir, ref)
+    by = {'D7': [], 'K8': []}
+    for k, r in split.items(): by[r].append(k)
+    cnt = {}                                              # по типу машины (префиксу) - чьи они чаще
+    for k, r in split.items(): cnt.setdefault(k.split('|')[0], {'D7': 0, 'K8': 0})[r] += 1
+    new = []
+    def who(plate):
+        k = plate_key(plate)
+        if k in split: return split[k]
+        if not re.search(r'\d{3}', k.split('|')[-1]): return 'K8'           # ячейка без номера (только тип) - ни в какие списки не попадает
+        c = cnt.get(k.split('|')[0]); r = ('D7' if c['D7'] > c['K8'] else 'K8') if c else 'K8'
+        split[k] = r; new.append((plate, r)); return r
+    res = {'D7': [], 'K8': []}; rexc = {'D7': [], 'K8': []}
+    for x in out:
+        r = who(x['plate']); x['src'] = r; res[r].append(x)
+    for e in exc: rexc[who(re.split(r'\s{2,}', str(e[1]).strip())[0])].append(e)
+    for plate, r in new: warns.append(f'Гараж-2: новая машина {plate} - отнесена к {ROLE_DISP[r]} по типу (раньше в отдельных файлах не встречалась)')
+    if new: json.dump(split, open(_split_path(raw_dir), 'w', encoding='utf-8'), ensure_ascii=False, sort_keys=True)
+    elif not os.path.exists(_split_path(raw_dir)): json.dump(split, open(_split_path(raw_dir), 'w', encoding='utf-8'), ensure_ascii=False, sort_keys=True)
+    return res, rexc, warns, sheet
+
 # ---------- какой это файл (по содержимому) ----------
 def _sheet_role(rows):
     r1 = [_n(c) for c in rows[0]] if rows else []
@@ -30,6 +94,7 @@ def _sheet_role(rows):
     if r1 and r1[0].startswith('ДИСПЕТЧЕР№3'): return 'D3'
     if r1 and r1[0].startswith('ДИСПЕТЧЕРА') and r2 and r2[0] == 'ПКРС' and any(c in ('РЕЗЕРВ', 'СПИСАНИЕ') for c in r2): return 'D7'   # новый вид файла диспетчера 7 (с 16.10)
     if r1 and r1[0].startswith('ДИСПЕТЧЕРА') and any('ЦПП-МПГУ' in c for c in r2): return 'K8'                                          # новый вид файла К-8 (с 16.10)
+    if r1 and r1[0] == 'ЦДН-1' and any('ДБИПКРС(1)' in c for c in r1) and 'РСУ' in r1: return 'GAR2'      # объединённый файл Д7+К-8 (с 23.10)
     if any('ДБИПКРС' in c for c in r1): return 'D7'
     if r2 and r2[0] == '№': return 'MS'
     if r2 and r2[0] == 'СБ': return 'SB'
@@ -124,11 +189,22 @@ def unknown_items(path, role, ref):
     out = PC.parse(cfg)[0]
     return ({x['dept'] for x in out} - set(KNOWN['depts']) - {'ПЧ'}) | ({x['code'] for x in out} - set(KNOWN['codes']))
 
-def build(raw_dir, ref, fresh, out_dir):
+def build(raw_dir, ref, fresh, out_dir, via=()):
     """raw_dir/<ROLE>.xlsx; fresh = {ROLE: True если файл пришёл сегодня}. -> (путь к xlsx, статусы ролей, предупреждения, ошибки)"""
     ds = ref.strftime('%d.%m.%Y'); short = ref.strftime('%d.%m')
     warns, errs, status, ALL, EXC, NOTES = [], [], {}, [], [], []
+    gar = None
+    if via:                                                 # диспетчеры 7 и 8 пришли одним файлом (Гараж-2)
+        try: gar = parse_gar2(raw_dir, ref, True)
+        except Exception as e: warns.append(f'Гараж-2 (Д7+К-8): не удалось разобрать объединённый файл: {e}')
+        if gar: warns += gar[2]
+        else: warns.append('Гараж-2 (Д7+К-8): в объединённом файле нет листа за сегодня - беру отдельные файлы Д7/К-8')
     for role, spec in ROLES.items():
+        if gar and role in via:
+            out = gar[0][role]; exc = gar[1][role]
+            for x in out: x['srcname'] = f'{spec["base"]} ({short})'
+            status[role] = dict(state='ok', sheet=gar[3], date=ref.isoformat())
+            ALL += out; EXC += [(role,) + x for x in exc]; continue
         path = os.path.join(raw_dir, role + '.xlsx')
         if not os.path.exists(path):
             status[role] = dict(state='absent'); warns.append(f'{ROLE_DISP[role]}: файла ещё не было ни разу - в своде его нет'); continue

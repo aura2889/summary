@@ -98,6 +98,16 @@ def main():
     for k, fl in sorted(kinds.items()):
         if not k.startswith('disp:'): continue
         role = k[5:]
+        if role == 'GAR2':                         # объединённый файл Гаража-2 = диспетчеры 7 и 8 сразу
+            fl = sorted(fl, key=os.path.getmtime)
+            shutil.copy(conv[fl[-1]], os.path.join(RAW, 'GAR2.xlsx'))
+            tt = aq_now().strftime('%Y-%m-%dT%H:%M')
+            for r2 in ('D7', 'K8'):
+                state[r2] = today.isoformat(); newroles.append(r2); state.setdefault('t', {})[r2] = tt
+                state.setdefault('via', {})[r2] = 'GAR2'
+            say('Получен объединённый файл Гараж-2: диспетчеры 7 и 8')
+            continue
+        state.get('via', {}).pop(role, None)       # отдельный файл роли снова пришёл - объединённый для неё не нужен
         def _rank(f):                              # лишние/старые файлы той же роли: берём с листом на сегодня и сохранённый позже всех
             try:
                 wb = openpyxl.load_workbook(conv[f], read_only=True)
@@ -136,7 +146,8 @@ def main():
     elif newroles or os.environ.get('SVOD_REBUILD'):       # свод собирается из файлов диспетчеров (SVOD_REBUILD=1 - пересобрать из уже лежащих raw/ без новых файлов)
         fresh = {r: state.get(r) == ref.isoformat() for r in svod_flow.ROLES}
         tmpd = os.path.join(ROOT, '.svod_tmp')
-        xl, status, warns, errs = svod_flow.build(RAW, ref, fresh, tmpd)
+        via = tuple(r for r in ('D7', 'K8') if state.get('via', {}).get(r) == 'GAR2' and state.get(r) == ref.isoformat() and os.path.exists(os.path.join(RAW, 'GAR2.xlsx')))
+        xl, status, warns, errs = svod_flow.build(RAW, ref, fresh, tmpd, via)
         for w in warns: say('⚠ ' + w)
         if errs:
             for e in errs: say('❌ ' + e)
