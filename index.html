@@ -187,6 +187,12 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
 .dv-r .n{font-weight:600}.dv-r small{display:block;color:var(--muted);font-weight:400;font-size:12px;margin-top:1px;line-height:1.35}
 .dv-r .d{font-weight:800;white-space:nowrap}.dv-neg{color:#d2452f}.dv-pos{color:#1d8a4e}.dv-z{color:var(--muted)}
 .dv-sum{background:var(--bg);border-radius:10px;padding:9px 11px;margin:6px 0 2px;font-size:14px}
+.dv-g{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:4px 0}.dv-g.c2{grid-template-columns:repeat(2,1fr)}
+.dv-tl{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:7px 6px 6px;text-align:center;cursor:pointer;display:flex;flex-direction:column;justify-content:space-between;gap:2px;min-width:0}
+.dv-tl .tt{font-size:12px;font-weight:600;line-height:1.25;overflow-wrap:anywhere}.dv-tl .tv{font-size:19px;font-weight:800;line-height:1.15;font-variant-numeric:tabular-nums}.dv-tl .ts{font-size:11px;color:var(--muted);line-height:1.3}
+.dv-tl.on{border-color:var(--brand2);box-shadow:0 0 0 1px var(--brand2)}
+.dv-pn{grid-column:1/-1;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:4px 11px}
+.dv-pn .dv-r:last-child{border:0}
 .dlbar{margin:0 0 10px;text-align:right}.dlbar a{display:inline-block;font-size:13px;font-weight:600;color:var(--brand2);text-decoration:none;border:1px solid var(--blue-line);background:var(--blue-bg);border-radius:9px;padding:5px 10px}
 /* ---- только компьютер (широкий экран + мышь); телефон не затрагивается ---- */
 @media (min-width:900px) and (hover:hover) and (pointer:fine){
@@ -743,14 +749,28 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     if(devMode==='plan') $('#devb').innerHTML=devPlan(); else devPrev();
   }
   function tname(x){return esc(x.p+' · '+x.name)}
+  var DVP={};                                              // подробности плиток: id -> html
+  function dvGrid(id,items,c2){
+    DVP[id]=items.map(function(x){return x.det||''});
+    return '<div class="dv-g'+(c2?' c2':'')+'">'+items.map(function(x,i){
+      return '<div class="dv-tl" data-dvt="'+id+'|'+i+'" role="button" tabindex="0"><div class="tt">'+x.t+'</div><div class="tv '+(x.c||'')+'">'+x.v+'</div>'+(x.s?'<div class="ts">'+x.s+'</div>':'')+'</div>';
+    }).join('')+'</div>';
+  }
   function devPlan(){
     var ty=(DATA.types||[]).slice(), lo=ty.filter(function(x){return x.diff<0}).sort(function(a,b){return a.diff-b.diff}), hi=ty.filter(function(x){return x.diff>0}).sort(function(a,b){return b.diff-a.diff});
-    function row(x){return '<div class="dv-r"><div class="n">'+tname(x)+'<small>план '+x.plan+' · факт '+x.fact+'</small></div><div class="d '+sgc(x.diff)+'">'+sg(x.diff)+' ед</div></div>'}
+    function tile(x){return {t:tname(x),v:sg(x.diff),c:sgc(x.diff),s:'план '+x.plan+' · факт '+x.fact}}
     var sl=lo.reduce(function(a,x){return a+x.diff},0), sh=hi.reduce(function(a,x){return a+x.diff},0);
     var s='<div class="dv-sum">План '+DATA.totals.plan+' · факт '+DATA.totals.fact+(DATA.tr?' · в обучении '+DATA.tr+'<br>Отклонение: '+sg(DATA.totals.diff+DATA.tr)+' (с обучением было бы '+sg(DATA.totals.diff)+')':'')+'</div>';
-    if(DATA.trl&&DATA.trl.length) s+='<div class="dv-t">В обучении ('+DATA.trl.length+') — в выход не входят</div>'+DATA.trl.map(function(x){return '<div class="dv-r"><div class="n">'+esc(x.num)+'<small>'+esc(x.dep)+' · '+esc(x.disp)+'</small></div></div>'}).join('');
-    s+='<div class="dv-t">Не хватает до плана ('+sg(sl)+')</div>'+(lo.length?lo.map(row).join(''):'<div class="empty">Нет</div>');
-    if(hi.length) s+='<div class="dv-t">Больше плана ('+sg(sh)+')</div>'+hi.map(row).join('');
+    if(DATA.trl&&DATA.trl.length){
+      var g={},nm={}; (DATA.types||[]).forEach(function(x){nm[x.p]=x.name});
+      DATA.trl.forEach(function(x){var m=String(x.num).match(/(\d{2}(?:[.,]\d)?)\s*[-\s]/),p=m?m[1].replace(',','.'):'?';(g[p]=g[p]||[]).push(x)});
+      var keys=Object.keys(g).sort(function(a,b){return parseFloat(a)-parseFloat(b)});
+      s+='<div class="dv-t">В обучении ('+DATA.trl.length+') — в выход не входят</div>'+dvGrid('tr',keys.map(function(p){
+        return {t:esc(p+(nm[p]?' · '+nm[p]:'')),v:g[p].length+' ед.',det:g[p].map(function(x){return '<div class="dv-r"><div class="n">'+esc(x.num)+'<small>'+esc(x.dep)+' · '+esc(x.disp)+'</small></div></div>'}).join('')};
+      }));
+    }
+    s+='<div class="dv-t">Не хватает до плана ('+sg(sl)+')</div>'+(lo.length?dvGrid('lo',lo.map(tile),true):'<div class="empty">Нет</div>');
+    if(hi.length) s+='<div class="dv-t">Больше плана ('+sg(sh)+')</div>'+dvGrid('hi',hi.map(tile),true);
     return s;
   }
   function devPrev(){
@@ -770,7 +790,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     var tr=(DATA.types||[]).map(function(x){var o=pm[x.p+'|'+x.name];return {x:x,d:x.fact-(o?o.fact:0),was:o?o.fact:0}}).filter(function(r){return r.d!==0});
     (P.types||[]).forEach(function(o){if(!(DATA.types||[]).some(function(x){return x.p===o.p&&x.name===o.name})&&o.fact) tr.push({x:o,d:-o.fact,was:o.fact,gone:1})});
     tr.sort(function(a,b){return a.d-b.d});
-    s+='<div class="dv-t">По типам техники (факт)</div>'+(tr.length?tr.map(function(r){return '<div class="dv-r"><div class="n">'+tname(r.x)+'<small>было '+r.was+' → стало '+(r.gone?0:r.x.fact)+'</small></div><div class="d '+sgc(r.d)+'">'+sg(r.d)+' ед</div></div>'}).join(''):'<div class="empty">Без изменений</div>');
+    s+='<div class="dv-t">По типам техники (факт)</div>'+(tr.length?dvGrid('pt',tr.map(function(r){return {t:tname(r.x),v:sg(r.d),c:sgc(r.d),s:'было '+r.was+' → стало '+(r.gone?0:r.x.fact)}}),true):'<div class="empty">Без изменений</div>');
     // по отделам
     function grp(V){var m={};V.forEach(function(v){var o=m[v.dep]||(m[v.dep]={n:0,t:{},k:{}});o.n++;o.t[v.t]=(o.t[v.t]||0)+1;o.k[pkey(v.num)]=v.num});return m}
     var A=grp(DATA.veh), B=grp(P.veh), names={}; Object.keys(A).concat(Object.keys(B)).forEach(function(k){names[k]=1});
@@ -782,12 +802,11 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
       var del=Object.keys(b.k).filter(function(k){return !(k in a.k)}).map(function(k){return b.k[k]});
       return {d:d,a:a.n,b:b.n,td:td,add:add,del:del};
     }).filter(function(r){return r.add.length||r.del.length||r.a!==r.b}).sort(function(x,y){return Math.abs(y.a-y.b)-Math.abs(x.a-x.b)||(x.d<y.d?-1:1)});
-    function lst(a){return a.slice(0,6).map(esc).join(', ')+(a.length>6?' и ещё '+(a.length-6):'')}
-    s+='<div class="dv-t">По отделам</div>'+(rows.length?rows.map(function(r){
+    s+='<div class="dv-t">По отделам</div>'+(rows.length?dvGrid('pd',rows.map(function(r){
       var dd=r.a-r.b, tl=r.td.map(function(z){return esc(z[0])+' '+sg(z[1])}).join(' · ');
-      var pl=(r.add.length?'<br>＋ '+lst(r.add):'')+(r.del.length?'<br>− '+lst(r.del):'');
-      return '<div class="dv-r"><div class="n">'+esc(r.d)+'<small>'+(tl||'состав изменился при том же количестве')+pl+'</small></div><div class="d '+sgc(dd)+'">'+r.b+' → '+r.a+' ('+sg(dd)+')</div></div>';
-    }).join(''):'<div class="empty">Без изменений</div>');
+      var det='<div class="dv-r"><div class="n">'+esc(r.d)+'<small>'+(tl||'состав изменился при том же количестве')+(r.add.length?'<br>＋ '+r.add.map(esc).join(', '):'')+(r.del.length?'<br>− '+r.del.map(esc).join(', '):'')+'</small></div></div>';
+      return {t:esc(r.d),v:sg(dd),c:sgc(dd),s:r.b+' → '+r.a,det:det};
+    }),true):'<div class="empty">Без изменений</div>');
     return s;
   }
   document.addEventListener('click',function(e){
@@ -795,7 +814,19 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     if(t.closest('[data-dev]')){track('отклонение');devOpen('plan');return}
     if(t.closest('[data-devx]')||t.id==='dev'){devClose();return}
     var m=t.closest('[data-devm]');
-    if(m){devOpen(m.dataset.devm)}
+    if(m){devOpen(m.dataset.devm);return}
+    var tl=t.closest('[data-dvt]');
+    if(tl){
+      var ky=tl.dataset.dvt.split('|'), id=ky[0], i=+ky[1], det=(DVP[id]||[])[i], g=tl.parentNode;
+      var was=tl.classList.contains('on'), old=g.querySelector('.dv-pn'); if(old) old.remove();
+      g.querySelectorAll('.dv-tl.on').forEach(function(x){x.classList.remove('on')});
+      if(det&&!was){
+        var cols=g.classList.contains('c2')?2:3, tiles=g.querySelectorAll('.dv-tl'), end=Math.min(tiles.length,Math.ceil((i+1)/cols)*cols);
+        var pn=document.createElement('div'); pn.className='dv-pn'; pn.innerHTML=det;
+        g.insertBefore(pn,tiles[end]||null); tl.classList.add('on');
+        try{pn.scrollIntoView({block:'nearest',behavior:'smooth'})}catch(_){}
+      }
+    }
   });
   // ---- «Для ЦИТС»: нажатие на ячейку (отдел × тип техники) - какие именно машины и водители
   function ccOpen(key){
