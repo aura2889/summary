@@ -65,7 +65,7 @@ def convert(path):
     for r in range(4, wd.max_row + 1):
         name, plan = wd.cell(r, 9).value, wd.cell(r, 10).value
         if isinstance(name, str) and isinstance(plan, (int, float)):
-            row = {'name': name, 'plan': num(plan), 'fact': num(wd.cell(r, 11).value), 'diff': num(wd.cell(r, 12).value),
+            row = {'p': str(wd.cell(r, 8).value) if wd.cell(r, 8).value is not None else '', 'name': name, 'plan': num(plan), 'fact': num(wd.cell(r, 11).value), 'diff': num(wd.cell(r, 12).value),
                    'day': num(wd.cell(r, 13).value), 'night': num(wd.cell(r, 14).value), 'cells': {}}
             for dname, c in zip(deps, cols):
                 v = wd.cell(r, c).value

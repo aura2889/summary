@@ -141,6 +141,10 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
 .cell i u{text-decoration:none;background:var(--card);border-radius:5px;padding:0 5px;margin-left:4px;color:var(--brand2);font-weight:600}
 .lrow{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:7px 0;border-bottom:1px solid var(--line)}
 .lrow:last-child{border:0}
+.tapc{cursor:pointer}.tapc:active{opacity:.7}
+.ccv{padding:9px 0;border-bottom:1px solid var(--line)}.ccv:last-child{border:0}
+.ccv .cp{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}.ccv .cp b{font-size:17px}.ccv .cp small{color:var(--muted)}.ccv .cs{font-size:11.5px;font-weight:700;border-radius:6px;padding:0 6px;background:var(--bg)}
+.ccv .cd{margin-top:3px;font-size:14px}.ccv .cd a{margin-left:8px;white-space:nowrap}.ccv .cn{margin-top:3px;font-size:13px;color:var(--muted)}
 .lrow b{font-size:17px;font-variant-numeric:tabular-nums;background:var(--blue-bg);color:var(--blue-ink);border-radius:8px;padding:1px 10px;min-width:38px;text-align:center}
 .lrow i{font-style:normal;font-size:12px;color:var(--muted);margin-left:6px}
 .lrow i u{text-decoration:none;background:var(--blue-bg);border-radius:5px;padding:0 5px;margin-left:4px;color:var(--brand2);font-weight:600}
@@ -444,7 +448,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     var h=seg('data-csub',[['type','По технике'],['dep','По отделам']],csub);
     if(csub==='type'){
       h+='<div class="cg">';
-      D.rows.forEach(function(r){
+      D.rows.forEach(function(r,ri){
         var keys=D.deps.filter(function(d){return r.cells[d]});
         h+='<div class="card cc"><h3>'+esc(r.name)+'</h3><div class="stats">'+
           '<div class="stat plan"><b>'+r.plan+'</b><span>план</span></div>'+
@@ -455,7 +459,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
         if(keys.length){
           h+='<div class="cells">'+keys.map(function(d){
             var c=r.cells[d];
-            return '<div class="cell"><small>'+esc(d)+(c.u?'<u>утт '+c.u+'</u>':'')+'</small><b>'+(c.e?c.e+'='+c.v:c.v)+'</b></div>';
+            return '<div class="cell tapc" data-cc="'+ri+'|'+esc(d)+'" role="button" tabindex="0"><small>'+esc(d)+(c.u?'<u>утт '+c.u+'</u>':'')+'</small><b>'+(c.e?c.e+'='+c.v:c.v)+'</b></div>';
           }).join('')+'</div>';
         }else h+='<div class="empty" style="padding:6px">Не распределено по отделам</div>';
         h+='</div>';
@@ -469,7 +473,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
         var sum=items.reduce(function(a,r){return a+r.cells[d].v},0);
         h+='<div class="card"><h3>'+esc(d)+'<em>— '+sum+' ед.</em></h3>'+items.map(function(r){
           var c=r.cells[d],ex=cellExtra(c);
-          return '<div class="lrow"><span>'+esc(r.name)+(ex?'<i>'+ex+'</i>':'')+'</span><b>'+c.v+'</b></div>';
+          return '<div class="lrow tapc" data-cc="'+D.rows.indexOf(r)+'|'+esc(d)+'" role="button" tabindex="0"><span>'+esc(r.name)+(ex?'<i>'+ex+'</i>':'')+'</span><b>'+c.v+'</b></div>';
         }).join('')+'</div>';
       });
       h+='</div>';
@@ -793,6 +797,33 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     var m=t.closest('[data-devm]');
     if(m){devOpen(m.dataset.devm)}
   });
+  // ---- «Для ЦИТС»: нажатие на ячейку (отдел × тип техники) - какие именно машины и водители
+  function ccOpen(key){
+    var i=key.indexOf('|'), r=DATA.daily.rows[+key.slice(0,i)], d=key.slice(i+1); if(!r) return;
+    var vs=DATA.veh.filter(function(v){return v.dep===d&&v.p===r.p});
+    var c=r.cells[d]||{}, el=devShell(), h='';
+    h+='<div class="sh"><div class="shh"><b>'+esc(r.name)+' · '+esc(d)+'</b><button class="shx" data-devx="1" aria-label="Закрыть">×</button></div>'+
+       '<div class="shs"><small style="color:var(--muted)">'+vs.length+' ед.'+(c.e?' ('+esc(c.e)+')':'')+'</small></div><div class="shb">';
+    if(!vs.length) h+='<div class="empty">Нет данных по машинам</div>';
+    vs.forEach(function(v){
+      var sh=v.d&&v.n?'день + ночь':(v.d?'день':'ночь'), cls=v.d&&v.n?'vdn':(v.d?'vd':'vn');
+      h+='<div class="ccv"><div class="cp"><span class="v '+cls+'">'+esc(v.num)+'</span><small>'+esc(v.t)+' · '+sh+'</small></div>';
+      var list=DRV&&DRV.map?DRV.map[v.num]:undefined;
+      if(!DRV) h+='<div class="cn">Данные по водителям не загружены</div>';
+      else if(list===undefined) h+='<div class="cn">Водитель не найден (номера нет в экспорте путевых листов)</div>';
+      else if(!list.length) h+='<div class="cn">Водитель не указан (в экспорте без водителя)</div>';
+      else list.forEach(function(x){h+='<div class="cd"><b>'+esc(x.n)+'</b>'+(x.t?tel(x.t)+(x.t2?tel(x.t2):''):'')+(x.s?' <small style="opacity:.6">(общий номер)</small>':'')+'</div>'});
+      h+='</div>';
+    });
+    if(DRV&&DRV.date) h+='<div class="cn" style="padding-top:8px">по путевым листам на '+fmtDate(DRV.date)+'</div>';
+    h+='</div></div>';
+    el.innerHTML=h; el.style.display='flex'; document.body.style.overflow='hidden';
+  }
+  document.addEventListener('click',function(e){
+    var c=e.target.closest&&e.target.closest('[data-cc]');
+    if(c&&DATA&&DATA.daily){track('ЦИТС/ячейка');ccOpen(c.dataset.cc)}
+  });
+  document.addEventListener('keydown',function(e){if((e.key==='Enter'||e.key===' ')&&e.target.dataset&&e.target.dataset.cc&&DATA&&DATA.daily){e.preventDefault();ccOpen(e.target.dataset.cc)}});
   document.addEventListener('keydown',function(e){if(e.key==='Escape')devClose();if((e.key==='Enter'||e.key===' ')&&e.target.dataset&&e.target.dataset.dev){e.preventDefault();devOpen('plan')}});
   var calM=null;
   function closeCal(){var c=document.querySelector('.cal');if(c)c.remove()}
