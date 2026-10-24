@@ -141,6 +141,8 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
 .cell i u{text-decoration:none;background:var(--card);border-radius:5px;padding:0 5px;margin-left:4px;color:var(--brand2);font-weight:600}
 .lrow{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:7px 0;border-bottom:1px solid var(--line)}
 .lrow:last-child{border:0}
+.pq{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;margin:0 0 10px}.pqb{border:1px solid var(--blue-line);background:var(--blue-bg);color:var(--blue-ink);border-radius:8px;padding:7px 0;font:inherit;font-weight:700;font-size:15px;cursor:pointer;font-variant-numeric:tabular-nums}.pqb:active{opacity:.7}
+.cc.flash{box-shadow:0 0 0 2px var(--brand2)}
 .tapc{cursor:pointer}.tapc:active{opacity:.7}
 .ccv{padding:9px 0;border-bottom:1px solid var(--line)}.ccv:last-child{border:0}
 .ccv .cp{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}.ccv .cp b{font-size:17px}.ccv .cp small{color:var(--muted)}.ccv .cs{font-size:11.5px;font-weight:700;border-radius:6px;padding:0 6px;background:var(--bg)}
@@ -453,10 +455,11 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     var D=DATA.daily; if(!D||!D.rows.length) return '<div class="empty">Нет данных режимного листа</div>';
     var h=seg('data-csub',[['type','По технике'],['dep','По отделам']],csub);
     if(csub==='type'){
+      h+='<div class="pq">'+D.rows.map(function(r,ri){return '<button class="pqb" data-cgo="'+ri+'">'+esc(r.p||'?')+'</button>'}).join('')+'</div>';
       h+='<div class="cg">';
       D.rows.forEach(function(r,ri){
         var keys=D.deps.filter(function(d){return r.cells[d]});
-        h+='<div class="card cc"><h3>'+esc(r.name)+'</h3><div class="stats">'+
+        h+='<div class="card cc" id="cc-'+ri+'"><h3>'+esc(r.name)+'</h3><div class="stats">'+
           '<div class="stat plan"><b>'+r.plan+'</b><span>план</span></div>'+
           '<div class="stat fact"><b>'+r.fact+'</b><span>факт</span></div>'+
           '<div class="stat"><b class="'+(r.diff<0?'neg':(r.diff>0?'pos':''))+'">'+sign(r.diff)+'</b><span>откл.</span></div>'+
@@ -853,6 +856,15 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     el.innerHTML=h; el.style.display='flex'; document.body.style.overflow='hidden';
   }
   document.addEventListener('click',function(e){
+    var g=e.target.closest&&e.target.closest('[data-cgo]');
+    if(g){
+      var el=document.getElementById('cc-'+g.dataset.cgo); if(!el) return;
+      var hh=document.querySelector('header').getBoundingClientRect().height;
+      window.scrollTo({top:el.getBoundingClientRect().top+window.pageYOffset-hh-8,behavior:'smooth'});
+      document.querySelectorAll('.cc.flash').forEach(function(x){x.classList.remove('flash')});
+      el.classList.add('flash'); setTimeout(function(){el.classList.remove('flash')},1600);
+      track('ЦИТС/префикс'); return;
+    }
     var c=e.target.closest&&e.target.closest('[data-cc]');
     if(c&&DATA&&DATA.daily){track('ЦИТС/ячейка');ccOpen(c.dataset.cc)}
   });
