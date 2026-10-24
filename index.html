@@ -564,11 +564,13 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
   function nachSearch(raw){
     var s=raw.toLowerCase(), toks=s.split(/\s+/).filter(Boolean);
     function lnum(x){return String(x).toUpperCase().replace(/[A-Z]/g,function(c){return LAT[c]||c})}
+    var tm={}; ((DATA&&DATA.types)||[]).forEach(function(x){tm[x.p]=x.name});      // префикс -> название типа техники («33» -> Компрессор)
+    function stem(t){return t.length>=5?t.slice(0,t.length-(t.length>6?2:1)):t}      // «компрессора» найдёт «компрессор»
     var f=allRep().filter(function(v){
-      var hay=(v.make+' '+v.type+' '+v.work+' '+v._chief+' '+(v.repl||'')).toLowerCase(), ln=lnum(v.num), nn=norm(v.num);
+      var hay=(v.make+' '+v.type+' '+v.work+' '+v._chief+' '+(v.repl||'')+' '+(tm[pref(v.num)]||'')).toLowerCase(), ln=lnum(v.num), nn=norm(v.num);
       return toks.every(function(t){
         if(/\*|-$/.test(t)){var re=lnum(t).replace(/[.+?^${}()|[\]\\]/g,'\\$&').replace(/\*/g,'.*');try{return new RegExp('^'+re).test(ln)}catch(e){return false}}
-        return hay.indexOf(t)>-1||nn.indexOf(norm(t))>-1||('ак'+v.ak).indexOf(t)>-1});
+        return hay.indexOf(t)>-1||hay.indexOf(stem(t))>-1||nn.indexOf(norm(t))>-1||('ак'+v.ak).indexOf(t)>-1});
     });
     if(!f.length) return '<div class="empty">Ничего не найдено</div>';
     f.sort(byDays);
@@ -622,7 +624,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     if(REP.date!==DATA.date) w+='<div class="pw">Отчёты автоколонн на '+fmtDate(REP.date)+' не обновлены</div>';
     var have=REP.aks.map(function(k){return k.n}), miss=[1,2,3,4,5,6,7,8].filter(function(n){return have.indexOf(n)<0});
     if(miss.length) w+='<div class="pw">Нет отчёта: АК '+miss.join(', ')+'</div>';
-    return '<input class="search" id="rq" type="search" inputmode="search" enterkeyhint="search" placeholder="Поиск: номер машины, марка, причина" value="'+esc(nq)+'">'+
+    return '<input class="search" id="rq" type="search" inputmode="search" enterkeyhint="search" placeholder="Поиск: номер, тип техники (компрессор, кран…), марка, причина" value="'+esc(nq)+'">'+
       seg('data-nsub',[['ak','По автоколоннам'],['pref','По префиксам']],nsub)+w+'<div id="nres">'+nachBody()+'</div>';
   }
 
