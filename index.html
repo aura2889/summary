@@ -219,7 +219,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
 .prn{display:flex;justify-content:space-between;align-items:baseline;gap:8px;color:var(--muted);font-size:13.5px}.prn b{font-size:17px;font-weight:800}.prn.big{font-size:14.5px;color:var(--ink)}
 .prs{font-size:12.5px;color:var(--muted);margin-top:2px}
 .pcs{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}.pcc{background:var(--soft);border-radius:999px;padding:2px 8px;font-size:12px}
-.pcg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.pct.on{outline:2px solid var(--brand2)}.pct[data-pc]{cursor:pointer}.pct{background:var(--soft);border-radius:10px;padding:8px 4px;text-align:center}.pct span{display:block;font-size:16px}.pct b{display:block;font-size:20px;line-height:1.2}.pct small{font-size:11px;color:var(--muted)}
+.pcg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.tot6.t2{margin-top:-6px}.pct.on{outline:2px solid var(--brand2)}.pct[data-pc]{cursor:pointer}.pct{background:var(--soft);border-radius:10px;padding:8px 4px;text-align:center}.pct span{display:block;font-size:16px}.pct b{display:block;font-size:20px;line-height:1.2}.pct small{font-size:11px;color:var(--muted)}
 .prr2{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}.prr2>div{background:var(--soft);border-radius:10px;padding:7px 10px}.prr2 small{display:block;font-size:11px;color:var(--muted)}.prr2 span{font-weight:700;margin-right:8px}
 .pbar{height:5px;border-radius:3px;background:var(--soft);margin-top:5px}.pbar i{display:block;height:5px;border-radius:3px}.pbar i.n{background:var(--bad)}.pbar i.p{background:var(--ok)}
 </style>
@@ -321,7 +321,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     $('#kpis').className='kpis'+(tr?' k5':'');
     $('#kpis').innerHTML=
       '<div class="kpi"><b>'+t.plan+'</b><span>план</span></div>'+
-      '<div class="kpi"><b>'+t.fact+'</b><span>факт</span></div>'+
+      '<div class="kpi"><b>'+(t.fact+tr)+'</b><span>факт</span></div>'+
       '<div class="kpi tapk'+(dv<0?' neg':'')+'" data-dev="1" role="button" tabindex="0"><b>'+(dv>0?'+':'')+dv+'</b><span>откл. ›</span></div>'+
       (tr?'<div class="kpi sm" data-dev="1" role="button" tabindex="0"><b>'+tr+'</b><span>в обучении</span></div>':'')+
       '<div class="kpi"><b>'+t.day+' / '+t.night+'</b><span>день / ночь</span></div>';
@@ -687,13 +687,34 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
       return '<div class="prr"><div class="prt"><span class="prp">'+esc(e[0].p||'—')+'</span> '+esc(e[0].name)+' <small>АК'+e[1]+'</small></div><div class="prn"><span>план '+e[0].plan+' → факт '+e[0].fact+'</span>'+pdv(e[2])+'</div></div>'}).join('');
     return h;
   }
+  function prRest(){
+    var h='<div class="gh"><span>• Прочее</span><small>не объяснено причинами</small></div><div class="prs">В файле отклонение колонны не всегда равно сумме причин (ремонт, персонал, отказ, годовой запрос, вне плана). Разница — здесь:</div>',n=0;
+    PRX.aks.forEach(function(a){
+      var z=pcz(a.c),sm=z.rep+z.staff+z.canc+z.yr+z.oop,r=a.dev-sm;
+      if(r){n++;h+='<div class="prr"><div class="prt"><b>АК '+a.n+'</b> <small>'+esc(a.name.replace(/^№\s*\d+\s*/,''))+'</small></div><div class="prn"><span>отклонение '+sg(a.dev)+', причины '+sg(sm)+'</span>'+pdv(r)+'</div>';
+      a.types.forEach(function(x){var zz=pcz(x.c),q=x.dev-(zz.rep+zz.staff+zz.canc+zz.yr+zz.oop);if(q)h+='<div class="prs"><span class="prp">'+esc(x.p||'—')+'</span> '+esc(x.name)+': отклонение '+sg(x.dev)+', причин указано '+sg(x.dev-q)+'</div>'});
+      h+='</div>'}
+    });
+    return n?h:h+'<div class="empty">Нет</div>';
+  }
+  function prCust(){
+    var G=[['pu','Производственное управление (ПУ)'],['krs','ДБиПКРС, бурение'],['dtt','ДТТ / пожарные (семсер)']],t=PRX.tot,h='';
+    G.forEach(function(g){
+      var v=t.g[g.n=g[0]];
+      h+='<div class="card"><h3>'+g[1]+'</h3><div class="prr2"><div><small>День</small><span>'+v[0]+' → '+v[1]+'</span>'+pdv(v[1]-v[0])+'</div><div><small>Ночь</small><span>'+v[2]+' → '+v[3]+'</span>'+pdv(v[3]-v[2])+'</div></div>';
+      PRX.aks.forEach(function(a){var w=a.g[g[0]];if(!(w[0]||w[1]||w[2]||w[3]))return;
+        h+='<div class="prr"><div class="prt"><b>АК '+a.n+'</b></div><div class="prn"><span>день '+w[0]+' → '+w[1]+' · ночь '+w[2]+' → '+w[3]+'</span>'+pdv(w[1]-w[0]+w[3]-w[2])+'</div></div>'});
+      h+='</div>';
+    });
+    return h+'<div class="prs">Факт = ДТТ + аренда. Заказчики берутся из шапки таблицы: Өндірістік басқарма, ДБиПКРС/Бурение, ДТТ/семсер өрт сөндіруші.</div>';
+  }
   function prSum(){
     var t=PRX.tot, z=pcz(t.c), h='', s=0;
-    h+='<div class="tot6"><div><b>'+t.plan+'</b><span>план</span></div><div><b>'+t.fact+'</b><span>факт</span></div><div><b class="'+sgc(t.dev)+'">'+sg(t.dev)+'</b><span>отклонение</span></div><div><b>'+Math.round(t.fact/t.plan*1000)/10+'%</b><span>выполнение</span></div></div>';
+    h+='<div class="tot6"><div><b>'+t.plan+'</b><span>план</span></div><div><b>'+t.fact+'</b><span>факт</span></div><div><b class="'+sgc(t.dev)+'">'+sg(t.dev)+'</b><span>отклонение</span></div><div><b>'+Math.round(t.fact/t.plan*1000)/10+'%</b><span>выполнение</span></div></div>'+'<div class="tot6 t2"><div><b>'+pct(t.kip)+'</b><span>КИП</span></div><div><b>'+pct(t.ktg)+'</b><span>КТГ</span></div><div><b>'+t.line+'</b><span>ДТТ на линии</span></div><div><b>'+t.rent+'</b><span>аренда в парке</span></div></div>';
     h+='<div class="card"><h3>Почему отклонение '+sg(t.dev)+'</h3><div class="pcg">';
     Object.keys(PCN).forEach(function(k){s+=z[k];h+='<div class="pct'+(pcx===k?' on':'')+'"'+(z[k]?' data-pc="'+k+'"':'')+'><span>'+PCI[k]+'</span><b class="'+sgc(z[k])+'">'+sg(z[k])+'</b><small>'+PCN[k]+'</small></div>'});
-    if(t.dev-s) h+='<div class="pct"><span>•</span><b class="'+sgc(t.dev-s)+'">'+sg(t.dev-s)+'</b><small>прочее</small></div>';
-    h+='</div>'+(pcx?prWhy(pcx):'<div class="prs" style="margin-top:8px">Нажмите на причину — покажу, по каким машинам и колоннам</div>')+'</div>';
+    if(t.dev-s) h+='<div class="pct'+(pcx==='rest'?' on':'')+'" data-pc="rest"><span>•</span><b class="'+sgc(t.dev-s)+'">'+sg(t.dev-s)+'</b><small>прочее</small></div>';
+    h+='</div>'+(pcx==='rest'?prRest():pcx?prWhy(pcx):'<div class="prs" style="margin-top:8px">Нажмите на причину — покажу, по каким машинам и колоннам</div>')+'</div>';
     h+='<div class="card"><h3>ДТТ и аренда</h3><div class="prr2"><div><small>ДТТ</small><span>'+t.pd+' → '+t.fd+'</span>'+pdv(t.devd)+'</div><div><small>Аренда</small><span>'+t.pr+' → '+t.fr+'</span>'+pdv(t.devr)+'</div></div>'+
       '<div class="prr2"><div><small>День (ДТТ+аренда)</small><span>'+t.dp+' → '+t.df+'</span>'+pdv(t.df-t.dp)+'</div><div><small>Ночь</small><span>'+t.np+' → '+t.nf+'</span>'+pdv(t.nf-t.np)+'</div></div></div>';
     h+='<div class="card"><h3>По автоколоннам</h3>'+PRX.aks.map(function(a){
@@ -720,7 +741,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     var t=PRX.tot, h='<div class="tot6"><div><b>'+t.own+'</b><span>ДТТ в парке</span></div><div><b>'+t.line+'</b><span>на линии</span></div><div><b>'+t.rep+'</b><span>в ремонте</span></div><div><b>'+t.res+'</b><span>резерв</span></div></div>';
     h+='<div class="card"><h3>Парк ДТТ</h3><div class="prr2"><div><small>КИП (использование)</small><span>'+pct(t.kip)+'</span></div><div><small>КТГ (исправность)</small><span>'+pct(t.ktg)+'</span></div></div>'+
       '<div class="prr2"><div><small>Куплено в 2026 (план → факт)</small><span>'+t.buy_p+' → '+t.buy_f+'</span></div><div><small>К списанию</small><span>'+t.wo+'</span></div></div>'+
-      '<div class="prr2"><div><small>Аренда в парке</small><span>'+t.rent+'</span></div><div><small>Нет выхода (день+ночь)</small><span>'+(-t.nd)+'</span></div></div></div>';
+      '<div class="prr2"><div><small>Аренда в парке</small><span>'+t.rent+'</span></div><div><small>Нет выхода (день+ночь)</small><span>'+(-t.nd)+'</span></div></div><div class="prr2"><div><small>Аренда: выход план → факт</small><span>'+t.hp+' → '+t.hf+'</span></div><div><small>Аренда без экипажа</small><span>'+t.hs+'</span></div></div><div class="prr2"><div><small>Списание 2026: план 1 / 2 п/г</small><span>'+t.w1+' / '+t.w2+'</span></div><div><small>Списано факт</small><span>'+t.wf+'</span></div></div>'+((t.ex||t.exr)?'<div class="prr2"><div><small>Доп. запрос ДТТ / аренда</small><span>'+t.ex+' / '+t.exr+'</span></div></div>':'')+'</div>';
     h+='<div class="card"><h3>По автоколоннам</h3>'+PRX.aks.map(function(a){
       return '<div class="prr"><div class="prt"><b>АК '+a.n+'</b></div><div class="prn"><span>КИП '+pct(a.kip)+' · КТГ '+pct(a.ktg)+'</span></div><div class="prs">в парке '+a.own+' · на линии '+a.line+' · ремонт '+a.rep+' · резерв '+a.res+(a.wo?' · к списанию '+a.wo:'')+(a.buy_p||a.buy_f?' · куплено '+a.buy_f+' из '+a.buy_p:'')+'</div></div>'}).join('')+'</div>';
     return h;
@@ -741,7 +762,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
   }
   function prodBody(){
     if(pq.trim().length>=2) return prSearch();
-    return psub==='sum'?prSum():(psub==='ak'?prAk():(psub==='tech'?prTech():(psub==='park'?prPark():(psub==='staff'?prStaff():prDyn()))));
+    return psub==='sum'?prSum():(psub==='ak'?prAk():(psub==='tech'?prTech():(psub==='cust'?prCust():psub==='park'?prPark():(psub==='staff'?prStaff():prDyn()))));
   }
   function viewProd(){
     prLoad();
@@ -751,7 +772,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     var sr='<input class="search" id="pq" type="search" inputmode="search" enterkeyhint="search" placeholder="Поиск: префикс, тип техники (кран, ППУ…), АК3" value="'+esc(pq)+'">';
     if(PRX===0||PRX===undefined) return sr+'<div class="empty">Загрузка дня…</div>';
     if(PRX===null) return sr+'<div class="empty">На '+fmtDate(dd)+' данных «Өндіріс ақпары» нет.<br><small>Выберите другую дату вверху</small></div>';
-    return sr+seg('data-psub',[['sum','Итог'],['ak','АК'],['tech','Техника'],['park','Парк'],['staff','Люди'],['dyn','Дни']],psub)+'<div id="pres">'+prodBody()+'</div>';
+    return sr+'<div class="chips">'+[['sum','Итог'],['ak','Автоколонны'],['tech','Техника'],['cust','Заказчики'],['park','Парк'],['staff','Люди'],['dyn','Дни']].map(function(i){return '<button class="chip'+(psub===i[0]?' on':'')+'" data-psub="'+i[0]+'">'+i[1]+'</button>'}).join('')+'</div>'+'<div id="pres">'+prodBody()+'</div>';
   }
 
   /* ---------- окошко с водителем ---------- */

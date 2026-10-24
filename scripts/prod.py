@@ -7,6 +7,7 @@ AKROWS=[(6,14),(15,26),(27,37),(38,50),(51,67),(68,75),(77,88),(89,111)]
 TOTAL=114
 F=dict(own='D',own0='C',buy_p='E',buy_f='F',rent='G',line='K',rep='L',res='M',wo='N',nd='O',
        dp='S',dpd='T',dpr='U',df='V',np='X',npd='Y',npr='Z',nf='AA',
+       hp='H',hf='I',hs='J',w1='P',w2='Q',wf='R',ex='AZ',exr='BA',
        plan='AW',pd='AX',pr='AY',fact='BB',fd='BC',fr='BD',dev='BG',devd='BE',devr='BF')
 CAUSE=dict(rep='BH',repr='BI',staff='BJ',staffr='BK',canc='BL',cancr='BM',yr='BN',yrr='BO',oop='BP')
 STAFF=dict(shtat='BQ',list='BR',need='BS',vahta='BT',vac='BU',vacp='BV',vac0='BW',sick='BX',sick5='BY',vacancy='BZ',oth='CA',frm='CB')
@@ -21,6 +22,7 @@ def nm(s):
     return re.sub(r'\s+',' ',s)
 def row(ws,r):
     d={k:v(ws,r,c) for k,c in F.items()}
+    d['g']={k:[v(ws,r,a), v(ws,r,b)+v(ws,r,b2), v(ws,r,c), v(ws,r,e)+v(ws,r,e2)] for k,a,b,b2,c,e,e2 in (('pu','S','V','W','X','AA','AB'),('krs','AC','AF','AG','AH','AK','AL'),('dtt','AM','AP','AQ','AR','AU','AV'))}
     d['c']={k:v(ws,r,c) for k,c in CAUSE.items() if v(ws,r,c)}
     d['s']={k:v(ws,r,c) for k,c in STAFF.items() if v(ws,r,c)}
     kip=ws['CI'+str(r)].value; ktg=ws['CJ'+str(r)].value
@@ -54,7 +56,8 @@ def day(ws):
 def parse(path):
     wb=openpyxl.load_workbook(path,data_only=True)
     m=re.search(r'(\d{2})\.(\d{4})',path.split('/')[-1])
-    mon=(m.group(2)+'-'+m.group(1)) if m else None
+    import datetime
+    mon=(m.group(2)+'-'+m.group(1)) if m else (datetime.datetime.utcnow()+datetime.timedelta(hours=5)).strftime('%Y-%m')
     out={}
     for ws in wb.worksheets:
         if not re.fullmatch(r'\d{1,2}',ws.title): continue
