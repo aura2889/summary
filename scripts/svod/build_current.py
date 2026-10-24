@@ -4,7 +4,7 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter as L
 DATE_STR=sys.argv[1] if len(sys.argv)>1 else '05.10.2026'
 ALL,EXC,NOTES=pickle.load(open('res.pkl','rb'))
-FINAL={'ПЧ-Семсер':'ОБиОТ','ПЧ':'ОБиОТ','ЧАКУР мед':'ОБиОТ','ЧАКУР мед.':'ОБиОТ','УПТОК':'БМТС','ГУ':'ГЦ','БПО 2':'ЦПКРС-2','РМУ 2':'ЦПКРС-2','ЦИТС.':'ЦИТС','Газ.цех':'ГЦ','РСУ':'РСЦ','Экология':'ГООС','оппоIR':'IR'}
+FINAL={'ПЧ-Семсер':'ОБиОТ','ПЧ':'ОБиОТ','ЧАКУР мед':'ОБиОТ','ЧАКУР мед.':'ОБиОТ','УПТОК':'БМТС','ГУ':'ГЦ','БПО 2':'ЦПКРС-2','РМУ 2':'Гараж-2','ЦИТС.':'ЦИТС','Газ.цех':'ГЦ','РСУ':'РСЦ','Экология':'ГООС','оппоIR':'IR'}
 for _x in ALL: _x['dept']=FINAL.get(_x['dept'],_x['dept'])
 for _i in range(6): ALL.append(dict(cell='—',src='MAN',srcname='Добавлено вручную (пожарные машины)',hdr='ПЧ',dept='ОБиОТ',plate='Пожарная машина %d'%(_i+1),code='10',day=1 if _i<3 else 0,night=0 if _i<3 else 1,note='пожарные: 3 день + 3 ночь (по указанию, в диспетчерских файлах нет)',raw='',pid=''))
 TPLF="resources/template_first_day.xlsm"
