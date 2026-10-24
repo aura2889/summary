@@ -224,7 +224,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
 .pbar{height:5px;border-radius:3px;background:var(--soft);margin-top:5px}.pbar i{display:block;height:5px;border-radius:3px}.pbar i.n{background:var(--bad)}.pbar i.p{background:var(--ok)}
 .ph{font-weight:800;font-size:13px;text-transform:uppercase;letter-spacing:.03em;color:var(--brand2);margin:16px 0 8px}.ph small{text-transform:none;letter-spacing:0;font-weight:500;color:var(--muted);margin-left:6px}
 .pgt{display:grid;grid-template-columns:1fr 1fr;gap:8px}.ptl{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px;cursor:pointer}.ptl small{display:block;font-size:12px;color:var(--muted);line-height:1.2}.ptl b{display:block;font-size:24px;line-height:1.25;margin-top:2px}.ptl span{display:block;font-size:12px;color:var(--muted);margin-top:1px}
-.prr.tp{cursor:pointer}
+.prr.tp{cursor:pointer}.prsub{margin:2px 0 6px 12px;padding-left:10px;border-left:3px solid var(--line)}
 </style>
 </head>
 <body>
@@ -665,24 +665,61 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     Object.keys(PCN).forEach(function(k){if(z[k])h+='<span class="pcc">'+PCI[k]+' '+PCN[k]+' <b class="'+sgc(z[k])+'">'+sg(z[k])+'</b></span>'});
     return h?'<div class="pcs">'+h+'</div>':'';
   }
+  function prRank(p,name){if(/самовожд/i.test(name)) return 900; var i=ORDER.indexOf(p); return i>=0?i:100+(parseFloat(p)||99)}
+  function prGroups(aknum){
+    var m={},ks=[];
+    PRX.aks.forEach(function(a){if(aknum&&a.n!==aknum) return;a.types.forEach(function(x){
+      var k=x.p+'|'+x.name,g=m[k];
+      if(!g){g=m[k]={k:k,p:x.p,name:x.name,plan:0,fact:0,dev:0,line:0,own:0,rep:0,res:0,c:{},s:{},parts:[]};ks.push(k)}
+      ['plan','fact','dev','line','own','rep','res'].forEach(function(f){g[f]+=x[f]||0});
+      Object.keys(x.c||{}).forEach(function(q){g.c[q]=(g.c[q]||0)+x.c[q]});
+      Object.keys(x.s||{}).forEach(function(q){g.s[q]=(g.s[q]||0)+x.s[q]});
+      g.parts.push({n:a.n,x:x});
+    })});
+    return ks.map(function(k){return m[k]}).sort(function(a,b){return prRank(a.p,a.name)-prRank(b.p,b.name)||a.dev-b.dev});
+  }
+  function prRepList(n,p){
+    if(!REP||!REP.aks) return '';
+    var a=REP.aks.filter(function(k){return k.n===n})[0]; if(!a) return '';
+    var vs=a.vehs.filter(function(v){return v.sec!=='wo'&&pref(v.num)===p}).sort(byDays);
+    if(!vs.length) return '<div class="prs">В отчёте ремонта АК'+n+' таких машин нет</div>';
+    return '<div class="prs"><b>В ремонте сейчас — '+vs.length+'</b>'+(REP.date!==DATA.date?' (отчёт на '+dm(REP.date)+')':'')+'</div>'+vs.map(function(v){return vrow(v)}).join('');
+  }
+  function prStaffChips(s){
+    s=s||{};var h='';
+    var vac=(s.vac||0)+(s.vacp||0)+(s.vac0||0),sick=(s.sick||0)+(s.sick5||0);
+    if(vac) h+='<span class="pcc">🌴 отпуск <b>'+vac+'</b></span>';
+    if(sick) h+='<span class="pcc">🤒 больничный <b>'+sick+'</b></span>';
+    if(s.vacancy) h+='<span class="pcc">⬜ вакансия <b>'+s.vacancy+'</b></span>';
+    if(s.oth) h+='<span class="pcc">↔ в другой смене <b>'+s.oth+'</b></span>';
+    var inf=(s.list!=null||s.shtat!=null)?'<div class="prs">штат '+(s.shtat||0)+' · по списку '+(s.list||0)+' · нужно '+(s.need||0)+' · на вахте '+(s.vahta||0)+'</div>':'';
+    return inf+(h?'<div class="pcs">'+h+'</div>':'');
+  }
+  function prPartDet(n,x,k){
+    if(k==='rep') return prRepList(n,x.p);
+    if(k==='staff') return prStaffChips(x.s);
+    if(k) return '';
+    return (pcz(x.c).rep||x.rep?prRepList(n,x.p):'')+prStaffChips(x.s);
+  }
   function prAllTypes(){var r=[];PRX.aks.forEach(function(a){a.types.forEach(function(t){r.push([t,a.n])})});return r}
   function prSearch(){
-    var ws=pq.toLowerCase().replace(/ак\s*(\d)/g,'ак$1').split(/\s+/).filter(Boolean), r=[];
-    prAllTypes().forEach(function(e,ix){e=[e[0],e[1],ix];
-      var t=e[0], s=(t.name+' ак'+e[1]).toLowerCase();
-      if(ws.every(function(w){return /^[\d.]+$/.test(w)?(t.p===w||s.indexOf(w)>=0):(s.indexOf(w)>=0||s.indexOf(w.slice(0,Math.max(4,w.length-2)))>=0)})) r.push(e);
-    });
+    var ws=pq.toLowerCase().replace(/ак\s*(\d)/g,'ак$1').split(/\s+/).filter(Boolean),akn=0,tw=[];
+    ws.forEach(function(w){var m=/^ак(\d)$/.exec(w);if(m)akn=+m[1];else tw.push(w)});
+    var r=prGroups(akn).filter(function(g){var s=(g.name).toLowerCase();return tw.every(function(w){return /^[\d.]+$/.test(w)?(g.p===w||s.indexOf(w)>=0):(s.indexOf(w)>=0||s.indexOf(w.slice(0,Math.max(4,w.length-2)))>=0)})});
     if(!r.length) return '<div class="empty">Ничего не найдено<br><small>Номер-префикс, тип техники (кран, ППУ…) или АК1…АК8</small></div>';
-    var p=0,f=0,d=0;r.forEach(function(e){p+=e[0].plan;f+=e[0].fact;d+=e[0].dev});
-    return '<div class="card"><div class="prn big"><span>Найдено '+r.length+' · план '+p+' → факт '+f+'</span>'+pdv(d)+'</div></div><div class="card">'+r.map(function(e){return prRow(e[0],e[2],e[1])}).join('')+'</div>';
+    var p=0,f=0,d=0;r.forEach(function(g){p+=g.plan;f+=g.fact;d+=g.dev});
+    return '<div class="card"><div class="prn big"><span>Найдено '+r.length+' · план '+p+' → факт '+f+'</span>'+pdv(d)+'</div></div><div class="card">'+r.map(function(g){return prRow(g,g.k)}).join('')+'</div>';
   }
   function prWhy(k){
-    var r=[],tot=0,by={};
-    PRX.aks.forEach(function(a){a.types.forEach(function(x){var v=pcz(x.c)[k];if(v){r.push([x,a.n,v]);tot+=v;by[a.n]=(by[a.n]||0)+v}})});
-    r.sort(function(x,y){return Math.abs(y[2])-Math.abs(x[2])});
-    var h='<div class="gh"><span>'+PCI[k]+' '+PCN[k]+' '+sg(tot)+'</span><small>по колоннам</small></div><div class="pcs">'+Object.keys(by).map(function(n){return '<span class="pcc">АК'+n+' <b class="'+sgc(by[n])+'">'+sg(by[n])+'</b></span>'}).join('')+'</div>';
-    h+='<div class="gh"><span>По типам техники</span><small>префикс · тип</small></div>'+r.map(function(e){
-      return '<div class="prr"><div class="prt"><span class="prp">'+esc(e[0].p||'—')+'</span> '+esc(e[0].name)+' <small>АК'+e[1]+'</small></div><div class="prn"><span>план '+e[0].plan+' → факт '+e[0].fact+'</span>'+pdv(e[2])+'</div></div>'}).join('');
+    var gs=prGroups().filter(function(g){return pcz(g.c)[k]}),tot=0,by={};
+    gs.forEach(function(g){g.parts.forEach(function(q){var v=pcz(q.x.c)[k];if(v){tot+=v;by[q.n]=(by[q.n]||0)+v}})});
+    var h='<div class="pcs">'+Object.keys(by).map(function(n){return '<span class="pcc">АК'+n+' <b class="'+sgc(by[n])+'">'+sg(by[n])+'</b></span>'}).join('')+'</div>';
+    h+='<div class="prs">Сначала приоритетная техника. Нажмите на тип — вся картина по нему.</div>';
+    h+=gs.map(function(g){
+      var v=pcz(g.c)[k];
+      return '<div class="prr tp" data-pt="'+esc(g.k)+'"><div class="prt"><span class="prp">'+esc(g.p||'—')+'</span> '+esc(g.name)+' <small>план '+g.plan+' → факт '+g.fact+'</small></div><div class="prn"><span></span>'+pdv(v)+'</div></div>'+
+        g.parts.filter(function(q){return pcz(q.x.c)[k]}).map(function(q){return '<div class="prsub"><div class="prn"><span><b>АК '+q.n+'</b></span>'+pdv(pcz(q.x.c)[k])+'</div>'+prPartDet(q.n,q.x,k)+'</div>'}).join('');
+    }).join('');
     return h;
   }
   function prSheet(title,body){
@@ -724,29 +761,29 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
   function prAkOpen(n){
     var a=PRX.aks.filter(function(x){return x.n===n})[0]; if(!a) return;
     var h='<div class="tot6"><div><b>'+a.plan+'</b><span>план</span></div><div><b>'+a.fact+'</b><span>факт</span></div><div><b class="'+sgc(a.dev)+'">'+sg(a.dev)+'</b><span>отклонение</span></div><div><b>'+pct(a.kip)+' / '+pct(a.ktg)+'</b><span>КИП / КТГ</span></div></div>'+pczChips(a.c);
-    var ts=a.types.slice().sort(function(x,y){return x.dev-y.dev}), bad=ts.filter(function(x){return x.dev}), ok=ts.filter(function(x){return !x.dev});
-    h+='<div class="ph">Где отклонение</div>'+(bad.length?bad.map(function(x){return prRow(x)}).join(''):'<div class="prs">Нет отклонений по типам</div>');
+    var ts=a.types.slice().sort(function(x,y){return prRank(x.p,x.name)-prRank(y.p,y.name)||x.dev-y.dev}), bad=ts.filter(function(x){return x.dev}), ok=ts.filter(function(x){return !x.dev});
+    h+='<div class="ph">Где отклонение</div>'+(bad.length?bad.map(function(x){return prRow(x,x.p+'|'+x.name)}).join(''):'<div class="prs">Нет отклонений по типам</div>');
     if(ok.length) h+='<div class="ph">Без отклонений — '+ok.length+'</div><div class="pcs">'+ok.map(function(x){return '<span class="pcc"><b>'+esc(x.p||'—')+'</b> '+esc(x.name)+' '+x.fact+'</span>'}).join('')+'</div>';
     var s=a.s||{};
     h+='<div class="ph">Парк</div><div class="pgt">'+tile('',a.own,'','В парке')+tile('',a.line,'','На линии')+tile('',a.rep,'','В ремонте')+tile('',a.res,'','Резерв')+'</div>';
     h+='<div class="ph">Люди</div><div class="pgt">'+tile('',(s.list||0)+' / '+(s.shtat||0),'','По списку / штат')+tile('',s.vahta||0,'','На вахте')+tile('',(s.vac||0)+(s.vacp||0)+(s.vac0||0),'','Отпуск')+tile('',(s.sick||0)+(s.sick5||0),'','Больничный')+'</div>';
     prSheet('АК '+a.n+' · '+pakn(a),h);
   }
-  function prTypeOpen(i){
-    var e=prAllTypes()[i]; if(!e) return; var x=e[0];
-    var h='<div class="tot6"><div><b>'+x.plan+'</b><span>план</span></div><div><b>'+x.fact+'</b><span>факт</span></div><div><b class="'+sgc(x.dev)+'">'+sg(x.dev)+'</b><span>отклонение</span></div><div><b>'+x.line+'</b><span>на линии</span></div></div>'+pczChips(x.c);
-    h+='<div class="ph">Парк</div><div class="pgt">'+tile('',x.own,'','В парке ДТТ')+tile('',x.rep,'','В ремонте')+tile('',x.res,'','Резерв')+tile('',x.wo,'','К списанию')+'</div>';
-    h+='<div class="ph">Выход</div><div class="pgt">'+tile('',x.pd+' → '+x.fd,'','ДТТ',sg(x.devd))+tile('',x.pr+' → '+x.fr,'','Аренда',sg(x.devr))+tile('',x.dp+' → '+x.df,'','День')+tile('',x.np+' → '+x.nf,'','Ночь')+'</div>';
-    prSheet((x.p?x.p+' · ':'')+esc(x.name)+' · АК'+e[1],h);
+  function prTypeOpen(key){
+    var g=prGroups().filter(function(q){return q.k===key})[0]; if(!g) return;
+    var h='<div class="tot6"><div><b>'+g.plan+'</b><span>план</span></div><div><b>'+g.fact+'</b><span>факт</span></div><div><b class="'+sgc(g.dev)+'">'+sg(g.dev)+'</b><span>отклонение</span></div><div><b>'+g.line+'</b><span>на линии</span></div></div>'+pczChips(g.c);
+    h+='<div class="ph">По автоколоннам</div>';
+    g.parts.forEach(function(q){var x=q.x;
+      h+='<div class="card"><div class="prr" style="border:0;padding-top:0"><div class="prt"><b>АК '+q.n+'</b></div><div class="prn"><span>'+x.plan+' → '+x.fact+' · в парке '+x.own+' · на линии '+x.line+(x.rep?' · ремонт '+x.rep:'')+(x.res?' · резерв '+x.res:'')+'</span>'+pdv(x.dev)+'</div>'+pczChips(x.c)+'</div>'+prPartDet(q.n,x)+'</div>'});
+    prSheet((g.p?g.p+' · ':'')+esc(g.name),h);
   }
-  function prRow(x,i,ak){
-    return '<div class="prr'+(i==null?'':' tp')+'"'+(i==null?'':' data-pt="'+i+'"')+'><div class="prt"><span class="prp">'+esc(x.p||'—')+'</span> '+esc(x.name)+(ak?' <small>АК'+ak+'</small>':'')+
+  function prRow(x,key,ak){
+    return '<div class="prr'+(key==null?'':' tp')+'"'+(key==null?'':' data-pt="'+esc(key)+'"')+'><div class="prt"><span class="prp">'+esc(x.p||'—')+'</span> '+esc(x.name)+(ak?' <small>АК'+ak+'</small>':'')+
       '</div><div class="prn"><span>'+x.plan+' → '+x.fact+'</span>'+pdv(x.dev)+'</div>'+pczChips(x.c)+'</div>';
   }
   function prTech(){
-    var all=prAllTypes();
-    var r=all.map(function(e,i){return [e[0],e[1],i]}).filter(function(e){return pfl==='neg'?e[0].dev<0:(pfl==='pos'?e[0].dev>0:true)}).sort(function(x,y){return x[0].dev-y[0].dev||y[0].plan-x[0].plan});
-    return seg('data-pfl',[['neg','Минус'],['pos','Плюс'],['all','Все']],pfl)+'<div class="card">'+(r.length?r.map(function(e){return prRow(e[0],e[2],e[1])}).join(''):'<div class="empty">Нет</div>')+'</div>';
+    var r=prGroups().filter(function(g){return pfl==='neg'?g.dev<0:(pfl==='pos'?g.dev>0:true)});
+    return seg('data-pfl',[['neg','Минус'],['pos','Плюс'],['all','Все']],pfl)+'<div class="prs" style="margin:6px 2px">Приоритетная техника сверху; нажмите на тип — по автоколоннам, ремонт и люди</div><div class="card">'+(r.length?r.map(function(g){return prRow(g,g.k)}).join(''):'<div class="empty">Нет</div>')+'</div>';
   }
   var PMP=[['own','В парке ДТТ','a.own'],['line','На линии','a.line'],['rep','В ремонте','a.rep'],['res','Резерв (отказ заказчика)','a.res'],['buy','Куплено в 2026 (факт из плана)','a.buy_f+" из "+a.buy_p'],['wo','К списанию','a.wo'],['rent','Аренда в парке','a.rent'],['hf','Аренда на линии (факт)','a.hf'],['kip','КИП','pct(a.kip)'],['ktg','КТГ','pct(a.ktg)']];
   var PMS=[['shtat','Штат','(a.s||{}).shtat||0'],['list','По списку','(a.s||{}).list||0'],['need','Нужно для плана','(a.s||{}).need||0'],['vahta','На вахте','(a.s||{}).vahta||0'],['vac','Отпуск','((a.s||{}).vac||0)+((a.s||{}).vacp||0)+((a.s||{}).vac0||0)'],['sick','Больничный','((a.s||{}).sick||0)+((a.s||{}).sick5||0)'],['vacancy','Вакансии','(a.s||{}).vacancy||0']];
@@ -778,7 +815,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     if(!DATA||top!=='prod'||!PRX) return;
     var t=e.target.closest('[data-pk],[data-pt],[data-pm],[data-pg],[data-pc]'); if(!t) return;
     if(t.dataset.pk) prAkOpen(+t.dataset.pk);
-    else if(t.dataset.pt!==undefined) prTypeOpen(+t.dataset.pt);
+    else if(t.dataset.pt!==undefined) prTypeOpen(t.dataset.pt);
     else if(t.dataset.pm) prMetricOpen(t.dataset.pm);
     else if(t.dataset.pg) prCustOpen(t.dataset.pg);
     else if(t.dataset.pc){var k=t.dataset.pc;prSheet(k==='rest'?'• Прочее':PCI[k]+' '+PCN[k],k==='rest'?prRest():prWhy(k))}
@@ -802,7 +839,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     var sr='<input class="search" id="pq" type="search" inputmode="search" enterkeyhint="search" placeholder="Поиск: префикс, тип техники (кран, ППУ…), АК3" value="'+esc(pq)+'">';
     if(PRX===0||PRX===undefined) return sr+'<div class="empty">Загрузка дня…</div>';
     if(PRX===null) return sr+'<div class="empty">На '+fmtDate(dd)+' данных «Өндіріс ақпары» нет.<br><small>Выберите другую дату вверху</small></div>';
-    return sr+'<div class="chips">'+[['sum','Итог'],['ak','Автоколонны'],['tech','Техника'],['cust','Заказчики'],['park','Парк'],['staff','Люди'],['dyn','Дни']].map(function(i){return '<button class="chip'+(psub===i[0]?' on':'')+'" data-psub="'+i[0]+'">'+i[1]+'</button>'}).join('')+'</div>'+'<div id="pres">'+prodBody()+'</div>';
+    return sr+'<div class="chips">'+[['sum','Итог'],['ak','Автоколонны'],['tech','Техника'],['park','Парк'],['staff','Люди']].map(function(i){return '<button class="chip'+(psub===i[0]?' on':'')+'" data-psub="'+i[0]+'">'+i[1]+'</button>'}).join('')+'</div>'+'<div id="pres">'+prodBody()+'</div>';
   }
 
   /* ---------- окошко с водителем ---------- */
