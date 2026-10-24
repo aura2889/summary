@@ -477,7 +477,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
         h+='<div class="card cc" id="cc-'+ri+'"><h3>'+esc(r.name)+'</h3><div class="stats">'+
           '<div class="stat plan"><b>'+r.plan+'</b><span>план</span></div>'+
           '<div class="stat fact"><b>'+r.fact+'</b><span>факт</span></div>'+
-          '<div class="stat"><b class="'+(r.diff<0?'neg':(r.diff>0?'pos':''))+'">'+sign(r.diff)+'</b><span>откл.</span></div>'+
+          '<div class="stat tapc" data-cd="'+ri+'" role="button" tabindex="0"><b class="'+(r.diff<0?'neg':(r.diff>0?'pos':''))+'">'+sign(r.diff)+'</b><span>откл. ›</span></div>'+
           '<div class="stat"><b>'+r.day+'</b><span>день</span></div>'+
           '<div class="stat"><b>'+r.night+'</b><span>ночь</span></div></div>';
         if(keys.length){
@@ -702,6 +702,27 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     if(k) return '';
     return (pcz(x.c).rep||x.rep?prRepList(n,x.p):'')+prStaffChips(x.s);
   }
+  function cdOpen(ri){
+    var r=DATA.daily.rows[ri]; if(!r) return; var pp=r.p||PBYN[r.name], d=DATA.date;
+    function go(x){
+      if(x===null||x===undefined){prSheet(esc(r.name)+' · отклонение','<div class="empty">На эту дату нет данных «Өндіріс ақпары»</div>');return}
+      PRX=x;
+      var gs=prGroups().filter(function(g){return g.p===pp}), pl=0,fa=0,dv=0,c={},parts=[];
+      gs.forEach(function(g){pl+=g.plan;fa+=g.fact;dv+=g.dev;Object.keys(g.c).forEach(function(k){c[k]=(c[k]||0)+g.c[k]});g.parts.forEach(function(q){parts.push(q)})});
+      parts.sort(function(a,b){return a.n-b.n});
+      var h='<div class="tot6"><div><b>'+r.plan+'</b><span>план</span></div><div><b>'+r.fact+'</b><span>факт</span></div><div><b class="'+sgc(r.diff)+'">'+sg(r.diff)+'</b><span>откл. сводка</span></div><div><b class="'+sgc(dv)+'">'+sg(dv)+'</b><span>откл. файл</span></div></div>';
+      if(!gs.length) h+='<div class="empty">Этого типа нет в файле «Өндіріс ақпары»</div>';
+      else{
+        h+=(pl!==r.plan||fa!==r.fact?'<div class="prs">По файлу «Өндіріс ақпары»: план '+pl+', факт '+fa+'.</div>':'')+(dv?'<div class="ph">Причины</div>'+pczChips(c):'<div class="prs">В файле «Өндіріс ақпары» отклонения по этому типу нет.</div>');
+        parts.filter(function(q){return q.x.dev||q.x.rep||Object.keys(q.x.c||{}).length}).forEach(function(q){var x=q.x;
+          h+='<div class="card"><div class="prr" style="border:0;padding-top:0"><div class="prt"><b>АК '+q.n+'</b> <small>'+esc(x.name)+'</small></div><div class="prn"><span>'+x.plan+' → '+x.fact+'</span>'+pdv(x.dev)+'</div>'+pczChips(x.c)+'</div>'+prPartDet(q.n,x)+'</div>'});
+      }
+      prSheet(esc(r.name)+' · отклонение '+sg(r.diff),h);
+    }
+    if(PC[d]) return go(PC[d]);
+    getJ('prod/'+d+'.json').then(function(x){x.date=d;PC[d]=x;go(x)}).catch(function(){go(null)});
+  }
+  document.addEventListener('click',function(e){var t=e.target.closest&&e.target.closest('[data-cd]');if(t&&DATA){e.stopPropagation();cdOpen(+t.dataset.cd)}});
   function prAllTypes(){var r=[];PRX.aks.forEach(function(a){a.types.forEach(function(t){r.push([t,a.n])})});return r}
   function prSearch(){
     var ws=pq.toLowerCase().replace(/ак\s*(\d)/g,'ак$1').split(/\s+/).filter(Boolean),akn=0,tw=[];
