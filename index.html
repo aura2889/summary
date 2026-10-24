@@ -222,6 +222,9 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
 .pcg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.tot6.t2{margin-top:-6px}.pct.on{outline:2px solid var(--brand2)}.pct[data-pc]{cursor:pointer}.pct{background:var(--soft);border-radius:10px;padding:8px 4px;text-align:center}.pct span{display:block;font-size:16px}.pct b{display:block;font-size:20px;line-height:1.2}.pct small{font-size:11px;color:var(--muted)}
 .prr2{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}.prr2>div{background:var(--soft);border-radius:10px;padding:7px 10px}.prr2 small{display:block;font-size:11px;color:var(--muted)}.prr2 span{font-weight:700;margin-right:8px}
 .pbar{height:5px;border-radius:3px;background:var(--soft);margin-top:5px}.pbar i{display:block;height:5px;border-radius:3px}.pbar i.n{background:var(--bad)}.pbar i.p{background:var(--ok)}
+.ph{font-weight:800;font-size:13px;text-transform:uppercase;letter-spacing:.03em;color:var(--brand2);margin:16px 0 8px}.ph small{text-transform:none;letter-spacing:0;font-weight:500;color:var(--muted);margin-left:6px}
+.pgt{display:grid;grid-template-columns:1fr 1fr;gap:8px}.ptl{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px;cursor:pointer}.ptl small{display:block;font-size:12px;color:var(--muted);line-height:1.2}.ptl b{display:block;font-size:24px;line-height:1.25;margin-top:2px}.ptl span{display:block;font-size:12px;color:var(--muted);margin-top:1px}
+.prr.tp{cursor:pointer}
 </style>
 </head>
 <body>
@@ -662,21 +665,16 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     Object.keys(PCN).forEach(function(k){if(z[k])h+='<span class="pcc">'+PCI[k]+' '+PCN[k]+' <b class="'+sgc(z[k])+'">'+sg(z[k])+'</b></span>'});
     return h?'<div class="pcs">'+h+'</div>':'';
   }
-  function prRow(x,ak){
-    return '<div class="prr"><div class="prt"><span class="prp">'+esc(x.p||'—')+'</span> '+esc(x.name)+(ak?' <small>АК'+ak+'</small>':'')+
-      '</div><div class="prn"><span>'+x.plan+' → '+x.fact+'</span>'+pdv(x.dev)+'</div>'+
-      '<div class="prs">ДТТ в парке '+x.own+' · на линии '+x.line+(x.rep?' · ремонт '+x.rep:'')+(x.res?' · резерв '+x.res:'')+(x.pr?' · аренда '+x.pr+'→'+x.fr:'')+'</div>'+pczChips(x.c)+'</div>';
-  }
   function prAllTypes(){var r=[];PRX.aks.forEach(function(a){a.types.forEach(function(t){r.push([t,a.n])})});return r}
   function prSearch(){
     var ws=pq.toLowerCase().replace(/ак\s*(\d)/g,'ак$1').split(/\s+/).filter(Boolean), r=[];
-    prAllTypes().forEach(function(e){
+    prAllTypes().forEach(function(e,ix){e=[e[0],e[1],ix];
       var t=e[0], s=(t.name+' ак'+e[1]).toLowerCase();
       if(ws.every(function(w){return /^[\d.]+$/.test(w)?(t.p===w||s.indexOf(w)>=0):(s.indexOf(w)>=0||s.indexOf(w.slice(0,Math.max(4,w.length-2)))>=0)})) r.push(e);
     });
     if(!r.length) return '<div class="empty">Ничего не найдено<br><small>Номер-префикс, тип техники (кран, ППУ…) или АК1…АК8</small></div>';
     var p=0,f=0,d=0;r.forEach(function(e){p+=e[0].plan;f+=e[0].fact;d+=e[0].dev});
-    return '<div class="card"><div class="prn big"><span>Найдено '+r.length+' · план '+p+' → факт '+f+'</span>'+pdv(d)+'</div></div><div class="card">'+r.map(function(e){return prRow(e[0],e[1])}).join('')+'</div>';
+    return '<div class="card"><div class="prn big"><span>Найдено '+r.length+' · план '+p+' → факт '+f+'</span>'+pdv(d)+'</div></div><div class="card">'+r.map(function(e){return prRow(e[0],e[2],e[1])}).join('')+'</div>';
   }
   function prWhy(k){
     var r=[],tot=0,by={};
@@ -687,72 +685,104 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
       return '<div class="prr"><div class="prt"><span class="prp">'+esc(e[0].p||'—')+'</span> '+esc(e[0].name)+' <small>АК'+e[1]+'</small></div><div class="prn"><span>план '+e[0].plan+' → факт '+e[0].fact+'</span>'+pdv(e[2])+'</div></div>'}).join('');
     return h;
   }
+  function prSheet(title,body){
+    var el=devShell();el.style.display='flex';document.body.style.overflow='hidden';
+    el.innerHTML='<div class="sh"><div class="shh"><b>'+title+'</b><button class="shx" data-devx="1" aria-label="Закрыть">×</button></div><div class="shb">'+body+'</div></div>';
+  }
+  function pct(x){return x==null?'—':Math.round(x*100)+'%'}
+  function pakn(a){return esc(a.name.replace(/^№\s*\d+\s*/,''))}
   function prRest(){
-    var h='<div class="gh"><span>• Прочее</span><small>не объяснено причинами</small></div><div class="prs">В файле отклонение колонны не всегда равно сумме причин (ремонт, персонал, отказ, годовой запрос, вне плана). Разница — здесь:</div>',n=0;
+    var h='<div class="prs">В файле отклонение колонны не всегда равно сумме причин. Разница по колоннам и типам:</div>',n=0;
     PRX.aks.forEach(function(a){
       var z=pcz(a.c),sm=z.rep+z.staff+z.canc+z.yr+z.oop,r=a.dev-sm;
-      if(r){n++;h+='<div class="prr"><div class="prt"><b>АК '+a.n+'</b> <small>'+esc(a.name.replace(/^№\s*\d+\s*/,''))+'</small></div><div class="prn"><span>отклонение '+sg(a.dev)+', причины '+sg(sm)+'</span>'+pdv(r)+'</div>';
-      a.types.forEach(function(x){var zz=pcz(x.c),q=x.dev-(zz.rep+zz.staff+zz.canc+zz.yr+zz.oop);if(q)h+='<div class="prs"><span class="prp">'+esc(x.p||'—')+'</span> '+esc(x.name)+': отклонение '+sg(x.dev)+', причин указано '+sg(x.dev-q)+'</div>'});
+      if(r){n++;h+='<div class="prr"><div class="prt"><b>АК '+a.n+'</b> <small>'+pakn(a)+'</small></div><div class="prn"><span>отклонение '+sg(a.dev)+', причины '+sg(sm)+'</span>'+pdv(r)+'</div>';
+      a.types.forEach(function(x){var zz=pcz(x.c),q=x.dev-(zz.rep+zz.staff+zz.canc+zz.yr+zz.oop);if(q)h+='<div class="prs"><span class="prp">'+esc(x.p||'—')+'</span> '+esc(x.name)+': отклонение '+sg(x.dev)+', причин '+sg(x.dev-q)+'</div>'});
       h+='</div>'}
     });
     return n?h:h+'<div class="empty">Нет</div>';
   }
-  function prCust(){
-    var G=[['pu','Производственное управление (ПУ)'],['krs','ДБиПКРС, бурение'],['dtt','ДТТ / пожарные (семсер)']],t=PRX.tot,h='';
-    G.forEach(function(g){
-      var v=t.g[g.n=g[0]];
-      h+='<div class="card"><h3>'+g[1]+'</h3><div class="prr2"><div><small>День</small><span>'+v[0]+' → '+v[1]+'</span>'+pdv(v[1]-v[0])+'</div><div><small>Ночь</small><span>'+v[2]+' → '+v[3]+'</span>'+pdv(v[3]-v[2])+'</div></div>';
-      PRX.aks.forEach(function(a){var w=a.g[g[0]];if(!(w[0]||w[1]||w[2]||w[3]))return;
-        h+='<div class="prr"><div class="prt"><b>АК '+a.n+'</b></div><div class="prn"><span>день '+w[0]+' → '+w[1]+' · ночь '+w[2]+' → '+w[3]+'</span>'+pdv(w[1]-w[0]+w[3]-w[2])+'</div></div>'});
-      h+='</div>';
-    });
-    return h+'<div class="prs">Факт = ДТТ + аренда. Заказчики берутся из шапки таблицы: Өндірістік басқарма, ДБиПКРС/Бурение, ДТТ/семсер өрт сөндіруші.</div>';
-  }
+  function tile(attr,val,cls,lab,sub){return '<div class="ptl" '+attr+'><small>'+lab+'</small><b'+(cls?' class="'+cls+'"':'')+'>'+val+'</b>'+(sub?'<span>'+sub+'</span>':'')+'</div>'}
   function prSum(){
     var t=PRX.tot, z=pcz(t.c), h='', s=0;
-    h+='<div class="tot6"><div><b>'+t.plan+'</b><span>план</span></div><div><b>'+t.fact+'</b><span>факт</span></div><div><b class="'+sgc(t.dev)+'">'+sg(t.dev)+'</b><span>отклонение</span></div><div><b>'+Math.round(t.fact/t.plan*1000)/10+'%</b><span>выполнение</span></div></div>'+'<div class="tot6 t2"><div><b>'+pct(t.kip)+'</b><span>КИП</span></div><div><b>'+pct(t.ktg)+'</b><span>КТГ</span></div><div><b>'+t.line+'</b><span>ДТТ на линии</span></div><div><b>'+t.rent+'</b><span>аренда в парке</span></div></div>';
-    h+='<div class="card"><h3>Почему отклонение '+sg(t.dev)+'</h3><div class="pcg">';
-    Object.keys(PCN).forEach(function(k){s+=z[k];h+='<div class="pct'+(pcx===k?' on':'')+'"'+(z[k]?' data-pc="'+k+'"':'')+'><span>'+PCI[k]+'</span><b class="'+sgc(z[k])+'">'+sg(z[k])+'</b><small>'+PCN[k]+'</small></div>'});
-    if(t.dev-s) h+='<div class="pct'+(pcx==='rest'?' on':'')+'" data-pc="rest"><span>•</span><b class="'+sgc(t.dev-s)+'">'+sg(t.dev-s)+'</b><small>прочее</small></div>';
-    h+='</div>'+(pcx==='rest'?prRest():pcx?prWhy(pcx):'<div class="prs" style="margin-top:8px">Нажмите на причину — покажу, по каким машинам и колоннам</div>')+'</div>';
-    h+='<div class="card"><h3>ДТТ и аренда</h3><div class="prr2"><div><small>ДТТ</small><span>'+t.pd+' → '+t.fd+'</span>'+pdv(t.devd)+'</div><div><small>Аренда</small><span>'+t.pr+' → '+t.fr+'</span>'+pdv(t.devr)+'</div></div>'+
-      '<div class="prr2"><div><small>День (ДТТ+аренда)</small><span>'+t.dp+' → '+t.df+'</span>'+pdv(t.df-t.dp)+'</div><div><small>Ночь</small><span>'+t.np+' → '+t.nf+'</span>'+pdv(t.nf-t.np)+'</div></div></div>';
-    h+='<div class="card"><h3>По автоколоннам</h3>'+PRX.aks.map(function(a){
-      return '<div class="prr" data-pa="'+a.n+'"><div class="prt"><b>АК '+a.n+'</b> <small>'+esc(a.name.replace(/^№\s*\d+\s*/,''))+'</small></div><div class="prn"><span>'+a.plan+' → '+a.fact+'</span>'+pdv(a.dev)+'</div>'+pczChips(a.c)+'</div>'}).join('')+'</div>';
-    if(PRX.use&&PRX.use.length) h+='<div class="card"><h3>Для чего нужна техника</h3>'+PRX.use.map(function(u){return '<div class="prr"><div class="prt">'+esc(u.name)+'</div><div class="prn"><span>'+u.plan+' → '+u.fact+'</span>'+pdv(u.dev)+'</div></div>'}).join('')+'</div>';
+    h+='<div class="tot6"><div><b>'+t.plan+'</b><span>план</span></div><div><b>'+t.fact+'</b><span>факт</span></div><div><b class="'+sgc(t.dev)+'">'+sg(t.dev)+'</b><span>отклонение</span></div><div><b>'+Math.round(t.fact/t.plan*1000)/10+'%</b><span>выполнение</span></div></div>';
+    h+='<div class="tot6 t2"><div><b>'+pct(t.kip)+'</b><span>КИП</span></div><div><b>'+pct(t.ktg)+'</b><span>КТГ</span></div><div><b>'+t.line+'</b><span>ДТТ на линии</span></div><div><b>'+t.rent+'</b><span>аренда в парке</span></div></div>';
+    h+='<div class="ph">Откуда отклонение '+sg(t.dev)+' <small>нажмите</small></div><div class="pgt">';
+    Object.keys(PCN).forEach(function(k){s+=z[k];h+=tile(z[k]?'data-pc="'+k+'"':'',sg(z[k]),sgc(z[k]),PCI[k]+' '+PCN[k])});
+    if(t.dev-s) h+=tile('data-pc="rest"',sg(t.dev-s),sgc(t.dev-s),'• Прочее');
+    h+='</div><div class="ph">ДТТ, аренда, смены</div><div class="pgt">'+
+      tile('',t.pd+' → '+t.fd,'','ДТТ',sg(t.devd))+tile('',t.pr+' → '+t.fr,'','Аренда',sg(t.devr))+
+      tile('',t.dp+' → '+t.df,'','День',sg(t.df-t.dp))+tile('',t.np+' → '+t.nf,'','Ночь',sg(t.nf-t.np))+'</div>';
+    h+='<div class="ph">По автоколоннам <small>нажмите</small></div>'+prAkTiles();
     return h;
   }
-  function prAk(){
-    return PRX.aks.map(function(a){
-      var o=pak===a.n, h='<div class="card"><div class="prr" data-pa="'+a.n+'"><div class="prt"><b>АК '+a.n+'</b> <small>'+esc(a.name.replace(/^№\s*\d+\s*/,''))+'</small></div><div class="prn"><span>'+a.plan+' → '+a.fact+'</span>'+pdv(a.dev)+'</div>'+pczChips(a.c)+'</div>';
-      if(o){
-        var ts=a.types.slice().sort(function(x,y){return x.dev-y.dev});
-        h+='<div class="gh"><span>Типы техники — '+ts.length+'</span><small>минус сверху</small></div>'+ts.map(function(x){return prRow(x)}).join('');
-      }
-      return h+'</div>';
-    }).join('');
+  function prAkTiles(){
+    return '<div class="pgt">'+PRX.aks.map(function(a){
+      var z=pcz(a.c),top=Object.keys(PCN).filter(function(k){return z[k]}).sort(function(x,y){return Math.abs(z[y])-Math.abs(z[x])})[0];
+      return tile('data-pk="'+a.n+'"',sg(a.dev),sgc(a.dev),'АК '+a.n+' · '+pakn(a),a.plan+' → '+a.fact+(top?' · '+PCI[top]+' '+sg(z[top]):''))}).join('')+'</div>';
+  }
+  function prAk(){return '<div class="ph">Автоколонны <small>нажмите — детали</small></div>'+prAkTiles()}
+  function prAkOpen(n){
+    var a=PRX.aks.filter(function(x){return x.n===n})[0]; if(!a) return;
+    var h='<div class="tot6"><div><b>'+a.plan+'</b><span>план</span></div><div><b>'+a.fact+'</b><span>факт</span></div><div><b class="'+sgc(a.dev)+'">'+sg(a.dev)+'</b><span>отклонение</span></div><div><b>'+pct(a.kip)+' / '+pct(a.ktg)+'</b><span>КИП / КТГ</span></div></div>'+pczChips(a.c);
+    var ts=a.types.slice().sort(function(x,y){return x.dev-y.dev}), bad=ts.filter(function(x){return x.dev}), ok=ts.filter(function(x){return !x.dev});
+    h+='<div class="ph">Где отклонение</div>'+(bad.length?bad.map(function(x){return prRow(x)}).join(''):'<div class="prs">Нет отклонений по типам</div>');
+    if(ok.length) h+='<div class="ph">Без отклонений — '+ok.length+'</div><div class="pcs">'+ok.map(function(x){return '<span class="pcc"><b>'+esc(x.p||'—')+'</b> '+esc(x.name)+' '+x.fact+'</span>'}).join('')+'</div>';
+    var s=a.s||{};
+    h+='<div class="ph">Парк</div><div class="pgt">'+tile('',a.own,'','В парке')+tile('',a.line,'','На линии')+tile('',a.rep,'','В ремонте')+tile('',a.res,'','Резерв')+'</div>';
+    h+='<div class="ph">Люди</div><div class="pgt">'+tile('',(s.list||0)+' / '+(s.shtat||0),'','По списку / штат')+tile('',s.vahta||0,'','На вахте')+tile('',(s.vac||0)+(s.vacp||0)+(s.vac0||0),'','Отпуск')+tile('',(s.sick||0)+(s.sick5||0),'','Больничный')+'</div>';
+    prSheet('АК '+a.n+' · '+pakn(a),h);
+  }
+  function prTypeOpen(i){
+    var e=prAllTypes()[i]; if(!e) return; var x=e[0];
+    var h='<div class="tot6"><div><b>'+x.plan+'</b><span>план</span></div><div><b>'+x.fact+'</b><span>факт</span></div><div><b class="'+sgc(x.dev)+'">'+sg(x.dev)+'</b><span>отклонение</span></div><div><b>'+x.line+'</b><span>на линии</span></div></div>'+pczChips(x.c);
+    h+='<div class="ph">Парк</div><div class="pgt">'+tile('',x.own,'','В парке ДТТ')+tile('',x.rep,'','В ремонте')+tile('',x.res,'','Резерв')+tile('',x.wo,'','К списанию')+'</div>';
+    h+='<div class="ph">Выход</div><div class="pgt">'+tile('',x.pd+' → '+x.fd,'','ДТТ',sg(x.devd))+tile('',x.pr+' → '+x.fr,'','Аренда',sg(x.devr))+tile('',x.dp+' → '+x.df,'','День')+tile('',x.np+' → '+x.nf,'','Ночь')+'</div>';
+    prSheet((x.p?x.p+' · ':'')+esc(x.name)+' · АК'+e[1],h);
+  }
+  function prRow(x,i,ak){
+    return '<div class="prr'+(i==null?'':' tp')+'"'+(i==null?'':' data-pt="'+i+'"')+'><div class="prt"><span class="prp">'+esc(x.p||'—')+'</span> '+esc(x.name)+(ak?' <small>АК'+ak+'</small>':'')+
+      '</div><div class="prn"><span>'+x.plan+' → '+x.fact+'</span>'+pdv(x.dev)+'</div>'+pczChips(x.c)+'</div>';
   }
   function prTech(){
-    var r=prAllTypes().filter(function(e){return pfl==='neg'?e[0].dev<0:(pfl==='pos'?e[0].dev>0:true)}).sort(function(x,y){return x[0].dev-y[0].dev||y[0].plan-x[0].plan});
-    return seg('data-pfl',[['neg','Минус'],['pos','Плюс'],['all','Все']],pfl)+'<div class="card">'+(r.length?r.map(function(e){return prRow(e[0],e[1])}).join(''):'<div class="empty">Нет</div>')+'</div>';
+    var all=prAllTypes();
+    var r=all.map(function(e,i){return [e[0],e[1],i]}).filter(function(e){return pfl==='neg'?e[0].dev<0:(pfl==='pos'?e[0].dev>0:true)}).sort(function(x,y){return x[0].dev-y[0].dev||y[0].plan-x[0].plan});
+    return seg('data-pfl',[['neg','Минус'],['pos','Плюс'],['all','Все']],pfl)+'<div class="card">'+(r.length?r.map(function(e){return prRow(e[0],e[2],e[1])}).join(''):'<div class="empty">Нет</div>')+'</div>';
   }
-  function pct(x){return x==null?'—':Math.round(x*100)+'%'}
-  function prPark(){
-    var t=PRX.tot, h='<div class="tot6"><div><b>'+t.own+'</b><span>ДТТ в парке</span></div><div><b>'+t.line+'</b><span>на линии</span></div><div><b>'+t.rep+'</b><span>в ремонте</span></div><div><b>'+t.res+'</b><span>резерв</span></div></div>';
-    h+='<div class="card"><h3>Парк ДТТ</h3><div class="prr2"><div><small>КИП (использование)</small><span>'+pct(t.kip)+'</span></div><div><small>КТГ (исправность)</small><span>'+pct(t.ktg)+'</span></div></div>'+
-      '<div class="prr2"><div><small>Куплено в 2026 (план → факт)</small><span>'+t.buy_p+' → '+t.buy_f+'</span></div><div><small>К списанию</small><span>'+t.wo+'</span></div></div>'+
-      '<div class="prr2"><div><small>Аренда в парке</small><span>'+t.rent+'</span></div><div><small>Нет выхода (день+ночь)</small><span>'+(-t.nd)+'</span></div></div><div class="prr2"><div><small>Аренда: выход план → факт</small><span>'+t.hp+' → '+t.hf+'</span></div><div><small>Аренда без экипажа</small><span>'+t.hs+'</span></div></div><div class="prr2"><div><small>Списание 2026: план 1 / 2 п/г</small><span>'+t.w1+' / '+t.w2+'</span></div><div><small>Списано факт</small><span>'+t.wf+'</span></div></div>'+((t.ex||t.exr)?'<div class="prr2"><div><small>Доп. запрос ДТТ / аренда</small><span>'+t.ex+' / '+t.exr+'</span></div></div>':'')+'</div>';
-    h+='<div class="card"><h3>По автоколоннам</h3>'+PRX.aks.map(function(a){
-      return '<div class="prr"><div class="prt"><b>АК '+a.n+'</b></div><div class="prn"><span>КИП '+pct(a.kip)+' · КТГ '+pct(a.ktg)+'</span></div><div class="prs">в парке '+a.own+' · на линии '+a.line+' · ремонт '+a.rep+' · резерв '+a.res+(a.wo?' · к списанию '+a.wo:'')+(a.buy_p||a.buy_f?' · куплено '+a.buy_f+' из '+a.buy_p:'')+'</div></div>'}).join('')+'</div>';
-    return h;
+  var PMP=[['own','В парке ДТТ','a.own'],['line','На линии','a.line'],['rep','В ремонте','a.rep'],['res','Резерв (отказ заказчика)','a.res'],['buy','Куплено в 2026 (факт из плана)','a.buy_f+" из "+a.buy_p'],['wo','К списанию','a.wo'],['rent','Аренда в парке','a.rent'],['hf','Аренда на линии (факт)','a.hf'],['kip','КИП','pct(a.kip)'],['ktg','КТГ','pct(a.ktg)']];
+  var PMS=[['shtat','Штат','(a.s||{}).shtat||0'],['list','По списку','(a.s||{}).list||0'],['need','Нужно для плана','(a.s||{}).need||0'],['vahta','На вахте','(a.s||{}).vahta||0'],['vac','Отпуск','((a.s||{}).vac||0)+((a.s||{}).vacp||0)+((a.s||{}).vac0||0)'],['sick','Больничный','((a.s||{}).sick||0)+((a.s||{}).sick5||0)'],['vacancy','Вакансии','(a.s||{}).vacancy||0']];
+  function pmv(m,a){return eval(m[2])}      // выражения заданы выше в коде, не пользовательские
+  function prMetrics(L,title){
+    var t=PRX.tot;
+    return '<div class="ph">'+title+' <small>нажмите — по колоннам</small></div><div class="pgt">'+L.map(function(m){return tile('data-pm="'+m[0]+'"',pmv(m,t),'',m[1])}).join('')+'</div>';
   }
-  function prStaff(){
-    var T=PRX.tot.s||{}, h='';
-    function st(a){var s=a.s||{};return '<div class="prs">штат '+(s.shtat||0)+' · по списку '+(s.list||0)+' · нужно '+(s.need||0)+' · на вахте '+(s.vahta||0)+'</div><div class="pcs"><span class="pcc">🌴 отпуск <b>'+((s.vac||0)+(s.vacp||0)+(s.vac0||0))+'</b></span><span class="pcc">🤒 больничный <b>'+((s.sick||0)+(s.sick5||0))+'</b></span><span class="pcc">⬜ вакансии <b>'+(s.vacancy||0)+'</b></span>'+((s.oth||0)||(s.frm||0)?'<span class="pcc">↔ в др. смене '+(s.oth||0)+' / из др. '+(s.frm||0)+'</span>':'')+'</div>'}
-    h+='<div class="card"><h3>Всего (водители и операторы)</h3>'+st(PRX.tot)+'</div>';
-    h+=PRX.aks.map(function(a){return '<div class="card"><div class="prt"><b>АК '+a.n+'</b> <small>'+esc(a.name.replace(/^№\s*\d+\s*/,''))+'</small></div>'+st(a)+'</div>'}).join('');
-    return h;
+  function prPark(){return prMetrics(PMP,'Парк')}
+  function prStaff(){return prMetrics(PMS,'Люди')}
+  function prMetricOpen(k){
+    var m=PMP.concat(PMS).filter(function(x){return x[0]===k})[0]; if(!m) return;
+    var h='<div class="prr"><div class="prt"><b>Всего</b></div><div class="prn"><span></span><b>'+pmv(m,PRX.tot)+'</b></div></div>'+PRX.aks.map(function(a){return '<div class="prr"><div class="prt"><b>АК '+a.n+'</b> <small>'+pakn(a)+'</small></div><div class="prn"><span></span><b>'+pmv(m,a)+'</b></div></div>'}).join('');
+    prSheet(m[1],h);
   }
+  var GRP=[['pu','Производственное управление (ПУ)'],['krs','ДБиПКРС, бурение'],['dtt','ДТТ / пожарные']];
+  function prCust(){
+    var t=PRX.tot;
+    return '<div class="ph">Заказчики <small>нажмите — по колоннам</small></div><div class="pgt">'+GRP.map(function(g){var v=t.g[g[0]];return tile('data-pg="'+g[0]+'"',v[1]+v[3]+' из '+(v[0]+v[2]),sgc(v[1]+v[3]-v[0]-v[2]),g[1],'день '+v[0]+'→'+v[1]+' · ночь '+v[2]+'→'+v[3])}).join('')+'</div><div class="prs">Факт = ДТТ + аренда</div>';
+  }
+  function prCustOpen(k){
+    var g=GRP.filter(function(x){return x[0]===k})[0],v=PRX.tot.g[k];
+    var h='<div class="tot6"><div><b>'+v[0]+'→'+v[1]+'</b><span>день</span></div><div><b>'+v[2]+'→'+v[3]+'</b><span>ночь</span></div></div>';
+    PRX.aks.forEach(function(a){var w=a.g[k];if(!(w[0]||w[1]||w[2]||w[3]))return;
+      h+='<div class="prr"><div class="prt"><b>АК '+a.n+'</b> <small>'+pakn(a)+'</small></div><div class="prn"><span>день '+w[0]+' → '+w[1]+' · ночь '+w[2]+' → '+w[3]+'</span>'+pdv(w[1]-w[0]+w[3]-w[2])+'</div></div>'});
+    prSheet(g[1],h);
+  }
+  document.addEventListener('click',function(e){
+    if(!DATA||top!=='prod'||!PRX) return;
+    var t=e.target.closest('[data-pk],[data-pt],[data-pm],[data-pg],[data-pc]'); if(!t) return;
+    if(t.dataset.pk) prAkOpen(+t.dataset.pk);
+    else if(t.dataset.pt!==undefined) prTypeOpen(+t.dataset.pt);
+    else if(t.dataset.pm) prMetricOpen(t.dataset.pm);
+    else if(t.dataset.pg) prCustOpen(t.dataset.pg);
+    else if(t.dataset.pc){var k=t.dataset.pc;prSheet(k==='rest'?'• Прочее':PCI[k]+' '+PCN[k],k==='rest'?prRest():prWhy(k))}
+  });
   function prDyn(){
     var tr=PR.trend.slice().reverse(), mx=1;
     tr.forEach(function(d){mx=Math.max(mx,Math.abs(d.dev))});
@@ -838,15 +868,13 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
       if(!open){showPop(pl);$('#pop').dataset.for=pl.dataset.i;track('окно водителя')}else $('#pop').dataset.for='';return}
     if(!e.target.closest('#pop')) hidePop();
     if(e.target.closest('[data-dl]')) return;
-    var t=e.target.closest('[data-top],[data-sub],[data-csub],[data-dep],[data-shift],[data-disp],[data-nsub],[data-nak],[data-npref],[data-psub],[data-pa],[data-pd],[data-pfl],[data-pc]'); if(!t) return;
+    var t=e.target.closest('[data-top],[data-sub],[data-csub],[data-dep],[data-shift],[data-disp],[data-nsub],[data-nak],[data-npref],[data-psub],[data-pd],[data-pfl]'); if(!t) return;
     if(t.dataset.top){
       top=t.dataset.top;track('вкладка/'+top);
       document.querySelectorAll('.tab').forEach(function(b){b.classList.toggle('on',b.dataset.top===top)});
       window.scrollTo(0,0);if(top==='prod')prLoad();
     }else if(t.dataset.psub){psub=t.dataset.psub;pq='';track('Өндіріс/'+psub)}
-    else if(t.dataset.pa){var pn=+t.dataset.pa;if(psub==='sum'){psub='ak';pak=pn}else pak=pak===pn?0:pn}
     else if(t.dataset.pd){pq='';psub='sum';goDay(t.dataset.pd);return}
-    else if(t.dataset.pc){pcx=pcx===t.dataset.pc?'':t.dataset.pc}
     else if(t.dataset.pfl){pfl=t.dataset.pfl}
     else if(t.dataset.disp!==undefined){track('диспетчер/'+t.dataset.disp);cdisp=+t.dataset.disp;store('disp',String(cdisp))}
     else if(t.dataset.npref){npref=npref===t.dataset.npref?'':t.dataset.npref;track('АК/префикс')}

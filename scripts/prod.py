@@ -20,35 +20,56 @@ def v(ws,r,col):
 def nm(s):
     s=str(s or '').split(' / ')[0].strip()
     return re.sub(r'\s+',' ',s)
-def row(ws,r):
+def layout(ws):
+    """столбцы КИП/КТГ и блоки персонала (Вахта №1/№2) ищем по заголовкам - файл меняют"""
+    kip=ktg=None; blocks=[]
+    for c in range(1,ws.max_column+1):
+        h2=str(ws.cell(2,c).value or ''); h3=str(ws.cell(3,c).value or '')
+        if 'КИП' in h2 and kip is None: kip=c
+        if 'КТГ' in h2 and ktg is None: ktg=c
+        if h3.startswith('Персонал'): blocks.append((c,h3))
+    return dict(kip=kip or ci('CI'),ktg=ktg or ci('CJ'),blocks=blocks or [(ci('BQ'),'')])
+def pickblock(ws,lay):
+    best=None
+    for c,nm_ in lay['blocks']:
+        a=sum(v(ws,TOTAL,L(c+i)) for i in (4,5,6,7,8,9))
+        if best is None or a>=best[0]: best=(a,c,nm_)
+    return best[1]
+def L(c):
+    from openpyxl.utils import get_column_letter
+    return get_column_letter(c)
+def row(ws,r,lay=None):
+    lay=lay or layout(ws)
     d={k:v(ws,r,c) for k,c in F.items()}
     d['g']={k:[v(ws,r,a), v(ws,r,b)+v(ws,r,b2), v(ws,r,c), v(ws,r,e)+v(ws,r,e2)] for k,a,b,b2,c,e,e2 in (('pu','S','V','W','X','AA','AB'),('krs','AC','AF','AG','AH','AK','AL'),('dtt','AM','AP','AQ','AR','AU','AV'))}
     d['c']={k:v(ws,r,c) for k,c in CAUSE.items() if v(ws,r,c)}
-    d['s']={k:v(ws,r,c) for k,c in STAFF.items() if v(ws,r,c)}
-    kip=ws['CI'+str(r)].value; ktg=ws['CJ'+str(r)].value
+    b=lay.get('b') or pickblock(ws,lay)
+    d['s']={k:v(ws,r,L(b+i)) for i,k in enumerate(STAFF) if v(ws,r,L(b+i))}
+    kip=ws.cell(r,lay['kip']).value; ktg=ws.cell(r,lay['ktg']).value
     d['kip']=round(kip,3) if isinstance(kip,(int,float)) else None
     d['ktg']=round(ktg,3) if isinstance(ktg,(int,float)) else None
     return d
 def day(ws):
+    lay=layout(ws); lay['b']=pickblock(ws,lay)
     aks=[]
     for i,(h,s) in enumerate(AKROWS):
-        t=row(ws,s); t['n']=i+1; t['name']=nm(ws['B'+str(h)].value)
+        t=row(ws,s,lay); t['n']=i+1; t['name']=nm(ws['B'+str(h)].value)
         ty=[]
         for r in range(h+1,s):
             a=ws['A'+str(r)].value; b=ws['B'+str(r)].value
             if b is None: continue
-            x=row(ws,r)
+            x=row(ws,r,lay)
             if not any(x[k] for k in ('own','plan','fact','line','rep','res','pd')) and not x['dev']: continue
             x['p']=str(a).strip() if a is not None else ''
             x['name']=nm(b)
             ty.append(x)
         t['types']=ty
         aks.append(t)
-    tot=row(ws,TOTAL)
+    tot=row(ws,TOTAL,lay)
     use=[]
     for r in range(143,148):
         b=ws['B'+str(r)].value
-        if b: x=row(ws,r); x['name']=nm(b); use.append(x)
+        if b: x=row(ws,r,lay); x['name']=nm(b); use.append(x)
     cust={}
     for lab,col in (('ПУ','V'),('КРС','AE'),('СОС','AL')):
         cust[lab]=ws[col+'165'].value if isinstance(ws[col+'165'].value,(int,float)) else 0
