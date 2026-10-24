@@ -225,6 +225,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
 .ph{font-weight:800;font-size:13px;text-transform:uppercase;letter-spacing:.03em;color:var(--brand2);margin:16px 0 8px}.ph small{text-transform:none;letter-spacing:0;font-weight:500;color:var(--muted);margin-left:6px}
 .pgt{display:grid;grid-template-columns:1fr 1fr;gap:8px}.ptl{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px;cursor:pointer}.ptl small{display:block;font-size:12px;color:var(--muted);line-height:1.2}.ptl b{display:block;font-size:24px;line-height:1.25;margin-top:2px}.ptl span{display:block;font-size:12px;color:var(--muted);margin-top:1px}
 .prr.tp{cursor:pointer}.prsub{margin:2px 0 6px 12px;padding-left:10px;border-left:3px solid var(--line)}
+.chips.c5{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;overflow:visible}.chips.c5 .chip{padding:8px 0;font-size:13px;text-align:center;min-width:0}
 </style>
 </head>
 <body>
@@ -742,13 +743,11 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
   function prSum(){
     var t=PRX.tot, z=pcz(t.c), h='', s=0;
     h+='<div class="tot6"><div><b>'+t.plan+'</b><span>план</span></div><div><b>'+t.fact+'</b><span>факт</span></div><div><b class="'+sgc(t.dev)+'">'+sg(t.dev)+'</b><span>отклонение</span></div><div><b>'+Math.round(t.fact/t.plan*1000)/10+'%</b><span>выполнение</span></div></div>';
-    h+='<div class="tot6 t2"><div><b>'+pct(t.kip)+'</b><span>КИП</span></div><div><b>'+pct(t.ktg)+'</b><span>КТГ</span></div><div><b>'+t.line+'</b><span>ДТТ на линии</span></div><div><b>'+t.rent+'</b><span>аренда в парке</span></div></div>';
+    h+='<div class="tot6 t2"><div><b>'+pct(t.kip)+'</b><span>КИП</span></div><div><b>'+pct(t.ktg)+'</b><span>КТГ</span></div><div><b>'+t.fd+'</b><span>вышло ДТТ</span></div><div><b>'+t.fr+'</b><span>вышло аренда</span></div></div>';
     h+='<div class="ph">Откуда отклонение '+sg(t.dev)+' <small>нажмите</small></div><div class="pgt">';
     Object.keys(PCN).forEach(function(k){s+=z[k];h+=tile(z[k]?'data-pc="'+k+'"':'',sg(z[k]),sgc(z[k]),PCI[k]+' '+PCN[k])});
     if(t.dev-s) h+=tile('data-pc="rest"',sg(t.dev-s),sgc(t.dev-s),'• Прочее');
-    h+='</div><div class="ph">ДТТ, аренда, смены</div><div class="pgt">'+
-      tile('',t.pd+' → '+t.fd,'','ДТТ',sg(t.devd))+tile('',t.pr+' → '+t.fr,'','Аренда',sg(t.devr))+
-      tile('',t.dp+' → '+t.df,'','День',sg(t.df-t.dp))+tile('',t.np+' → '+t.nf,'','Ночь',sg(t.nf-t.np))+'</div>';
+    h+='</div>';
     h+='<div class="ph">По автоколоннам <small>нажмите</small></div>'+prAkTiles();
     return h;
   }
@@ -785,7 +784,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     var r=prGroups().filter(function(g){return pfl==='neg'?g.dev<0:(pfl==='pos'?g.dev>0:true)});
     return seg('data-pfl',[['neg','Минус'],['pos','Плюс'],['all','Все']],pfl)+'<div class="prs" style="margin:6px 2px">Приоритетная техника сверху; нажмите на тип — по автоколоннам, ремонт и люди</div><div class="card">'+(r.length?r.map(function(g){return prRow(g,g.k)}).join(''):'<div class="empty">Нет</div>')+'</div>';
   }
-  var PMP=[['own','В парке ДТТ','a.own'],['line','На линии','a.line'],['rep','В ремонте','a.rep'],['res','Резерв (отказ заказчика)','a.res'],['buy','Куплено в 2026 (факт из плана)','a.buy_f+" из "+a.buy_p'],['wo','К списанию','a.wo'],['rent','Аренда в парке','a.rent'],['hf','Аренда на линии (факт)','a.hf'],['kip','КИП','pct(a.kip)'],['ktg','КТГ','pct(a.ktg)']];
+  var PMP=[['own','В парке ДТТ','a.own'],['line','ДТТ на линии (факт)','a.fd'],['rep','В ремонте','a.rep'],['res','Резерв (отказ заказчика)','a.res'],['buy','Куплено в 2026 (факт из плана)','a.buy_f+" из "+a.buy_p'],['wo','К списанию','a.wo'],['rent','Аренда: машин по списку','a.rent'],['hf','Аренда: выходов (факт)','a.fr'],['kip','КИП','pct(a.kip)'],['ktg','КТГ','pct(a.ktg)']];
   var PMS=[['shtat','Штат','(a.s||{}).shtat||0'],['list','По списку','(a.s||{}).list||0'],['need','Нужно для плана','(a.s||{}).need||0'],['vahta','На вахте','(a.s||{}).vahta||0'],['vac','Отпуск','((a.s||{}).vac||0)+((a.s||{}).vacp||0)+((a.s||{}).vac0||0)'],['sick','Больничный','((a.s||{}).sick||0)+((a.s||{}).sick5||0)'],['vacancy','Вакансии','(a.s||{}).vacancy||0']];
   function pmv(m,a){return eval(m[2])}      // выражения заданы выше в коде, не пользовательские
   function prMetrics(L,title){
@@ -839,7 +838,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     var sr='<input class="search" id="pq" type="search" inputmode="search" enterkeyhint="search" placeholder="Поиск: префикс, тип техники (кран, ППУ…), АК3" value="'+esc(pq)+'">';
     if(PRX===0||PRX===undefined) return sr+'<div class="empty">Загрузка дня…</div>';
     if(PRX===null) return sr+'<div class="empty">На '+fmtDate(dd)+' данных «Өндіріс ақпары» нет.<br><small>Выберите другую дату вверху</small></div>';
-    return sr+'<div class="chips">'+[['sum','Итог'],['ak','Автоколонны'],['tech','Техника'],['park','Парк'],['staff','Люди']].map(function(i){return '<button class="chip'+(psub===i[0]?' on':'')+'" data-psub="'+i[0]+'">'+i[1]+'</button>'}).join('')+'</div>'+'<div id="pres">'+prodBody()+'</div>';
+    return sr+'<div class="chips c5">'+[['sum','Итог'],['ak','Колонны'],['tech','Техника'],['park','Парк'],['staff','Люди']].map(function(i){return '<button class="chip'+(psub===i[0]?' on':'')+'" data-psub="'+i[0]+'">'+i[1]+'</button>'}).join('')+'</div>'+'<div id="pres">'+prodBody()+'</div>';
   }
 
   /* ---------- окошко с водителем ---------- */
