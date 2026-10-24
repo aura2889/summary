@@ -444,6 +444,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
   }
 
   /* ---------- Для ЦИТС: режимный лист (лист «Ежедневная сводка», I3:AD23) ---------- */
+  var PBYN={'ППУ':'34','Экскаватор':'47','Вакуум уст.':'49','Автокран':'28','ТРАЛ':'22','АРОК (КМУ)':'27','ЦА-320':'31','АЦН':'35','Бульдозер':'50','Погрузчик':'53'};   // запасной вариант для старых дней
   function sign(n){return (n>0?'+':'')+n}
   function cellExtra(c){
     var s='';
@@ -455,7 +456,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     var D=DATA.daily; if(!D||!D.rows.length) return '<div class="empty">Нет данных режимного листа</div>';
     var h=seg('data-csub',[['type','По технике'],['dep','По отделам']],csub);
     if(csub==='type'){
-      h+='<div class="pq">'+D.rows.map(function(r,ri){return '<button class="pqb" data-cgo="'+ri+'">'+esc(r.p||'?')+'</button>'}).join('')+'</div>';
+      h+='<div class="pq">'+D.rows.map(function(r,ri){return '<button class="pqb" data-cgo="'+ri+'">'+esc(r.p||PBYN[r.name]||'?')+'</button>'}).join('')+'</div>';
       h+='<div class="cg">';
       D.rows.forEach(function(r,ri){
         var keys=D.deps.filter(function(d){return r.cells[d]});
@@ -836,7 +837,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
   // ---- «Для ЦИТС»: нажатие на ячейку (отдел × тип техники) - какие именно машины и водители
   function ccOpen(key){
     var i=key.indexOf('|'), r=DATA.daily.rows[+key.slice(0,i)], d=key.slice(i+1); if(!r) return;
-    var vs=DATA.veh.filter(function(v){return v.dep===d&&v.p===r.p});
+    var pp=r.p||PBYN[r.name], vs=DATA.veh.filter(function(v){return v.dep===d&&v.p===pp});
     var c=r.cells[d]||{}, el=devShell(), h='';
     h+='<div class="sh"><div class="shh"><b>'+esc(r.name)+' · '+esc(d)+'</b><button class="shx" data-devx="1" aria-label="Закрыть">×</button></div>'+
        '<div class="shs"><small style="color:var(--muted)">'+vs.length+' ед.'+(c.e?' ('+esc(c.e)+')':'')+'</small></div><div class="shb">';
