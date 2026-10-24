@@ -18,6 +18,7 @@ def classify(path):
         wb = openpyxl.load_workbook(path, data_only=True, read_only=True)
         names = wb.sheetnames
         if 'Исходные данные' in names and 'Выход ТС' in names: return 'svod'
+        if sum(1 for n in names if re.fullmatch(r'\d{1,2}', n)) >= 1 and 'Префикс' in str(wb[[n for n in names if re.fullmatch(r'\d{1,2}', n)][0]]['A3'].value or ''): return 'prod'
         ws = wb[names[0]]
         first = next(ws.iter_rows(max_row=1, values_only=True), ())
         if build_drivers.export_cols(first) and any(str(x or '').startswith('Путевой лист') for x in first): return 'export'
@@ -250,7 +251,16 @@ def main():
             idx = load(os.path.join(ARC, 'index.json'), {'dates': []})
             if not idx['dates'] or ref.isoformat() >= idx['dates'][0]:
                 dump(out, os.path.join(ROOT, 'repair.json'))
-    elif not (kinds.get('roster') or svods or exports or newroles):
+    if kinds.get('prod'):
+        import prod
+        PD = os.path.join(ROOT, 'prod'); os.makedirs(PD, exist_ok=True)
+        for f in sorted(kinds['prod'], key=os.path.getmtime):
+            try: days = prod.parse(conv[f])
+            except Exception as e: say(f'⚠ Өндіріс ақпары: не прочитан {os.path.basename(f)}: {e}'); continue
+            for dd, dv in days.items(): dump(dv, os.path.join(PD, dd + '.json'))
+            say(f'Өндіріс ақпары: дней в файле {len(days)} ({min(days)} … {max(days)})' if days else 'Өндіріс ақпары: в файле нет заполненных дней')
+        prod.publish(ROOT)
+    if not (kinds.get('roster') or svods or exports or newroles or kinds.get('prod')) and not kinds.get('repair'):
         say('В input/ нет подходящих файлов - ничего не делаю')
     for t in tmps: shutil.rmtree(t, ignore_errors=True)
     for ks in kinds.values():          # обработанные файлы убираем из папки
