@@ -82,9 +82,28 @@ def convert(path):
                     if mu: cell['u'] = int(mu.group(1))
                 row['cells'][dname] = cell
             rows.append(row)
-    return {'date': date, 'totals': totals, 'depOrder': depOrder, 'types': types, 'veh': veh, 'disp': disp, 'daily': {'deps': deps, 'rows': rows}}
+    out = {'date': date, 'totals': totals, 'depOrder': depOrder, 'types': types, 'veh': veh, 'disp': disp, 'daily': {'deps': deps, 'rows': rows}}
+    add_tral_winch(out)
+    return out
 
 if __name__ == '__main__':
     out = convert(sys.argv[1])
     if len(sys.argv) > 2: json.dump(out, open(sys.argv[2], 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
     else: print(json.dumps(out, ensure_ascii=False)[:500])
+
+
+def add_tral_winch(data):
+    """в режимный лист добавляем строку «ТРАЛ с лебедкой» (префикс 23) сразу после ТРАЛ (22): план/факт - из основной таблицы, по отделам - из списка машин"""
+    D = data.get('daily') or {}
+    rows = D.get('rows')
+    if rows is None or any(r.get('p') == '23' for r in rows): return
+    ty = [t for t in data.get('types', []) if str(t.get('p')) == '23']
+    if not ty: return
+    t = ty[0]
+    cells = {}
+    for v in data.get('veh', []):
+        if str(v.get('p')) == '23' and v.get('dep') in D.get('deps', []):
+            c = cells.setdefault(v['dep'], {'v': 0}); c['v'] += 1
+    row = {'p': '23', 'name': 'ТРАЛ с лебедкой', 'plan': t['plan'], 'fact': t['fact'], 'diff': t['diff'], 'day': t['day'], 'night': t['night'], 'cells': cells}
+    ix = next((i for i, r in enumerate(rows) if r.get('p') == '22'), None)
+    rows.insert(ix + 1 if ix is not None else len(rows), row)
