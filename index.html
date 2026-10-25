@@ -399,7 +399,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     return out.filter(function(d){
       var words=d.n.toLowerCase().replace(/[^\wа-яёәғқңөұүіһ]+/g,' ').split(' '), digits=((d.t||'')+(d.t2||'')).replace(/\D/g,'');
       return toks.every(function(t){
-        if(/^[\d+\-() ]{4,}$/.test(t)&&/\d{4}/.test(t.replace(/\D/g,'')) ) return digits.indexOf(t.replace(/\D/g,''))>-1;
+        if(/\d/.test(t)) return false;                       // по телефону не ищем
         if(/\*|-$/.test(t)||t.length<2) return false;
         return words.some(function(w){return w.indexOf(t)===0});
       });
