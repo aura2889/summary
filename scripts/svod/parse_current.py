@@ -85,6 +85,7 @@ def _norm_dept(raw, gar2=False):
     if u in ('OKC',): return 'ОКС'
     if u=='ПКРС-2': return 'ЦПКРС-2'
     if u=='ГАРАЖ-2': return 'Гараж-2'
+    if u in ('ДТТ-2','ДТТ2','ГАРАЖ-2'): return 'Гараж-2'
     if u in ('ДТТ','ГАРАЖ-1'): return 'Гараж-1'
     if u in ('ИГУ','ИГУОТР','ОГИР'): return 'ОГиР'
     if u.startswith('ЦПП-МПГУ') or u.startswith('МПГУ') or u=='ЦПП': return 'ЦПП'
