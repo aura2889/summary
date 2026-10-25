@@ -105,7 +105,8 @@ def build(data, export_path, contacts, mobil):
     for r in exrows:
         plate = str(r[cp]).strip(); pp = parse_plate(plate)
         names = [str(x).strip() for x in (r[c1], r[c2] if c2 is not None else None) if x and str(x).strip()]
-        inf = EP.setdefault(plate, {'pp': pp, 'status': set(), 'names': []})
+        # если госномер повторяется (утренняя и дневная выгрузка после пересменки) - берём НИЖНЮЮ строку, предыдущие отбрасываем
+        inf = EP[plate] = {'pp': pp, 'status': set(), 'names': []}
         inf['status'].add(r[cs] if cs is not None else None)
         for n in names:
             if n not in inf['names']: inf['names'].append(n)
