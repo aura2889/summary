@@ -49,6 +49,13 @@ jobs:
             exit 1
           fi
 
+      - name: Копия на Bitbucket (сайт repo2889.bitbucket.io)
+        env:
+          BB_TOKEN: ${{ secrets.BITBUCKET_TOKEN }}
+        run: |
+          git fetch --unshallow || true
+          git push --force "https://x-bitbucket-api-token-auth:${BB_TOKEN}@bitbucket.org/repo2889/repo2889.bitbucket.io.git" HEAD:main
+
       - name: При ошибке очистить input/ (чтобы не мешали следующей загрузке)
         if: failure()
         run: |

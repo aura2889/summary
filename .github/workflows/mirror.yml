@@ -1,0 +1,24 @@
+name: Копия на Bitbucket
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: mirror
+  cancel-in-progress: true
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Копия на Bitbucket (сайт repo2889.bitbucket.io)
+        env:
+          BB_TOKEN: ${{ secrets.BITBUCKET_TOKEN }}
+        run: |
+          git push --force "https://x-bitbucket-api-token-auth:${BB_TOKEN}@bitbucket.org/repo2889/repo2889.bitbucket.io.git" HEAD:main
