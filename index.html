@@ -470,7 +470,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     var D=DATA.daily; if(!D||!D.rows.length) return '<div class="empty">Нет данных режимного листа</div>';
     var h=seg('data-csub',[['type','По технике'],['dep','По отделам']],csub);
     if(csub==='type'){
-      h+='<div class="pq">'+D.rows.map(function(r,ri){return '<button class="pqb" data-cgo="'+ri+'">'+esc(r.p||PBYN[r.name]||'?')+'</button>'}).join('')+'</div>';
+      h+='<div class="pq" style="grid-template-columns:repeat('+(D.rows.length>10?Math.ceil(D.rows.length/2):D.rows.length)+',minmax(0,1fr))">'+D.rows.map(function(r,ri){return '<button class="pqb" data-cgo="'+ri+'">'+esc(r.p||PBYN[r.name]||'?')+'</button>'}).join('')+'</div>';
       h+='<div class="cg">';
       D.rows.forEach(function(r,ri){
         var keys=D.deps.filter(function(d){return r.cells[d]});
