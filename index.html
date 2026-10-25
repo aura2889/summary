@@ -1012,14 +1012,14 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     }).join('')+'</div>';
   }
   function devPlan(){
-    var ty=(DATA.types||[]).slice(), lo=ty.filter(function(x){return x.diff<0}).sort(function(a,b){return a.diff-b.diff}), hi=ty.filter(function(x){return x.diff>0}).sort(function(a,b){return b.diff-a.diff});
+    var ty=(DATA.types||[]).slice(), lo=ty.filter(function(x){return x.diff<0}).sort(function(a,b){return prRank(a.p,a.name)-prRank(b.p,b.name)||a.diff-b.diff}), hi=ty.filter(function(x){return x.diff>0}).sort(function(a,b){return prRank(a.p,a.name)-prRank(b.p,b.name)||b.diff-a.diff});
     function tile(x){return {t:tname(x),v:sg(x.diff),c:sgc(x.diff),s:'план '+x.plan+' · факт '+x.fact}}
     var sl=lo.reduce(function(a,x){return a+x.diff},0), sh=hi.reduce(function(a,x){return a+x.diff},0);
     var s='<div class="dv-sum">План '+DATA.totals.plan+' · факт '+DATA.totals.fact+(DATA.tr?' · в обучении '+DATA.tr+'<br>Отклонение: '+sg(DATA.totals.diff+DATA.tr)+' (с обучением было бы '+sg(DATA.totals.diff)+')':'')+'</div>';
     if(DATA.trl&&DATA.trl.length){
       var g={},nm={}; (DATA.types||[]).forEach(function(x){nm[x.p]=x.name});
       DATA.trl.forEach(function(x){var m=String(x.num).match(/(\d{2}(?:[.,]\d)?)\s*[-\s]/),p=m?m[1].replace(',','.'):'?';(g[p]=g[p]||[]).push(x)});
-      var keys=Object.keys(g).sort(function(a,b){return parseFloat(a)-parseFloat(b)});
+      var keys=Object.keys(g).sort(function(a,b){return prRank(a,nm[a]||'')-prRank(b,nm[b]||'')||parseFloat(a)-parseFloat(b)});
       s+='<div class="dv-t">В обучении ('+DATA.trl.length+')</div>'+dvGrid('tr',keys.map(function(p){
         return {t:esc(p+(nm[p]?' · '+nm[p]:'')),v:g[p].length+' ед.',c:'dv-y',det:g[p].map(function(x){return '<div class="dv-r"><div class="n">'+esc(x.num)+'<small>'+esc(x.dep)+' · '+esc(x.disp)+'</small></div></div>'}).join('')};
       }),true);
@@ -1044,7 +1044,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     var pm={}; (P.types||[]).forEach(function(x){pm[x.p+'|'+x.name]=x});
     var tr=(DATA.types||[]).map(function(x){var o=pm[x.p+'|'+x.name];return {x:x,d:x.fact-(o?o.fact:0),was:o?o.fact:0}}).filter(function(r){return r.d!==0});
     (P.types||[]).forEach(function(o){if(!(DATA.types||[]).some(function(x){return x.p===o.p&&x.name===o.name})&&o.fact) tr.push({x:o,d:-o.fact,was:o.fact,gone:1})});
-    tr.sort(function(a,b){return a.d-b.d});
+    tr.sort(function(a,b){return prRank(a.x.p,a.x.name)-prRank(b.x.p,b.x.name)||a.d-b.d});
     s+='<div class="dv-t">По типам техники (факт)</div>'+(tr.length?dvGrid('pt',tr.map(function(r){return {t:tname(r.x),v:sg(r.d),c:sgc(r.d),s:'было '+r.was+' → стало '+(r.gone?0:r.x.fact)}}),true):'<div class="empty">Без изменений</div>');
     // по отделам
     function grp(V){var m={};V.forEach(function(v){var o=m[v.dep]||(m[v.dep]={n:0,t:{},k:{}});o.n++;o.t[v.t]=(o.t[v.t]||0)+1;o.k[pkey(v.num)]=v.num});return m}
