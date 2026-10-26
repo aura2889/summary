@@ -679,6 +679,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     })});
     return ks.map(function(k){return m[k]}).sort(function(a,b){return prRank(a.p,a.name)-prRank(b.p,b.name)||a.dev-b.dev});
   }
+  function prEff(d){var ds=(PR&&PR.trend||[]).map(function(x){return x.d}).filter(function(x){return x<=d});return ds.length?ds[ds.length-1]:d}
   function prRepList(n,p,wo){
     if(!REP||!REP.aks) return '';
     var a=REP.aks.filter(function(k){return k.n===n})[0]; if(!a) return '';
@@ -703,7 +704,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     return (pcz(x.c).rep||x.rep?prRepList(n,x.p):'')+prStaffChips(x.s);
   }
   function cdOpen(ri){
-    var r=DATA.daily.rows[ri]; if(!r) return; var pp=r.p||PBYN[r.name], d=DATA.date;
+    var r=DATA.daily.rows[ri]; if(!r) return; var pp=r.p||PBYN[r.name], d=prEff(DATA.date);
     function go(x){
       if(x===null||x===undefined){prSheet(esc(r.name)+' · отклонение','<div class="empty">На эту дату нет данных «Өндіріс ақпары»</div>');return}
       PRX=x;
@@ -870,11 +871,11 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     prLoad();
     if(PRE) return '<div class="empty">Данные «Өндіріс ақпары» не загружены.<br><small>Обновите страницу и откройте вкладку снова</small></div>';
     if(!PRS) return '<div class="empty">Загрузка…</div>';
-    var dd=DATA.date; prFetch(dd); PRX=PC[dd];
+    var dd=prEff(DATA.date); prFetch(dd); PRX=PC[dd];
     var sr='<input class="search" id="pq" type="search" inputmode="search" enterkeyhint="search" placeholder="Поиск: префикс, тип техники (кран, ППУ…), АК3" value="'+esc(pq)+'">';
     if(PRX===0||PRX===undefined) return sr+'<div class="empty">Загрузка дня…</div>';
     if(PRX===null) return sr+'<div class="empty">На '+fmtDate(dd)+' данных «Өндіріс ақпары» нет.<br><small>Выберите другую дату вверху</small></div>';
-    return sr+'<div class="chips c5">'+[['sum','Итог'],['ak','Колонны'],['tech','Техника'],['park','Парк'],['staff','Люди']].map(function(i){return '<button class="chip'+(psub===i[0]?' on':'')+'" data-psub="'+i[0]+'">'+i[1]+'</button>'}).join('')+'</div>'+'<div id="pres">'+prodBody()+'</div>';
+    return sr+(dd!==DATA.date?'<div class="pw">Данные «Өндіріс ақпары» за '+fmtDate(DATA.date)+' ещё не обновлены. Показан отчёт за '+fmtDate(dd)+'</div>':'')+'<div class="chips c5">'+[['sum','Итог'],['ak','Колонны'],['tech','Техника'],['park','Парк'],['staff','Люди']].map(function(i){return '<button class="chip'+(psub===i[0]?' on':'')+'" data-psub="'+i[0]+'">'+i[1]+'</button>'}).join('')+'</div>'+'<div id="pres">'+prodBody()+'</div>';
   }
 
   /* ---------- окошко с водителем ---------- */
