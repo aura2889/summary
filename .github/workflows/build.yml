@@ -16,6 +16,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -28,7 +29,7 @@ jobs:
       - name: LibreOffice (пересчёт формул свода, чтение старых .xls)
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq libreoffice-calc
+          sudo apt-get install -y -qq --no-install-recommends libreoffice-calc
 
       - name: Собрать свод, data.json, drivers.json
         run: python scripts/build.py
