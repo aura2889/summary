@@ -226,6 +226,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
 .pgt{display:grid;grid-template-columns:1fr 1fr;gap:8px}.ptl{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px;cursor:pointer}.ptl small{display:block;font-size:12px;color:var(--muted);line-height:1.2}.ptl b{display:block;font-size:24px;line-height:1.25;margin-top:2px}.ptl span{display:block;font-size:12px;color:var(--muted);margin-top:1px}
 .prr.tp{cursor:pointer}.prsub{margin:2px 0 6px 12px;padding-left:10px;border-left:3px solid var(--line)}
 .chips.c5.c6{grid-template-columns:repeat(6,minmax(0,1fr))}.chips.c5.c6 .chip{font-size:11.5px;padding:8px 0}.chips.c5{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;overflow:visible}.chips.c5 .chip{padding:8px 0;font-size:13px;text-align:center;min-width:0}
+.pdx{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;color:var(--muted);font-size:13.5px}.pdx .pcs{margin-top:0}.pdx .pdd{margin-left:auto;font-size:17px}
 </style>
 </head>
 <body>
@@ -780,8 +781,9 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
       var dm=r.af-r.b.fact;
       return '<div class="prr"><div class="prt"><span class="prp">'+esc(r.k)+'</span> '+esc(nm[r.k]||'')+'</div>'+
         '<div class="prn"><span>Основной: '+r.a.plan+' → '+r.af+(r.a.tr?' (в т.ч. обуч. '+r.a.tr+')':'')+' · '+sg(r.af-r.a.plan)+'</span></div>'+
-        '<div class="prn"><span>Өндіріс ақпары: '+r.b.plan+' → '+r.b.fact+' · '+sg(r.b.fact-r.b.plan)+'</span>'+(r.a.plan!==r.b.plan?'<small>план разный</small>':'<b class="'+(dm?'dv-y':'')+'">'+sg(dm)+'</b>')+'</div>'+
-        '<div class="pcs">'+Object.keys(r.b.ak||{}).map(function(n){var q=r.b.ak[n],df=q[1]-q[0];return '<span class="pcc">АК'+n+' '+q[0]+' → '+q[1]+(df?' <b class="'+sgc(df)+'">'+sg(df)+'</b>':'')+'</span>'}).join('')+'</div></div>';
+        '<div class="pdx"><span class="pdt">Өндіріс ақпары: '+r.b.plan+' → '+r.b.fact+' · '+sg(r.b.fact-r.b.plan)+'</span>'+
+        '<span class="pcs">'+Object.keys(r.b.ak||{}).map(function(n){var q=r.b.ak[n],df=q[1]-q[0];return '<span class="pcc">АК'+n+' '+q[0]+' → '+q[1]+(df?' <b class="'+sgc(df)+'">'+sg(df)+'</b>':'')+'</span>'}).join('')+'</span>'+
+        (r.a.plan!==r.b.plan?'<small>план разный</small>':'<b class="pdd '+(dm?'dv-y':'')+'">'+sg(dm)+'</b>')+'</div></div>';
     }).join(''):'<div class="empty">Всё совпадает</div>';
     return h+'</div>';
   }
