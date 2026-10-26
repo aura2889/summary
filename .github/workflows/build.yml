@@ -50,11 +50,20 @@ jobs:
           fi
 
       - name: Копия на Bitbucket (сайт repo2889.bitbucket.io)
+        run: git fetch --unshallow || true
+
+      - name: Записать в Bitbucket
         env:
           BB_TOKEN: ${{ secrets.BITBUCKET_TOKEN }}
+          BB_USER: aigulizimbergen@gmail.com
         run: |
-          git fetch --unshallow || true
-          git push --force "https://x-bitbucket-api-token-auth:${BB_TOKEN}@bitbucket.org/repo2889/repo2889.bitbucket.io.git" HEAD:main
+          if [ -z "$BB_TOKEN" ]; then echo "::error::секрет BITBUCKET_TOKEN пустой или не создан"; exit 1; fi
+          for U in x-bitbucket-api-token-auth "$BB_USER"; do
+            [ -z "$U" ] && continue
+            if out=$(git push --force "https://${U}:${BB_TOKEN}@bitbucket.org/repo2889/repo2889.bitbucket.io.git" HEAD:main 2>&1); then echo "ok: $U"; exit 0; fi
+            echo "::warning::вход как ${U%%@*}: ${out//$BB_TOKEN/***}"
+          done
+          echo "::error::не удалось записать в Bitbucket"; exit 1
 
       - name: При ошибке очистить input/ (чтобы не мешали следующей загрузке)
         if: failure()

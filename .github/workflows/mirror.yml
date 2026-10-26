@@ -20,7 +20,7 @@ jobs:
       - name: Копия на Bitbucket (сайт repo2889.bitbucket.io)
         env:
           BB_TOKEN: ${{ secrets.BITBUCKET_TOKEN }}
-          BB_USER: ${{ secrets.BITBUCKET_USER }}
+          BB_USER: aigulizimbergen@gmail.com
         run: |
           if [ -z "$BB_TOKEN" ]; then echo "::error::секрет BITBUCKET_TOKEN пустой или не создан"; exit 1; fi
           for U in x-bitbucket-api-token-auth "$BB_USER"; do
