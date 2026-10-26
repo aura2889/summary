@@ -231,6 +231,8 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
 .pfd.sm{margin-top:0;flex:1;gap:4px}.pfd.sm>div{padding:2px 0 3px;border-radius:7px}.pfd.sm b{font-size:15px}.pfd.sm small{font-size:9.5px}
 .paks{margin-top:6px;padding-left:8px;border-left:3px solid var(--line)}.pak{display:flex;align-items:center;gap:8px;margin-top:4px}.pakl{flex:none;width:42px;font-size:12px;font-weight:700;color:var(--brand2)}
 .ptl .pfd{margin-top:8px}.ptl .pfd b{font-size:19px}
+.ptr{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px}.ptr .prt{flex:1 1 100%}.ptr .ptn{color:var(--muted);font-size:13.5px}.ptr .pcs{margin-top:0;flex:1 1 auto}.ptr .ptd{margin-left:auto;font-size:17px}.ptr .ptd:empty{display:none}
+@media (min-width:700px){.ptr{flex-wrap:nowrap}.ptr .prt{flex:0 0 300px}.ptr .ptn{flex:0 0 90px;font-size:14.5px;color:var(--ink);font-weight:600}.ptr .ptd{flex:0 0 40px;text-align:right}.ptr .ptd:empty{display:block}}
 </style>
 </head>
 <body>
@@ -861,9 +863,10 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
   function prTechPref(){
     var r=prGroups().slice().sort(function(a,b){return (parseFloat(a.p)||999)-(parseFloat(b.p)||999)||String(a.p).localeCompare(String(b.p))||a.name.localeCompare(b.name,'ru')});
     return '<div class="prs" style="margin:6px 2px">По возрастанию префикса. Нажмите на тип — ремонт, причины, люди</div><div class="card">'+r.map(function(g){
-      return '<div class="prr tp" data-pt="'+esc(g.k)+'"><div class="prt"><span class="prp">'+esc(g.p||'—')+'</span> '+esc(g.name)+'</div>'+
-        '<div class="prn"><span>'+g.plan+' → '+g.fact+'</span>'+(g.dev?pdv(g.dev):'')+'</div>'+
-        '<div class="pcs">'+g.parts.map(function(q){var x=q.x;return '<span class="pcc">АК'+q.n+' '+x.plan+' → '+x.fact+(x.dev?' <b class="'+sgc(x.dev)+'">'+sg(x.dev)+'</b>':'')+'</span>'}).join('')+'</div>'+(g.dev?pczChips(g.c):'')+'</div>';
+      return '<div class="prr tp" data-pt="'+esc(g.k)+'"><div class="ptr"><div class="prt"><span class="prp">'+esc(g.p||'—')+'</span> '+esc(g.name)+'</div>'+
+        '<span class="ptn">'+g.plan+' → '+g.fact+'</span>'+
+        '<span class="pcs">'+g.parts.map(function(q){var x=q.x;return '<span class="pcc">АК'+q.n+' '+x.plan+' → '+x.fact+(x.dev?' <b class="'+sgc(x.dev)+'">'+sg(x.dev)+'</b>':'')+'</span>'}).join('')+'</span>'+
+        '<span class="ptd">'+(g.dev?pdv(g.dev):'')+'</span></div>'+(g.dev?pczChips(g.c):'')+'</div>';
     }).join('')+'</div>';
   }
   function prRentOpen(){
