@@ -227,6 +227,10 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
 .prr.tp{cursor:pointer}.prsub{margin:2px 0 6px 12px;padding-left:10px;border-left:3px solid var(--line)}
 .chips.c5.c6{grid-template-columns:repeat(6,minmax(0,1fr))}.chips.c5.c6 .chip{font-size:11.5px;padding:8px 0}.chips.c5{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;overflow:visible}.chips.c5 .chip{padding:8px 0;font-size:13px;text-align:center;min-width:0}
 .pdx{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;color:var(--muted);font-size:13.5px}.pdx .pcs{margin-top:0}.pdx .pdd{margin-left:auto;font-size:17px}
+.pfd{display:flex;gap:6px;margin-top:6px}.pfd>div{flex:1;text-align:center;background:var(--soft);border-radius:9px;padding:4px 0 5px}.pfd small{display:block;font-size:10.5px;color:var(--muted);line-height:1.1}.pfd b{display:block;font-size:20px;line-height:1.15}.pfd .z b{color:var(--muted);font-weight:600}
+.pfd.sm{margin-top:0;flex:1;gap:4px}.pfd.sm>div{padding:2px 0 3px;border-radius:7px}.pfd.sm b{font-size:15px}.pfd.sm small{font-size:9.5px}
+.paks{margin-top:6px;padding-left:8px;border-left:3px solid var(--line)}.pak{display:flex;align-items:center;gap:8px;margin-top:4px}.pakl{flex:none;width:42px;font-size:12px;font-weight:700;color:var(--brand2)}
+.ptl .pfd{margin-top:8px}.ptl .pfd b{font-size:19px}
 </style>
 </head>
 <body>
@@ -838,22 +842,28 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     return '<div class="prr'+(key==null?'':' tp')+'"'+(key==null?'':' data-pt="'+esc(key)+'"')+'><div class="prt"><span class="prp">'+esc(x.p||'—')+'</span> '+esc(x.name)+(ak?' <small>АК'+ak+'</small>':'')+
       '</div><div class="prn"><span>'+x.plan+' → '+x.fact+'</span>'+pdv(x.dev)+'</div>'+pczChips(x.c)+'</div>';
   }
-  var tsub='ak';
+  var tsub='pref';
   function prTech(){
-    return seg('data-tsub',[['ak','По автоколоннам'],['pref','По префиксам']],tsub)+(tsub==='ak'?prTechAk():prTechPref());
+    return seg('data-tsub',[['pref','По префиксам'],['ak','По автоколоннам']],tsub)+(tsub==='ak'?prTechAk():prTechPref());
+  }
+  function pfd(p,f,d,sm){
+    return '<div class="pfd'+(sm?' sm':'')+'"><div><small>план</small><b>'+p+'</b></div><div><small>факт</small><b>'+f+'</b></div><div class="'+(d?'':'z')+'"><small>откл.</small><b class="'+(d?sgc(d):'')+'">'+(d?sg(d):'0')+'</b></div></div>';
   }
   function prTechAk(){
     var t=PRX.tot,h='<div class="ph">План → факт по колоннам <small>нажмите — детали</small></div><div class="pgt">';
     PRX.aks.forEach(function(a){
-      h+=tile('data-pk="'+a.n+'"',a.plan+' → '+a.fact,'','АК '+a.n+' · '+pakn(a),'<b class="'+sgc(a.dev)+'">'+sg(a.dev)+'</b>'+(a.pr||a.fr?' · в т.ч. аренда '+a.pr+' → '+a.fr:''));
+      h+='<div class="ptl" data-pk="'+a.n+'"><small>АК '+a.n+' · '+pakn(a)+'</small>'+pfd(a.plan,a.fact,a.dev)+(a.pr||a.fr?'<span>в т.ч. аренда '+a.pr+' → '+a.fr+'</span>':'')+'</div>';
     });
-    h+=tile('data-prent="1"',t.pr+' → '+t.fr,'','Аренда (Mobil и др.)','<b class="'+sgc(t.devr)+'">'+sg(t.devr)+'</b> · уже входит в колонны')+'</div>';
+    h+='<div class="ptl" data-prent="1"><small>Аренда (Mobil и др.)</small>'+pfd(t.pr,t.fr,t.devr)+'<span>уже входит в колонны</span></div></div>';
     h+='<div class="prs" style="margin-top:8px">Всего: план '+t.plan+' → факт '+t.fact+' (<b class="'+sgc(t.dev)+'">'+sg(t.dev)+'</b>). ДТТ '+t.pd+' → '+t.fd+', аренда '+t.pr+' → '+t.fr+'.</div>';
     return h;
   }
   function prTechPref(){
     var r=prGroups().slice().sort(function(a,b){return (parseFloat(a.p)||999)-(parseFloat(b.p)||999)||String(a.p).localeCompare(String(b.p))||a.name.localeCompare(b.name,'ru')});
-    return '<div class="prs" style="margin:6px 2px">По возрастанию префикса; нажмите на тип — по автоколоннам, ремонт и люди</div><div class="card">'+r.map(function(g){return prRow(g,g.k)}).join('')+'</div>';
+    return '<div class="prs" style="margin:6px 2px">По возрастанию префикса. Нажмите на тип — ремонт, причины, люди</div><div class="card">'+r.map(function(g){
+      return '<div class="prr tp" data-pt="'+esc(g.k)+'"><div class="prt"><span class="prp">'+esc(g.p||'—')+'</span> '+esc(g.name)+'</div>'+pfd(g.plan,g.fact,g.dev)+
+        '<div class="paks">'+g.parts.map(function(q){return '<div class="pak"><span class="pakl">АК '+q.n+'</span>'+pfd(q.x.plan,q.x.fact,q.x.dev,1)+'</div>'}).join('')+'</div>'+(g.dev?pczChips(g.c):'')+'</div>';
+    }).join('')+'</div>';
   }
   function prRentOpen(){
     var t=PRX.tot,h='<div class="tot6"><div><b>'+t.pr+'</b><span>план</span></div><div><b>'+t.fr+'</b><span>факт</span></div><div><b class="'+sgc(t.devr)+'">'+sg(t.devr)+'</b><span>откл.</span></div><div><b>'+t.rent+'</b><span>по списку</span></div></div><div class="prs">Арендованная техника уже входит в план и факт колонн.</div>';
