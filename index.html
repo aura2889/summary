@@ -763,7 +763,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     var A={},B={},nm={},tn={},nt=0;
     (M.types||[]).forEach(function(x){var k=gk(x.p),g=A[k]||(A[k]={plan:0,fact:0,tr:0});g.plan+=x.plan;g.fact+=x.fact;if(!nm[k])nm[k]=x.name});
     (M.trl||[]).forEach(function(x){var m=String(x.num).match(/(\d{2}(?:[.,]\d)?)\s*[-\s]/),k=gk(m?m[1].replace(',','.'):'?');(A[k]=A[k]||{plan:0,fact:0,tr:0}).tr++;nt++});
-    PRX.aks.forEach(function(a){a.types.forEach(function(x){var k=gk(x.p),g=B[k]||(B[k]={plan:0,fact:0});g.plan+=x.plan;g.fact+=x.fact;if(!nm[k])nm[k]=x.name})});
+    PRX.aks.forEach(function(a){a.types.forEach(function(x){var k=gk(x.p),g=B[k]||(B[k]={plan:0,fact:0,ak:{}});g.plan+=x.plan;g.fact+=x.fact;var q=g.ak[a.n]||(g.ak[a.n]=[0,0]);q[0]+=x.plan;q[1]+=x.fact;if(!nm[k])nm[k]=x.name})});
     var MN=M.totals.diff+(M.tr||0), PD=PRX.tot.dev;
     var h='<div class="tot6"><div><b class="'+sgc(MN)+'">'+sg(MN)+'</b><span>основной</span></div><div><b class="'+sgc(PD)+'">'+sg(PD)+'</b><span>Өндіріс ақпары</span></div><div><b>'+sg(MN-PD)+'</b><span>разница</span></div><div><b>'+(M.tr||0)+'</b><span>в обучении</span></div></div>';
     if(d!==DATA.date) h+='<div class="prs">Сравнение за '+fmtDate(d)+': основной взят из архива за этот день.</div>';
@@ -771,7 +771,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     var keys=Object.keys(A).concat(Object.keys(B).filter(function(k){return !A[k]})).sort(function(a,b){return prRank(a,nm[a]||'')-prRank(b,nm[b]||'')});
     var diff=[],same=0;
     keys.forEach(function(k){
-      var a=A[k]||{plan:0,fact:0,tr:0},b=B[k]||{plan:0,fact:0},af=a.fact+a.tr;
+      var a=A[k]||{plan:0,fact:0,tr:0},b=B[k]||{plan:0,fact:0,ak:{}},af=a.fact+a.tr;
       if(a.plan===b.plan&&af===b.fact){same++;return}
       diff.push({k:k,a:a,af:af,b:b});
     });
@@ -780,7 +780,8 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
       var dm=r.af-r.b.fact;
       return '<div class="prr"><div class="prt"><span class="prp">'+esc(r.k)+'</span> '+esc(nm[r.k]||'')+'</div>'+
         '<div class="prn"><span>Основной: '+r.a.plan+' → '+r.af+(r.a.tr?' (в т.ч. обуч. '+r.a.tr+')':'')+' · '+sg(r.af-r.a.plan)+'</span></div>'+
-        '<div class="prn"><span>Өндіріс ақпары: '+r.b.plan+' → '+r.b.fact+' · '+sg(r.b.fact-r.b.plan)+'</span>'+(r.a.plan!==r.b.plan?'<small>план разный</small>':'<b class="'+(dm?'dv-y':'')+'">'+sg(dm)+'</b>')+'</div></div>';
+        '<div class="prn"><span>Өндіріс ақпары: '+r.b.plan+' → '+r.b.fact+' · '+sg(r.b.fact-r.b.plan)+'</span>'+(r.a.plan!==r.b.plan?'<small>план разный</small>':'<b class="'+(dm?'dv-y':'')+'">'+sg(dm)+'</b>')+'</div>'+
+        '<div class="pcs">'+Object.keys(r.b.ak||{}).map(function(n){var q=r.b.ak[n],df=q[1]-q[0];return '<span class="pcc">АК'+n+' '+q[0]+' → '+q[1]+(df?' <b class="'+sgc(df)+'">'+sg(df)+'</b>':'')+'</span>'}).join('')+'</div></div>';
     }).join(''):'<div class="empty">Всё совпадает</div>';
     return h+'</div>';
   }
