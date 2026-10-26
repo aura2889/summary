@@ -852,17 +852,18 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
   function prTechAk(){
     var t=PRX.tot,h='<div class="ph">План → факт по колоннам <small>нажмите — детали</small></div><div class="pgt">';
     PRX.aks.forEach(function(a){
-      h+='<div class="ptl" data-pk="'+a.n+'"><small>АК '+a.n+' · '+pakn(a)+'</small>'+pfd(a.plan,a.fact,a.dev)+(a.pr||a.fr?'<span>в т.ч. аренда '+a.pr+' → '+a.fr+'</span>':'')+'</div>';
+      h+=tile('data-pk="'+a.n+'"',a.plan+' → '+a.fact+(a.dev?' <span class="'+sgc(a.dev)+'" style="display:inline;font-size:16px;font-weight:800">'+sg(a.dev)+'</span>':''),'','АК '+a.n+' · '+pakn(a),a.pr||a.fr?'в т.ч. аренда '+a.pr+' → '+a.fr:'');
     });
-    h+='<div class="ptl" data-prent="1"><small>Аренда (Mobil и др.)</small>'+pfd(t.pr,t.fr,t.devr)+'<span>уже входит в колонны</span></div></div>';
+    h+=tile('data-prent="1"',t.pr+' → '+t.fr+(t.devr?' '+sg(t.devr):''),'','Аренда (Mobil и др.)','уже входит в колонны')+'</div>';
     h+='<div class="prs" style="margin-top:8px">Всего: план '+t.plan+' → факт '+t.fact+' (<b class="'+sgc(t.dev)+'">'+sg(t.dev)+'</b>). ДТТ '+t.pd+' → '+t.fd+', аренда '+t.pr+' → '+t.fr+'.</div>';
     return h;
   }
   function prTechPref(){
     var r=prGroups().slice().sort(function(a,b){return (parseFloat(a.p)||999)-(parseFloat(b.p)||999)||String(a.p).localeCompare(String(b.p))||a.name.localeCompare(b.name,'ru')});
     return '<div class="prs" style="margin:6px 2px">По возрастанию префикса. Нажмите на тип — ремонт, причины, люди</div><div class="card">'+r.map(function(g){
-      return '<div class="prr tp" data-pt="'+esc(g.k)+'"><div class="prt"><span class="prp">'+esc(g.p||'—')+'</span> '+esc(g.name)+'</div>'+pfd(g.plan,g.fact,g.dev)+
-        '<div class="paks">'+g.parts.map(function(q){return '<div class="pak"><span class="pakl">АК '+q.n+'</span>'+pfd(q.x.plan,q.x.fact,q.x.dev,1)+'</div>'}).join('')+'</div>'+(g.dev?pczChips(g.c):'')+'</div>';
+      return '<div class="prr tp" data-pt="'+esc(g.k)+'"><div class="prt"><span class="prp">'+esc(g.p||'—')+'</span> '+esc(g.name)+'</div>'+
+        '<div class="prn"><span>'+g.plan+' → '+g.fact+'</span>'+(g.dev?pdv(g.dev):'')+'</div>'+
+        '<div class="pcs">'+g.parts.map(function(q){var x=q.x;return '<span class="pcc">АК'+q.n+' '+x.plan+' → '+x.fact+(x.dev?' <b class="'+sgc(x.dev)+'">'+sg(x.dev)+'</b>':'')+'</span>'}).join('')+'</div>'+(g.dev?pczChips(g.c):'')+'</div>';
     }).join('')+'</div>';
   }
   function prRentOpen(){
