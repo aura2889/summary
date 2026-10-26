@@ -4,7 +4,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from common import *
 
 junk, junk_lost = set(), set()
-idx1, idx2, cache, amb = {}, {}, {}, {}
+idx0, idx1, idx2, cache, amb = {}, {}, {}, {}, {}
 
 def build_idx(rows):
     idx = collections.defaultdict(list)
@@ -63,14 +63,22 @@ def lookup(idx, name):
 cache = {}
 junk_lost = set()
 def phones_for(name):
+    """главный справочник (rows0) - первым; второй номер, если его нет, берём из старой базы"""
     if name in cache: return cache[name]
-    res = None
-    for label, idx in (('Водители', idx1), ('КБМ', idx2)):
+    res = None; first = None
+    for label, idx in (('Справочник КБМ', idx0), ('Водители', idx1), ('КБМ', idx2)):
         r = lookup(idx, name)
-        if r and r[0] != 'AMBIG': res = (r[0], label, r[1], r[2]); break
-        if r and r[0] == 'AMBIG' and res is None: amb[name] = (label, r[2])
-    cache[name] = res
-    return res
+        if r and r[0] != 'AMBIG':
+            if first is None:
+                first = (list(r[0]), label, r[1], r[2])
+                if label != 'Справочник КБМ' or len(r[0]) >= 2: break
+            elif first[1] == 'Справочник КБМ':
+                for p in r[0]:
+                    if p not in first[0] and len(first[0]) < 2: first[0].append(p)
+                break
+        if r and r[0] == 'AMBIG' and first is None: amb[name] = (label, r[2])
+    cache[name] = first
+    return first
 amb = {}
 
 ALIAS = {'56-396ARE': '56-AKER396', '56-395ARE': '56-AKER395', '35-903AC12': '35-903AG12', '20-586AG12': '20-586AI12'}   # опечатка диспетчеров, подтверждено пользователем
@@ -89,9 +97,10 @@ def export_cols(header):
 def build(data, export_path, contacts, mobil):
     """data - dict из svod2json; contacts - содержимое contacts.json; mobil - содержимое mobil.json
     -> (drivers_dict, список строк отчёта, список имён без телефона)"""
-    global junk, idx1, idx2
+    global junk, idx0, idx1, idx2
     junk_lost.clear(); cache.clear(); amb.clear()
     junk = set(contacts['junk'])
+    idx0 = build_idx([(n, p) for n, p in contacts.get('rows0', [])])
     idx1 = build_idx([(n, p) for n, p in contacts['rows1']])
     idx2 = build_idx([(n, p) for n, p in contacts['rows2']])
     ex = openpyxl.load_workbook(export_path, data_only=True).active

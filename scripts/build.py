@@ -5,7 +5,7 @@ HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
 import openpyxl
 from svod2json import convert
-import build_drivers, make_mobil, repair, svod_flow
+import build_drivers, make_mobil, repair, svod_flow, make_phonebook
 
 KEEP_DAYS = 365
 INP = os.path.join(ROOT, 'input'); ARC = os.path.join(ROOT, 'archive')
@@ -15,6 +15,7 @@ def say(s): print(s); summary.append(s)
 def classify(path):
     """свод / экспорт / вахта / ремонт автоколонны / None - по содержимому, а не по имени файла"""
     try:
+        if make_phonebook.is_phonebook(path): return 'book'
         wb = openpyxl.load_workbook(path, data_only=True, read_only=True)
         names = wb.sheetnames
         if 'Исходные данные' in names and 'Выход ТС' in names: return 'svod'
@@ -94,6 +95,12 @@ def main():
     for f in kinds.get('roster', []):
         new = make_mobil.read_roster(conv[f]); mobil.update(new); dump(mobil, mob_path)
         say(f'Список вахты Mobil обновлён: {len(new)} машин')
+    for f in sorted(kinds.get('book', []), key=os.path.getmtime)[-1:]:      # главный телефонный справочник (КБМ1-7)
+        cp = os.path.join(ROOT, 'data', 'contacts.json'); ct = load(cp)
+        if ct is None: errors.append('нет data/contacts.json'); continue
+        r0, j0 = make_phonebook.build_rows0(conv[f], ROOT)
+        ct['rows0'] = r0; ct['junk'] = sorted(set(ct.get('junk', [])) | set(j0)); dump(ct, cp)
+        say(f'Справочник телефонов обновлён: {len(r0)} человек')
     # --- файлы диспетчеров -> raw/<РОЛЬ>.xlsx (хранится последний файл роли)
     newroles = []
     for k, fl in sorted(kinds.items()):
@@ -144,7 +151,7 @@ def main():
         else:
             data = convert(conv[svods[0]]); svod_file = conv[svods[0]]
             say(f'Свод на {data["date"]}: план {data["totals"]["plan"]}, факт {data["totals"]["fact"]}, машин {len(data["veh"])}')
-    elif newroles or os.environ.get('SVOD_REBUILD'):       # свод собирается из файлов диспетчеров (SVOD_REBUILD=1 - пересобрать из уже лежащих raw/ без новых файлов)
+    elif newroles or os.environ.get('SVOD_REBUILD') or kinds.get('book'):       # свод собирается из файлов диспетчеров (SVOD_REBUILD=1 - пересобрать из уже лежащих raw/ без новых файлов)
         fresh = {r: state.get(r) == ref.isoformat() for r in svod_flow.ROLES}
         tmpd = os.path.join(ROOT, '.svod_tmp')
         via = tuple(r for r in ('D7', 'K8') if state.get('via', {}).get(r) == 'GAR2' and state.get(r) == ref.isoformat() and os.path.exists(os.path.join(RAW, 'GAR2.xlsx')))
@@ -260,7 +267,7 @@ def main():
             for dd, dv in days.items(): dump(dv, os.path.join(PD, dd + '.json'))
             say(f'Өндіріс ақпары: дней в файле {len(days)} ({min(days)} … {max(days)})' if days else 'Өндіріс ақпары: в файле нет заполненных дней')
         prod.publish(ROOT)
-    if not (kinds.get('roster') or svods or exports or newroles or kinds.get('prod')) and not kinds.get('repair'):
+    if not (kinds.get('roster') or kinds.get('book') or svods or exports or newroles or kinds.get('prod')) and not kinds.get('repair'):
         say('В input/ нет подходящих файлов - ничего не делаю')
     for t in tmps: shutil.rmtree(t, ignore_errors=True)
     for ks in kinds.values():          # обработанные файлы убираем из папки
