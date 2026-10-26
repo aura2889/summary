@@ -225,7 +225,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
 .ph{font-weight:800;font-size:13px;text-transform:uppercase;letter-spacing:.03em;color:var(--brand2);margin:16px 0 8px}.ph small{text-transform:none;letter-spacing:0;font-weight:500;color:var(--muted);margin-left:6px}
 .pgt{display:grid;grid-template-columns:1fr 1fr;gap:8px}.ptl{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px;cursor:pointer}.ptl small{display:block;font-size:12px;color:var(--muted);line-height:1.2}.ptl b{display:block;font-size:24px;line-height:1.25;margin-top:2px}.ptl span{display:block;font-size:12px;color:var(--muted);margin-top:1px}
 .prr.tp{cursor:pointer}.prsub{margin:2px 0 6px 12px;padding-left:10px;border-left:3px solid var(--line)}
-.chips.c5{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;overflow:visible}.chips.c5 .chip{padding:8px 0;font-size:13px;text-align:center;min-width:0}
+.chips.c5.c6{grid-template-columns:repeat(6,minmax(0,1fr))}.chips.c5.c6 .chip{font-size:11.5px;padding:8px 0}.chips.c5{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;overflow:visible}.chips.c5 .chip{padding:8px 0;font-size:13px;text-align:center;min-width:0}
 </style>
 </head>
 <body>
@@ -751,6 +751,39 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
   }
   function pct(x){return x==null?'—':Math.round(x*100)+'%'}
   function pakn(a){return esc(a.name.replace(/^№\s*\d+\s*/,''))}
+  function prDiffMain(date,cb){
+    if(DATA.date===date){cb(DATA);return}
+    if(PREV[date]){cb(PREV[date]);return}
+    fetch('archive/'+date+'/data.json?'+Date.now(),{cache:'no-store'}).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(d){PREV[date]=d;cb(d)}).catch(function(){cb(null)});
+  }
+  function prDiff(){
+    var d=PRX.date, M=(d===DATA.date)?DATA:PREV[d];
+    if(!M){prDiffMain(d,function(){if(top==='prod'&&psub==='diff'){var r=$('#pres');if(r)r.innerHTML=prDiff()}});return '<div class="empty">Загрузка основного…</div>'}
+    function gk(p){p=String(p||'');return (p==='13'||p==='13.1'||p==='12.1'||p==='')?'13':((p==='42'||p==='42.1')?'42':p)}
+    var A={},B={},nm={},tn={},nt=0;
+    (M.types||[]).forEach(function(x){var k=gk(x.p),g=A[k]||(A[k]={plan:0,fact:0,tr:0});g.plan+=x.plan;g.fact+=x.fact;if(!nm[k])nm[k]=x.name});
+    (M.trl||[]).forEach(function(x){var m=String(x.num).match(/(\d{2}(?:[.,]\d)?)\s*[-\s]/),k=gk(m?m[1].replace(',','.'):'?');(A[k]=A[k]||{plan:0,fact:0,tr:0}).tr++;nt++});
+    PRX.aks.forEach(function(a){a.types.forEach(function(x){var k=gk(x.p),g=B[k]||(B[k]={plan:0,fact:0});g.plan+=x.plan;g.fact+=x.fact;if(!nm[k])nm[k]=x.name})});
+    var MN=M.totals.diff+(M.tr||0), PD=PRX.tot.dev;
+    var h='<div class="tot6"><div><b class="'+sgc(MN)+'">'+sg(MN)+'</b><span>основной</span></div><div><b class="'+sgc(PD)+'">'+sg(PD)+'</b><span>Өндіріс ақпары</span></div><div><b>'+sg(MN-PD)+'</b><span>разница</span></div><div><b>'+(M.tr||0)+'</b><span>в обучении</span></div></div>';
+    if(d!==DATA.date) h+='<div class="prs">Сравнение за '+fmtDate(d)+': основной взят из архива за этот день.</div>';
+    h+='<div class="prs">Основной = сводка диспетчеров. В его факт добавлены машины в обучении ('+(M.tr||0)+'), как в шапке сайта.</div>';
+    var keys=Object.keys(A).concat(Object.keys(B).filter(function(k){return !A[k]})).sort(function(a,b){return prRank(a,nm[a]||'')-prRank(b,nm[b]||'')});
+    var diff=[],same=0;
+    keys.forEach(function(k){
+      var a=A[k]||{plan:0,fact:0,tr:0},b=B[k]||{plan:0,fact:0},af=a.fact+a.tr;
+      if(a.plan===b.plan&&af===b.fact){same++;return}
+      diff.push({k:k,a:a,af:af,b:b});
+    });
+    h+='<div class="ph">Где расходятся — '+diff.length+' <small>совпадают '+same+'</small></div><div class="card">';
+    h+=diff.length?diff.map(function(r){
+      var dm=r.af-r.b.fact;
+      return '<div class="prr"><div class="prt"><span class="prp">'+esc(r.k)+'</span> '+esc(nm[r.k]||'')+'</div>'+
+        '<div class="prn"><span>Основной: '+r.a.plan+' → '+r.af+(r.a.tr?' (в т.ч. обуч. '+r.a.tr+')':'')+' · '+sg(r.af-r.a.plan)+'</span></div>'+
+        '<div class="prn"><span>Өндіріс ақпары: '+r.b.plan+' → '+r.b.fact+' · '+sg(r.b.fact-r.b.plan)+'</span>'+(r.a.plan!==r.b.plan?'<small>план разный</small>':'<b class="'+(dm?'dv-y':'')+'">'+sg(dm)+'</b>')+'</div></div>';
+    }).join(''):'<div class="empty">Всё совпадает</div>';
+    return h+'</div>';
+  }
   function prRest(){
     var h='<div class="prs">В файле отклонение колонны не всегда равно сумме причин. Разница по колоннам и типам:</div>',n=0;
     PRX.aks.forEach(function(a){
@@ -865,7 +898,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
   }
   function prodBody(){
     if(pq.trim().length>=2) return prSearch();
-    return psub==='sum'?prSum():(psub==='ak'?prAk():(psub==='tech'?prTech():(psub==='cust'?prCust():psub==='park'?prPark():(psub==='staff'?prStaff():prDyn()))));
+    return psub==='sum'?prSum():(psub==='ak'?prAk():(psub==='tech'?prTech():(psub==='diff'?prDiff():psub==='cust'?prCust():psub==='park'?prPark():(psub==='staff'?prStaff():prDyn()))));
   }
   function viewProd(){
     prLoad();
@@ -875,7 +908,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     var sr='<input class="search" id="pq" type="search" inputmode="search" enterkeyhint="search" placeholder="Поиск: префикс, тип техники (кран, ППУ…), АК3" value="'+esc(pq)+'">';
     if(PRX===0||PRX===undefined) return sr+'<div class="empty">Загрузка дня…</div>';
     if(PRX===null) return sr+'<div class="empty">На '+fmtDate(dd)+' данных «Өндіріс ақпары» нет.<br><small>Выберите другую дату вверху</small></div>';
-    return sr+(dd!==DATA.date?'<div class="pw">Данные «Өндіріс ақпары» за '+fmtDate(DATA.date)+' ещё не обновлены. Показан отчёт за '+fmtDate(dd)+'</div>':'')+'<div class="chips c5">'+[['sum','Итог'],['ak','Колонны'],['tech','Техника'],['park','Парк'],['staff','Люди']].map(function(i){return '<button class="chip'+(psub===i[0]?' on':'')+'" data-psub="'+i[0]+'">'+i[1]+'</button>'}).join('')+'</div>'+'<div id="pres">'+prodBody()+'</div>';
+    return sr+(dd!==DATA.date?'<div class="pw">Данные «Өндіріс ақпары» за '+fmtDate(DATA.date)+' ещё не обновлены. Показан отчёт за '+fmtDate(dd)+'</div>':'')+'<div class="chips c5 c6">'+[['sum','Итог'],['ak','Колонны'],['tech','Техника'],['park','Парк'],['staff','Люди'],['diff','Разница']].map(function(i){return '<button class="chip'+(psub===i[0]?' on':'')+'" data-psub="'+i[0]+'">'+i[1]+'</button>'}).join('')+'</div>'+'<div id="pres">'+prodBody()+'</div>';
   }
 
   /* ---------- окошко с водителем ---------- */
