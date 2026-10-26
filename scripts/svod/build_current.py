@@ -14,14 +14,13 @@ TN={'10':'Пожарная машина','11':'Скорая','12':'Toyota LC','1
 
 for c,n in tpl_types: TN[c]=n
 TN['35.2']='Сед.тягач без прицепа АЦН 30т'
+TN['46']='Гусеничный Экскаватор'
 TPL_D=['ЦДН-1','ЦДН-2','ЦДН-3','ЦППН','ЦППД','ЭЦ','ОКС','РСЦ','ЦИТС','ПРЦЭО','ГЦ','ЦПП','БМТС','ЦПКРС-1','ЦПКРС-2','Гараж-1','ЦНИПР','ОБиПКРС','ЦАП','ГООС','Ақкетік','Нейрон','Бурение','ЦТВС','ТБ','ОТДН','ПЧ-Семсер','ПРЦЭО(2)','БД','ОГиР','ГСРиВК','МПГУ','БПО 2','ЛД','Отделкадр','ЦИТС.','ОБО','УЖЭО','Мухтар/Хамит','ОБО-    СБ','РМУ 2','ГАПиИТ','ОМ','оппоIR','Маркшейдер','ПСО']
 
-# plan from yesterday's file
-pw=openpyxl.load_workbook('resources/plan_source_04.10.xlsx',data_only=True)['План (общий файл)']
-PLAN=collections.Counter()
-for r in range(2,60):
-    a=pw.cell(r,1).value
-    if a is not None and pw.cell(r,2).value not in ('ИТОГО',) and isinstance(pw.cell(r,3).value,(int,float)): PLAN[str(a)]+=pw.cell(r,3).value
+# план: общий (по типам) и по цехам (день/ночь) - из resources/plan_dept.json (из файла диспетчера, зелёные столбцы)
+import json as _json
+PD=_json.load(open('resources/plan_dept.json',encoding='utf-8'))
+PLAN=collections.Counter({k:v for k,v in PD['total'].items()})
 codes_data=collections.Counter()
 for x in ALL: codes_data[x['code']]+=x['day']+x['night']
 types=[c for c,_ in tpl_types]
@@ -35,7 +34,7 @@ types.remove('23'); types.insert(types.index('50')+1,'23')
 types[14:]=sorted(types[14:],key=lambda c:float(c))   # строки 17 и ниже - по возрастанию номера позиции
 dvol=collections.Counter()
 for x in ALL: dvol[x['dept']]+=x['day']+x['night']
-depts=[d for d in TPL_D if dvol[d]>0 and d!='ОБиОТ']+[d for d,_ in dvol.most_common() if d not in TPL_D and d!='ОБиОТ']+['ОБиОТ']
+depts=[d for d in PD['depts'] if d!='ОБиОТ']+[d for d,_ in dvol.most_common() if d not in PD['depts'] and d!='ОБиОТ']+['ОБиОТ']
 PRI={'34','47','49','28','22','27','31','35','50'}
 thin=Side(style='thin'); B=Border(left=thin,right=thin,top=thin,bottom=thin)
 YEL=PatternFill('solid',fgColor='FFFF00'); ORG=PatternFill('solid',fgColor='FFC000'); GRY=PatternFill('solid',fgColor='F2F2F2')
@@ -62,44 +61,57 @@ def sty(c,fill=None,bold=False,center=False):
     if fill: c.fill=fill
     c.alignment=Alignment(horizontal='center',vertical='center')
     if center: c.alignment=Alignment(horizontal='center',vertical='center',wrap_text=True)
-D0=8
-for col,t in zip((1,2,3,4,5,6,7),('Префикс','Название типа','План','Факт','Откл','Всего день','Всего ночь')):
+D0=9          # цеха начинаются с I: на каждый цех 4 столбца = план Д, план Н (зелёные, сгруппированы и скрыты), факт Д, факт Н
+GRN=PatternFill('solid',fgColor='FF92D050')
+for col,t in zip((1,2,3,4,5,6,7,8),('Префикс','Название типа','План','По формуле','Факт','Откл','Всего Д','Всего Н')):
     ws.cell(1,col,t); ws.merge_cells(start_row=1,start_column=col,end_row=2,end_column=col)
 for r in (1,2):
     for c in range(1,D0): sty(ws.cell(r,c),YEL if c<3 else ORG,True,True)
 for i,d in enumerate(depts):
-    c1=D0+2*i
-    ws.cell(1,c1,d); ws.merge_cells(start_row=1,start_column=c1,end_row=1,end_column=c1+1)
-    ws.cell(2,c1,'День'); ws.cell(2,c1+1,'Ночь')
-    for c in (c1,c1+1): sty(ws.cell(1,c),YEL,True,True); sty(ws.cell(2,c),YEL,True,True)
-r0=3; last_col=D0-1+2*len(depts); LC=L(last_col); FD=L(D0)
+    c1=D0+4*i
+    ws.cell(1,c1,'План'); ws.merge_cells(start_row=1,start_column=c1,end_row=1,end_column=c1+1)
+    ws.cell(1,c1+2,d); ws.merge_cells(start_row=1,start_column=c1+2,end_row=1,end_column=c1+3)
+    for k,t in enumerate(('Д','Н','Д','Н')): ws.cell(2,c1+k,t)
+    for c in (c1,c1+1): sty(ws.cell(1,c),GRN,True,True); sty(ws.cell(2,c),GRN,True,True)
+    for c in (c1+2,c1+3): sty(ws.cell(1,c),YEL,True,True); sty(ws.cell(2,c),YEL,True,True)
+r0=3; last_col=D0-1+4*len(depts); LC=L(last_col)
+PL=[L(D0+4*i+k) for i in range(len(depts)) for k in (0,1)]      # столбцы плана
+FDc=[L(D0+4*i+2) for i in range(len(depts))]; FNc=[L(D0+4*i+3) for i in range(len(depts))]   # факт день / ночь
 for k,code in enumerate(types):
     r=r0+k; pri=code in PRI; b28=(code=='28')
     ws.cell(r,1,code).number_format='@'; ws.cell(r,2,TN[code])
     sty(ws.cell(r,1),YEL if pri else None,True); sty(ws.cell(r,2),YEL if pri else None,b28)
     ws.cell(r,3,PLAN.get(code,0))
-    ws.cell(r,4,f"=F{r}+G{r}"); ws.cell(r,5,f"=D{r}-C{r}")
-    ws.cell(r,6,f'=SUMIFS(${FD}{r}:${LC}{r},${FD}$2:${LC}$2,"День")'); ws.cell(r,7,f'=SUMIFS(${FD}{r}:${LC}{r},${FD}$2:${LC}$2,"Ночь")')
-    for c in (3,4,5,6,7): sty(ws.cell(r,c),ORG,b28)
+    ws.cell(r,4,'='+'+'.join(f'{c}{r}' for c in PL))
+    ws.cell(r,5,f"=G{r}+H{r}"); ws.cell(r,6,f"=E{r}-C{r}")
+    ws.cell(r,7,'='+'+'.join(f'{c}{r}' for c in FDc)); ws.cell(r,8,'='+'+'.join(f'{c}{r}' for c in FNc))
+    for c in (3,4,5,6,7,8): sty(ws.cell(r,c),ORG,b28)
     ws.cell(r,1).number_format='@'
     for i,d in enumerate(depts):
-        c1=D0+2*i; dl=L(c1)
-        ws.cell(r,c1,f"=SUMIFS({RNG('I')},{RNG('D')},{dl}$1,{RNG('F')},$A{r})")
-        ws.cell(r,c1+1,f"=SUMIFS({RNG('J')},{RNG('D')},{dl}$1,{RNG('F')},$A{r})")
-        for c in (c1,c1+1): sty(ws.cell(r,c),YEL if pri else None,b28)
+        c1=D0+4*i; dl=L(c1+2)
+        pd=(PD['plan'].get(code) or {}).get(d) or [0,0]
+        ws.cell(r,c1,pd[0]); ws.cell(r,c1+1,pd[1])
+        ws.cell(r,c1+2,f"=SUMIFS({RNG('I')},{RNG('D')},{dl}$1,{RNG('F')},$A{r})")
+        ws.cell(r,c1+3,f"=SUMIFS({RNG('J')},{RNG('D')},{dl}$1,{RNG('F')},$A{r})")
+        for c in (c1,c1+1): sty(ws.cell(r,c),GRN,False)
+        for c in (c1+2,c1+3): sty(ws.cell(r,c),YEL if pri else None,b28)
 tr=r0+len(types)
 ws.cell(tr,2,'ИТОГО'); sty(ws.cell(tr,1),GRY,True); sty(ws.cell(tr,2),GRY,True)
 for c in range(3,last_col+1):
     cl=L(c); ws.cell(tr,c,f"=SUM({cl}{r0}:{cl}{tr-1})"); sty(ws.cell(tr,c),ORG if c<D0 else GRY,True)
 ws.cell(tr+1,2,'ВСЕГО день+ночь'); sty(ws.cell(tr+1,1),GRY,True); sty(ws.cell(tr+1,2),GRY,True)
 for c in range(3,D0): sty(ws.cell(tr+1,c),ORG,True)
-ws.cell(tr+1,4,f"=D{tr}")
+ws.cell(tr+1,4,'='+'+'.join(f'{c}{tr}' for c in PL)); ws.cell(tr+1,5,f"=E{tr}")
 for i in range(len(depts)):
-    c1=D0+2*i
-    ws.cell(tr+1,c1,f"={L(c1)}{tr}+{L(c1+1)}{tr}"); ws.merge_cells(start_row=tr+1,start_column=c1,end_row=tr+1,end_column=c1+1)
-    for c in (c1,c1+1): sty(ws.cell(tr+1,c),GRY,True,True)
+    c1=D0+4*i
+    for q in (c1,c1+2):
+        ws.cell(tr+1,q,f"={L(q)}{tr}+{L(q+1)}{tr}"); ws.merge_cells(start_row=tr+1,start_column=q,end_row=tr+1,end_column=q+1)
+        for c in (q,q+1): sty(ws.cell(tr+1,c),GRY,True,True)
 ws.column_dimensions['A'].width=8; ws.column_dimensions['B'].width=30
 for c in range(3,last_col+1): ws.column_dimensions[L(c)].width=7
+ws.column_dimensions['D'].hidden=True
+for i in range(len(depts)):                     # зелёные столбцы плана каждого цеха - группа «+», по умолчанию свёрнута
+    c1=D0+4*i; ws.column_dimensions.group(L(c1),L(c1+1),outline_level=1,hidden=True)
 ws.row_dimensions[1].height=30; ws.freeze_panes='C3'
 # short sheet from user's formatted template
 tsrc=openpyxl.load_workbook('resources/short_template_user.xlsx')['Ежедневная сводка']
@@ -147,10 +159,34 @@ for r_ in range(4,23,2):
         cell.font=GREEN; cell.alignment=Alignment(horizontal='center',vertical='center'); cell.number_format='General'
 for r_ in range(5,24,2):
     if sh.cell(r_,PC).value is None: continue
-    for nm,src in (('План','C'),('Факт','D'),('Откл','E'),('День','F'),('Ночь','G')):
+    for nm,src in (('План','C'),('Факт','E'),('Откл','F'),('День','G'),('Ночь','H')):
         f=f"INDEX('Выход ТС'!${src}:${src},MATCH(${PCL}{r_}&\"\",'Выход ТС'!$A:$A,0))"
         sh.cell(r_,colI[nm],f'=IFERROR({f},"")' if nm in ('План','Факт','Откл') else f'=IFERROR(IF({f}=0,"",{f}),"")')
         sh.cell(r_,colI[nm]).number_format='General'
+
+# --- отклонение от плана по цехам (факт - план), столбцы справа от таблицы: AE, AF, ... ; в 3-й строке название цеха
+_codes=[str(sh.cell(r_,PC).value) for r_ in range(5,24,2) if sh.cell(r_,PC).value is not None]
+_fact=collections.Counter()
+for x in ALL: _fact[(x['dept'],x['code'])]+=x['day']+x['night']
+DV=[d for d in depts if any(sum((PD['plan'].get(c) or {}).get(d) or [0,0]) or _fact[(d,c)] for c in _codes)]
+DV0=LASTD+1
+_hs=sh.cell(3,LASTD); _bs=sh.cell(5,LASTD)
+sh.cell(2,DV0,'Откл. по цехам (факт − план)'); sh.cell(2,DV0).font=Font(name='Times New Roman',size=12,bold=True)
+sh.cell(2,DV0).alignment=Alignment(horizontal='left',vertical='center')
+for j,d in enumerate(DV):
+    c_=DV0+j; cl=L(c_)
+    h=sh.cell(3,c_,d)
+    h.font=Font(name='Times New Roman',size=11,bold=True); h.fill=copy(_hs.fill); h.border=copy(_hs.border); h.alignment=Alignment(horizontal='center',vertical='center',shrink_to_fit=True)
+    sh.column_dimensions[cl].width=9
+    i=depts.index(d); c1=D0+4*i
+    for r_ in range(5,24,2):
+        if sh.cell(r_,PC).value is None: continue
+        m=f"MATCH(${PCL}{r_}&\"\",'Выход ТС'!$A:$A,0)"
+        ix=lambda col:f"INDEX('Выход ТС'!${L(col)}:${L(col)},{m})"
+        cell=sh.cell(r_,c_,f'=IFERROR({ix(c1+2)}+{ix(c1+3)}-{ix(c1)}-{ix(c1+1)},"")')
+        cell.font=Font(name='Times New Roman',size=14,bold=True); cell.border=copy(_bs.border)
+        cell.alignment=Alignment(horizontal='center',vertical='center'); cell.number_format='[Red]-0;[Color10]+0;;'
+sh.print_area=f"A1:{L(LASTD)}{sh.max_row}"       # печать как раньше, без новых столбцов
 
 # --- перечень госномеров по технике: слева пары (B,C) и (E,F), справа с 47-й строки пары через столбец
 PLIST=[str(sh.cell(r_,PC).value) for r_ in range(5,24,2) if sh.cell(r_,PC).value is not None]

@@ -274,8 +274,8 @@ def build(raw_dir, ref, fresh, out_dir, via=()):
     tot = sum(int(r[8] or 0) + int(r[9] or 0) for r in wb['Исходные данные'].iter_rows(min_row=2, values_only=True) if r[4])
     if tot != sum(x['day'] + x['night'] for x in ALL) + 6: errs.append('в «Исходных данных» не столько строк, сколько разобрано из файлов')
     ws = wb['Выход ТС']; fact = None
-    for row in ws.iter_rows(min_row=3, max_col=4, values_only=True):
-        if row[1] == 'ИТОГО': fact = row[3]
+    for row in ws.iter_rows(min_row=3, max_col=5, values_only=True):
+        if row[1] == 'ИТОГО': fact = row[4]
     if bad: errs.append(f'в своде ошибок формул: {bad}')
     if fact != tot: errs.append(f'итог на листе «Выход ТС» ({fact}) не равен сумме исходных данных ({tot})')
     if errs: return None, status, warns, errs

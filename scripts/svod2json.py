@@ -43,22 +43,29 @@ def convert(path):
     disp = [{'name': disp_names[i], 'src': disp_src[i]} for i in order]
     # ---- типы и итоги
     ws = wb['Выход ТС']
-    depOrder = [str(ws.cell(1, c).value) for c in range(8, ws.max_column + 1, 2) if ws.cell(1, c).value]
+    depOrder = [str(ws.cell(1, c).value) for c in range(11, ws.max_column + 1, 4) if ws.cell(1, c).value]       # K, O, S… (перед каждым цехом 2 столбца плана)
     types, totals = [], None
     for r in range(3, ws.max_row + 1):
         b = ws.cell(r, 2).value
         if b == 'ИТОГО':
-            totals = {'plan': num(ws.cell(r, 3).value), 'fact': num(ws.cell(r, 4).value), 'diff': num(ws.cell(r, 5).value),
-                      'day': num(ws.cell(r, 6).value), 'night': num(ws.cell(r, 7).value)}
+            totals = {'plan': num(ws.cell(r, 3).value), 'fact': num(ws.cell(r, 5).value), 'diff': num(ws.cell(r, 6).value),
+                      'day': num(ws.cell(r, 7).value), 'night': num(ws.cell(r, 8).value)}
             break
         if ws.cell(r, 1).value is None and b is None: continue
-        types.append({'p': str(ws.cell(r, 1).value), 'name': str(b), 'plan': num(ws.cell(r, 3).value), 'fact': num(ws.cell(r, 4).value),
-                      'diff': num(ws.cell(r, 5).value), 'day': num(ws.cell(r, 6).value), 'night': num(ws.cell(r, 7).value)})
+        t = {'p': str(ws.cell(r, 1).value), 'name': str(b), 'plan': num(ws.cell(r, 3).value), 'fact': num(ws.cell(r, 5).value),
+             'diff': num(ws.cell(r, 6).value), 'day': num(ws.cell(r, 7).value), 'night': num(ws.cell(r, 8).value)}
+        dp = {}                                                  # план по цехам: {цех: [день, ночь]} (только ненулевые)
+        for i, dn in enumerate(depOrder):
+            a, b2 = num(ws.cell(r, 9 + 4 * i).value), num(ws.cell(r, 10 + 4 * i).value)
+            if a or b2: dp[dn] = [a, b2]
+        if dp: t['dp'] = dp
+        types.append(t)
     # ---- режимный лист
     wd = wb['Ежедневная сводка']
     c0 = 15                                   # O
     deps, cols = [], []
-    for c in range(c0, wd.max_column + 1):
+    c_end = next((c for c in range(c0, wd.max_column + 1) if str(wd.cell(2, c).value or '').startswith('Откл. по цехам')), wd.max_column + 1)   # с этого столбца - отклонения по цехам, это не режимная таблица
+    for c in range(c0, c_end):
         v = wd.cell(3, c).value
         if v: deps.append(str(v)); cols.append(c)
     rows = []

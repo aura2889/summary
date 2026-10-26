@@ -233,6 +233,9 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
 .ptl .pfd{margin-top:8px}.ptl .pfd b{font-size:19px}
 .ptr{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px}.ptr .prt{flex:1 1 100%}.ptr .ptn{color:var(--muted);font-size:13.5px}.ptr .pcs{margin-top:0;flex:1 1 auto}.ptr .ptd{margin-left:auto;font-size:17px}.ptr .ptd:empty{display:none}
 @media (min-width:700px){.ptr{flex-wrap:nowrap}.ptr .prt{flex:0 0 300px}.ptr .ptn{flex:0 0 90px;font-size:14.5px;color:var(--ink);font-weight:600}.ptr .ptd{flex:0 0 40px;text-align:right}.ptr .ptd:empty{display:block}}
+.dpc{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;margin:6px 0 2px}.dpc>small{color:var(--muted);font-size:12px;font-weight:700}.dpz{color:var(--muted);font-size:12.5px}
+.dpb{font-size:12.5px;color:var(--muted);font-weight:600;margin-left:6px;font-style:normal}.dep .dpb{display:block;margin:3px 0 0}.dpb b{font-size:inherit}.cdb{font-size:12px;font-weight:700;font-style:normal}
+table tr.dvr td{border-top:0;padding-top:0}
 </style>
 </head>
 <body>
@@ -358,6 +361,11 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
   function viewDeps(){
     return '<input class="search" id="q" type="search" inputmode="search" enterkeyhint="search" placeholder="Поиск: отдел, номер машины, тип техники или водитель" value="'+esc(q)+'"><div id="dres">'+depsBody()+'</div>';
   }
+  function dpDepBadge(d){
+    var X=dpx(); if(!X.has||!X.D[d]) return '';
+    var v=0,pl=0;Object.keys(X.D[d]).forEach(function(p){var b=X.D[d][p];v+=dpF(b)-dpP(b);pl+=dpP(b)});
+    return '<span class="dpb">план '+pl+' · <b class="'+sgc(v)+'">'+sg(v)+'</b></span>';
+  }
   function depsBody(){
     var list=depList(), html='';
     if(q.trim()) return viewSearch(q.trim(),list);
@@ -370,13 +378,18 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     if(dep===null){
       html+='<div class="depgrid">';
       list.forEach(function(x){
-        html+='<button class="dep" data-dep="'+esc(x.name)+'"><b>'+esc(x.name)+'</b><span class="tot">'+x.cnt+'</span><span>день '+x.d+' · ночь '+x.n+'</span></button>';
+        html+='<button class="dep" data-dep="'+esc(x.name)+'"><b>'+esc(x.name)+'</b><span class="tot">'+x.cnt+'</span><span>день '+x.d+' · ночь '+x.n+'</span>'+dpDepBadge(x.name)+'</button>';
       });
       return html+'</div>';
     }
     var vs=DATA.veh.filter(function(v){return v.dep===dep});
     var dcount=vs.filter(function(v){return v.d}).length, ncount=vs.filter(function(v){return v.n}).length;
     html+=seg('data-shift',[['d','День ('+dcount+')'],['n','Ночь ('+ncount+')'],['all','Все ('+vs.length+')']],shift);
+    var XD=dpx(),DD=XD.has?(XD.D[dep]||{}):null;
+    if(DD){
+      var dk=Object.keys(DD).filter(function(p){return dpF(DD[p],shift)-dpP(DD[p],shift)}).sort(function(a,b){return (dpF(DD[a],shift)-dpP(DD[a],shift))-(dpF(DD[b],shift)-dpP(DD[b],shift))});
+      html+='<div class="card"><div class="ph" style="margin-top:0">Откл. от плана цеха'+(shift==='d'?' (день)':(shift==='n'?' (ночь)':''))+'</div>'+(dk.length?'<div class="pcs">'+dk.map(function(p){var v=dpF(DD[p],shift)-dpP(DD[p],shift);return '<span class="pcc">'+esc(dpTName(p))+' <small>'+dpF(DD[p],shift)+' из '+dpP(DD[p],shift)+'</small> <b class="'+sgc(v)+'">'+sg(v)+'</b></span>'}).join('')+'</div>':'<div class="prs">Отклонений нет: всё по плану.</div>')+'</div>';
+    }
     var f=vs.filter(function(v){return shift==='all'||(shift==='d'?v.d:v.n)});
     if(!f.length) return html+'<div class="empty">В этой смене техники нет</div>';
     html+=legend();
@@ -388,7 +401,9 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     keys.forEach(function(k){
       var x=g[k];
       x.a.sort(function(a,b){return a.num.localeCompare(b.num,'ru',{numeric:true})});
-      html+='<div class="card"><h3>'+esc(x.t)+'<em>— '+x.a.length+' ед.</em></h3><div class="nums">'+x.a.map(numChip).join('')+'</div></div>';
+      var pb=DD&&DD[k],pe='';
+      if(pb){var pv=dpF(pb,shift)-dpP(pb,shift);pe=' <span class="dpb">план '+dpP(pb,shift)+(pv?' · <b class="'+sgc(pv)+'">'+sg(pv)+'</b>':'')+'</span>'}
+      html+='<div class="card"><h3>'+esc(x.t)+'<em>— '+x.a.length+' ед.</em>'+pe+'</h3><div class="nums">'+x.a.map(numChip).join('')+'</div></div>';
     });
     return html+'</div>';
   }
@@ -458,6 +473,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     DATA.types.slice().sort(function(a,b){return b.plan-a.plan}).forEach(function(t){
       if(!t.plan&&!t.fact) return;
       h+='<tr><td class="pref">'+esc(t.p)+'</td><td>'+esc(t.name)+'</td><td>'+t.plan+'</td><td>'+t.fact+'</td><td class="'+(t.diff<0?'neg':(t.diff>0?'pos':''))+'">'+(t.diff>0?'+':'')+t.diff+'</td><td>'+t.day+'/'+t.night+'</td></tr>';
+      var dc=dpChips(t.p); if(dc&&dc.indexOf('нет, все')<0) h+='<tr class="dvr"><td></td><td colspan="5">'+dc+'</td></tr>';
     });
     var T=DATA.totals;
     h+='<tr><td></td><td><b>Итого</b></td><td><b>'+T.plan+'</b></td><td><b>'+T.fact+'</b></td><td class="'+(T.diff<0?'neg':'pos')+'"><b>'+T.diff+'</b></td><td><b>'+T.day+'/'+T.night+'</b></td></tr></table></div>';
@@ -486,11 +502,12 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
           '<div class="stat fact"><b>'+r.fact+'</b><span>факт</span></div>'+
           '<div class="stat tapc" data-cdv="'+ri+'" role="button" tabindex="0"><b class="'+(r.diff<0?'neg':(r.diff>0?'pos':''))+'">'+sign(r.diff)+'</b><span>откл. ›</span></div>'+
           '<div class="stat"><b>'+r.day+'</b><span>день</span></div>'+
-          '<div class="stat"><b>'+r.night+'</b><span>ночь</span></div></div>';
+          '<div class="stat"><b>'+r.night+'</b><span>ночь</span></div></div>'+dpChips(r.p);
         if(keys.length){
           h+='<div class="cells">'+keys.map(function(d){
             var c=r.cells[d];
-            return '<div class="cell tapc" data-cc="'+ri+'|'+esc(d)+'" role="button" tabindex="0"><small>'+esc(d)+(c.u?'<u>утт '+c.u+'</u>':'')+'</small><b>'+(c.e?c.e+'='+c.v:c.v)+'</b></div>';
+            var bx=(dpx().T[r.p]||{})[d],dvb=bx&&dpx().has?dpF(bx)-dpP(bx):0;
+            return '<div class="cell tapc" data-cc="'+ri+'|'+esc(d)+'" role="button" tabindex="0"><small>'+esc(d)+(c.u?'<u>утт '+c.u+'</u>':'')+'</small><b>'+(c.e?c.e+'='+c.v:c.v)+(dvb?' <span class="cdb '+sgc(dvb)+'">'+sg(dvb)+'</span>':'')+'</b></div>';
           }).join('')+'</div>';
         }else h+='<div class="empty" style="padding:6px">Не распределено по отделам</div>';
         h+='</div>';
@@ -719,6 +736,9 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
       gs.forEach(function(g){pl+=g.plan;fa+=g.fact;dv+=g.dev;Object.keys(g.c).forEach(function(k){c[k]=(c[k]||0)+g.c[k]});g.parts.forEach(function(q){parts.push(q)})});
       parts.sort(function(a,b){return a.n-b.n});
       var h='<div class="tot6"><div><b>'+r.plan+'</b><span>план</span></div><div><b>'+r.fact+'</b><span>факт</span></div><div><b class="'+sgc(r.diff)+'">'+sg(r.diff)+'</b><span>откл. сводка</span></div><div><b class="'+sgc(dv)+'">'+sg(dv)+'</b><span>откл. файл</span></div></div>';
+      var X=dpx();
+      if(X.has){var tb=X.T[pp]||{},tk=Object.keys(tb).filter(function(k){return dpP(tb[k])||dpF(tb[k])}).sort(function(a,b){return (dpF(tb[a])-dpP(tb[a]))-(dpF(tb[b])-dpP(tb[b]))});
+        h+='<div class="ph">По цехам: план → факт</div>'+tk.map(function(k){var v=dpF(tb[k])-dpP(tb[k]);return '<div class="prr"><div class="prt">'+esc(k)+' <small>день '+tb[k].pd+' · ночь '+tb[k].pn+'</small></div><div class="prn"><span>'+dpP(tb[k])+' → '+dpF(tb[k])+'</span>'+pdv(v)+'</div></div>'}).join('')}
       if(!gs.length) h+='<div class="empty">Этого типа нет в файле «Өндіріс ақпары»</div>';
       else{
         h+=(pl!==r.plan||fa!==r.fact?'<div class="prs">По файлу «Өндіріс ақпары»: план '+pl+', факт '+fa+'.</div>':'')+(dv?'<div class="ph">Причины</div>'+pczChips(c):'<div class="prs">В файле «Өндіріс ақпары» отклонения по этому типу нет.</div>');
@@ -1061,6 +1081,25 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
   var PREV={}, devMode='plan';
   function sg(n){return n>0?'+'+n:(n<0?'−'+Math.abs(n):'0')}
   function sgc(n){return n>0?'dv-pos':(n<0?'dv-neg':'dv-z')}
+  /* план по цехам (из столбцов плана свода) против факта по машинам: X.T[тип][цех], X.D[цех][тип] = {pd,pn,fd,fn} */
+  var DPX=null;
+  function dpx(){
+    if(DPX&&DPX.src===DATA) return DPX;
+    var X={src:DATA,has:false,T:{},D:{}};
+    function cell(p,d){var a=X.T[p]||(X.T[p]={}),b=a[d];if(!b){b=a[d]={pd:0,pn:0,fd:0,fn:0};(X.D[d]||(X.D[d]={}))[p]=b}return b}
+    (DATA.types||[]).forEach(function(t){if(!t.dp)return;X.has=true;Object.keys(t.dp).forEach(function(d){var b=cell(t.p,d);b.pd+=t.dp[d][0];b.pn+=t.dp[d][1]})});
+    (DATA.veh||[]).forEach(function(v){var b=cell(v.p,v.dep);b.fd+=v.d?1:0;b.fn+=v.n?1:0});
+    DPX=X;return X;
+  }
+  function dpP(b,sh){return sh==='d'?b.pd:(sh==='n'?b.pn:b.pd+b.pn)}
+  function dpF(b,sh){return sh==='d'?b.fd:(sh==='n'?b.fn:b.fd+b.fn)}
+  function dpTName(p){var r=(DATA.types||[]).filter(function(t){return t.p===p})[0];return r?r.name:p}
+  function dpChips(p){
+    var X=dpx(); if(!X.has) return ''; var a=X.T[p]||{};
+    var ks=Object.keys(a).filter(function(d){return dpF(a[d])-dpP(a[d])}).sort(function(x,y){return (dpF(a[x])-dpP(a[x]))-(dpF(a[y])-dpP(a[y]))});
+    if(!ks.length) return '<div class="dpc"><small>Откл. по цехам:</small> <span class="dpz">нет, все цехи по плану</span></div>';
+    return '<div class="dpc"><small>Откл. по цехам:</small>'+ks.map(function(d){var v=dpF(a[d])-dpP(a[d]);return '<span class="pcc">'+esc(d)+' <small>'+dpF(a[d])+' из '+dpP(a[d])+'</small> <b class="'+sgc(v)+'">'+sg(v)+'</b></span>'}).join('')+'</div>';
+  }
   function pkey(s){return String(s).toUpperCase().replace(/\s+/g,'').replace(/(Д\/Н|Д|Н)$/,'')}
   function devShell(){
     var el=$('#dev');
