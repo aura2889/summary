@@ -261,7 +261,7 @@ table tr.dvr td{border-top:0;padding-top:0}
     gs.setAttribute('data-goatcounter','https://'+GC_CODE+'.goatcounter.com/count');document.head.appendChild(gs)}catch(e){}}
   function track(p){try{if(window.goatcounter&&window.goatcounter.count)window.goatcounter.count({path:p,title:p,event:true})}catch(e){}}
   var searched=false;
-  var DATA=null, DRV=null, DATES=null, curDay='', top='all', sub='deps', csub='type', dep=null, shift='d', q='', dq='', cdisp=0;
+  var DATA=null, DRV=null, DATES=null, curDay='', top='all', sub='deps', csub='type', cpf='', dep=null, shift='d', q='', dq='', cdisp=0;
   // порядок типов техники внутри отдела (по префиксам); остальное — после, по количеству
   var ORDER=['35','35.1','35.2','31','28','30','63','29','22','23','22.1','34','47','46','49','62','27','50','53','13','13.1','20'];
   var LAT={A:'А',B:'В',C:'С',E:'Е',H:'Н',K:'К',M:'М',O:'О',P:'Р',T:'Т',X:'Х',Y:'У'};
@@ -481,9 +481,20 @@ table tr.dvr td{border-top:0;padding-top:0}
     if(c.u) s+=(s?' ':'')+'<u>утт '+c.u+'</u>';
     return s;
   }
+  function citsPlan(){
+    var X=dpx(); if(!X.has) return '<div class="empty">План по цехам для этого дня не загружен</div>';
+    var ps=Object.keys(X.T).filter(function(p){return Object.keys(X.T[p]).some(function(d){var b=X.T[p][d];return dpP(b)||dpF(b)})}).sort(function(a,b){return parseFloat(a)-parseFloat(b)||(a<b?-1:1)});
+    if(ps.indexOf(cpf)<0) cpf=ps[0]||'';
+    var h='<div class="pq" style="grid-template-columns:repeat('+Math.ceil(ps.length/4)+',minmax(0,1fr))">'+ps.map(function(p){return '<button class="pqb'+(p===cpf?' on':'')+'" data-cpf="'+esc(p)+'">'+esc(p)+'</button>'}).join('')+'</div>';
+    var a=X.T[cpf]||{},ord=DATA.depOrder||[],ds=Object.keys(a).filter(function(d){return dpP(a[d])||dpF(a[d])}).sort(function(x,y){var ix=ord.indexOf(x),iy=ord.indexOf(y);return (ix<0?999:ix)-(iy<0?999:iy)});
+    var pl=0,fa=0;ds.forEach(function(d){pl+=dpP(a[d]);fa+=dpF(a[d])});
+    h+='<div class="card"><h3>'+esc(cpf+' · '+dpTName(cpf))+'</h3><div class="stats"><div class="stat plan"><b>'+pl+'</b><span>план</span></div><div class="stat fact"><b>'+fa+'</b><span>факт</span></div><div class="stat"><b class="'+sgc(fa-pl)+'">'+sg(fa-pl)+'</b><span>откл.</span></div></div>';
+    h+=ds.map(function(d){var b=a[d],v=dpF(b)-dpP(b);return '<div class="dv-r"><div class="n">'+esc(d)+'<small>план: день '+b.pd+' · ночь '+b.pn+' — факт: день '+b.fd+' · ночь '+b.fn+'</small></div><div class="d">'+dpP(b)+' → '+dpF(b)+' <span class="'+sgc(v)+'">'+(v?sg(v):'')+'</span></div></div>'}).join('')+'</div>';
+    return h;
+  }
   function viewCits(){
     var D=DATA.daily; if(!D||!D.rows.length) return '<div class="empty">Нет данных режимного листа</div>';
-    var h=seg('data-csub',[['type','По технике'],['dep','По отделам']],csub);
+    var h=seg('data-csub',[['type','По технике'],['dep','План по цехам']],csub);
     if(csub==='type'){
       h+='<div class="pq" style="grid-template-columns:repeat('+(D.rows.length>10?Math.ceil(D.rows.length/2):D.rows.length)+',minmax(0,1fr))">'+D.rows.map(function(r,ri){return '<button class="pqb" data-cgo="'+ri+'">'+esc(r.p||PBYN[r.name]||'?')+'</button>'}).join('')+'</div>';
       h+='<div class="cg">';
@@ -506,17 +517,7 @@ table tr.dvr td{border-top:0;padding-top:0}
       });
       h+='</div>';
     }else{
-      h+='<div class="cg">';
-      D.deps.forEach(function(d){
-        var items=D.rows.filter(function(r){return r.cells[d]});
-        if(!items.length) return;
-        var sum=items.reduce(function(a,r){return a+r.cells[d].v},0);
-        h+='<div class="card"><h3>'+esc(d)+'<em>— '+sum+' ед.</em></h3>'+items.map(function(r){
-          var c=r.cells[d],ex=cellExtra(c);
-          return '<div class="lrow tapc" data-cc="'+D.rows.indexOf(r)+'|'+esc(d)+'" role="button" tabindex="0"><span>'+esc(r.name)+(ex?'<i>'+ex+'</i>':'')+'</span><b>'+c.v+'</b></div>';
-        }).join('')+'</div>';
-      });
-      h+='</div>';
+      h+=citsPlan();
     }
     return h;
   }
@@ -1028,7 +1029,7 @@ table tr.dvr td{border-top:0;padding-top:0}
       if(!open){showPop(pl);$('#pop').dataset.for=pl.dataset.i;track('окно водителя')}else $('#pop').dataset.for='';return}
     if(!e.target.closest('#pop')) hidePop();
     if(e.target.closest('[data-dl]')) return;
-    var t=e.target.closest('[data-top],[data-sub],[data-csub],[data-dep],[data-shift],[data-disp],[data-nsub],[data-nak],[data-npref],[data-psub],[data-pd],[data-pfl],[data-tsub]'); if(!t) return;
+    var t=e.target.closest('[data-top],[data-sub],[data-csub],[data-dep],[data-shift],[data-disp],[data-nsub],[data-nak],[data-npref],[data-psub],[data-pd],[data-pfl],[data-tsub],[data-cpf]'); if(!t) return;
     if(t.dataset.top){
       top=t.dataset.top;track('вкладка/'+top);
       document.querySelectorAll('.tab').forEach(function(b){b.classList.toggle('on',b.dataset.top===top)});
@@ -1043,6 +1044,7 @@ table tr.dvr td{border-top:0;padding-top:0}
     else if(t.dataset.nak){var n=+t.dataset.nak;nak=nak===n?0:n;track('АК/'+n)}
     else if(t.dataset.sub){sub=t.dataset.sub}
     else if(t.dataset.csub){csub=t.dataset.csub}
+    else if(t.dataset.cpf){cpf=t.dataset.cpf}
     else if(t.dataset.dep!==undefined){
       dep=t.dataset.dep||null; q='';if(dep)track('отдел/'+dep);
       if(dep) fixShift(); else shift='d';
@@ -1134,6 +1136,18 @@ table tr.dvr td{border-top:0;padding-top:0}
     }
     s+='<div class="dv-t">Не хватает до плана ('+sg(sl)+')</div>'+(lo.length?dvGrid('lo',lo.map(tile),true):'<div class="empty">Нет</div>');
     if(hi.length) s+='<div class="dv-t">Больше плана ('+sg(sh)+')</div>'+dvGrid('hi',hi.map(tile),true);
+    var X=dpx();
+    if(X.has){
+      var dl=[],ord=DATA.depOrder||[];
+      Object.keys(X.D).forEach(function(d){var pl=0,fa=0,rows=[];Object.keys(X.D[d]).forEach(function(p){var b=X.D[d][p],v=dpF(b)-dpP(b);pl+=dpP(b);fa+=dpF(b);if(v)rows.push({p:p,b:b,v:v})});
+        var dv=fa-pl;if(!dv&&!rows.length)return;
+        rows.sort(function(x,y){return prRank(x.p,dpTName(x.p))-prRank(y.p,dpTName(y.p))||x.v-y.v});
+        dl.push({t:esc(d),v:sg(dv),c:sgc(dv),dv:dv,s:'план '+pl+' · факт '+fa,det:rows.map(function(r){return '<div class="dv-r"><div class="n">'+esc(r.p+' · '+dpTName(r.p))+'<small>план '+dpP(r.b)+' · факт '+dpF(r.b)+'</small></div><div class="d '+sgc(r.v)+'">'+sg(r.v)+'</div></div>'}).join('')})});
+      dl.sort(function(x,y){return x.dv-y.dv});
+      var dlo=dl.filter(function(x){return x.dv<0}),dhi=dl.filter(function(x){return x.dv>0}).reverse();
+      if(dlo.length) s+='<div class="dv-t">По цехам: не хватает ('+sg(dlo.reduce(function(a,x){return a+x.dv},0))+')</div>'+dvGrid('dlo',dlo,true);
+      if(dhi.length) s+='<div class="dv-t">По цехам: больше плана ('+sg(dhi.reduce(function(a,x){return a+x.dv},0))+')</div>'+dvGrid('dhi',dhi,true);
+    }
     return s;
   }
   function devPrev(){
