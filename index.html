@@ -838,10 +838,33 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     return '<div class="prr'+(key==null?'':' tp')+'"'+(key==null?'':' data-pt="'+esc(key)+'"')+'><div class="prt"><span class="prp">'+esc(x.p||'—')+'</span> '+esc(x.name)+(ak?' <small>АК'+ak+'</small>':'')+
       '</div><div class="prn"><span>'+x.plan+' → '+x.fact+'</span>'+pdv(x.dev)+'</div>'+pczChips(x.c)+'</div>';
   }
+  var tsub='ak';
   function prTech(){
-    var r=prGroups().filter(function(g){return pfl==='neg'?g.dev<0:(pfl==='pos'?g.dev>0:true)});
-    return seg('data-pfl',[['neg','Минус'],['pos','Плюс'],['all','Все']],pfl)+'<div class="prs" style="margin:6px 2px">Приоритетная техника сверху; нажмите на тип — по автоколоннам, ремонт и люди</div><div class="card">'+(r.length?r.map(function(g){return prRow(g,g.k)}).join(''):'<div class="empty">Нет</div>')+'</div>';
+    return seg('data-tsub',[['ak','По автоколоннам'],['pref','По префиксам']],tsub)+(tsub==='ak'?prTechAk():prTechPref());
   }
+  function prTechAk(){
+    var t=PRX.tot,h='<div class="ph">План → факт по колоннам <small>нажмите — детали</small></div><div class="pgt">';
+    PRX.aks.forEach(function(a){
+      h+=tile('data-pk="'+a.n+'"',a.plan+' → '+a.fact,'','АК '+a.n+' · '+pakn(a),'<b class="'+sgc(a.dev)+'">'+sg(a.dev)+'</b>'+(a.pr||a.fr?' · в т.ч. аренда '+a.pr+' → '+a.fr:''));
+    });
+    h+=tile('data-prent="1"',t.pr+' → '+t.fr,'','Аренда (Mobil и др.)','<b class="'+sgc(t.devr)+'">'+sg(t.devr)+'</b> · уже входит в колонны')+'</div>';
+    h+='<div class="prs" style="margin-top:8px">Всего: план '+t.plan+' → факт '+t.fact+' (<b class="'+sgc(t.dev)+'">'+sg(t.dev)+'</b>). ДТТ '+t.pd+' → '+t.fd+', аренда '+t.pr+' → '+t.fr+'.</div>';
+    return h;
+  }
+  function prTechPref(){
+    var r=prGroups().slice().sort(function(a,b){return (parseFloat(a.p)||999)-(parseFloat(b.p)||999)||String(a.p).localeCompare(String(b.p))||a.name.localeCompare(b.name,'ru')});
+    return '<div class="prs" style="margin:6px 2px">По возрастанию префикса; нажмите на тип — по автоколоннам, ремонт и люди</div><div class="card">'+r.map(function(g){return prRow(g,g.k)}).join('')+'</div>';
+  }
+  function prRentOpen(){
+    var t=PRX.tot,h='<div class="tot6"><div><b>'+t.pr+'</b><span>план</span></div><div><b>'+t.fr+'</b><span>факт</span></div><div><b class="'+sgc(t.devr)+'">'+sg(t.devr)+'</b><span>откл.</span></div><div><b>'+t.rent+'</b><span>по списку</span></div></div><div class="prs">Арендованная техника уже входит в план и факт колонн.</div>';
+    PRX.aks.forEach(function(a){
+      var ts=a.types.filter(function(x){return x.pr||x.fr}).sort(function(x,y){return prRank(x.p,x.name)-prRank(y.p,y.name)});
+      if(!ts.length) return;
+      h+='<div class="ph">АК '+a.n+' <small>'+pakn(a)+' — '+a.pr+' → '+a.fr+'</small></div>'+ts.map(function(x){var d=x.fr-x.pr;return '<div class="prr"><div class="prt"><span class="prp">'+esc(x.p||'—')+'</span> '+esc(x.name)+'</div><div class="prn"><span>'+x.pr+' → '+x.fr+'</span>'+pdv(d)+'</div></div>'}).join('');
+    });
+    prSheet('Аренда',h);
+  }
+
   var PMP=[['own','В парке ДТТ','a.own'],['line','ДТТ на линии (факт)','a.fd'],['rep','В ремонте','a.rep'],['res','Резерв (отказ заказчика)','a.res'],['buy','Куплено в 2026 (факт из плана)','a.buy_f+" из "+a.buy_p'],['wo','К списанию','a.wo'],['rent','Аренда: машин по списку','a.rent'],['hf','Аренда: выходов (факт)','a.fr'],['kip','КИП','pct(a.kip)'],['ktg','КТГ','pct(a.ktg)']];
   var PMS=[['shtat','Штат','(a.s||{}).shtat||0'],['list','По списку','(a.s||{}).list||0'],['need','Нужно для плана','(a.s||{}).need||0'],['vahta','На вахте','(a.s||{}).vahta||0'],['vac','Отпуск','((a.s||{}).vac||0)+((a.s||{}).vacp||0)+((a.s||{}).vac0||0)'],['sick','Больничный','((a.s||{}).sick||0)+((a.s||{}).sick5||0)'],['vacancy','Вакансии','(a.s||{}).vacancy||0']];
   function pmv(m,a){return eval(m[2])}      // выражения заданы выше в коде, не пользовательские
@@ -885,8 +908,9 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
   }
   document.addEventListener('click',function(e){
     if(!DATA||top!=='prod'||!PRX) return;
-    var t=e.target.closest('[data-pk],[data-pt],[data-pm],[data-pg],[data-pc]'); if(!t) return;
-    if(t.dataset.pk) prAkOpen(+t.dataset.pk);
+    var t=e.target.closest('[data-pk],[data-pt],[data-pm],[data-pg],[data-pc],[data-prent]'); if(!t) return;
+    if(t.dataset.prent) prRentOpen();
+    else if(t.dataset.pk) prAkOpen(+t.dataset.pk);
     else if(t.dataset.pt!==undefined) prTypeOpen(t.dataset.pt);
     else if(t.dataset.pm) prMetricOpen(t.dataset.pm);
     else if(t.dataset.pg) prCustOpen(t.dataset.pg);
@@ -977,7 +1001,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
       if(!open){showPop(pl);$('#pop').dataset.for=pl.dataset.i;track('окно водителя')}else $('#pop').dataset.for='';return}
     if(!e.target.closest('#pop')) hidePop();
     if(e.target.closest('[data-dl]')) return;
-    var t=e.target.closest('[data-top],[data-sub],[data-csub],[data-dep],[data-shift],[data-disp],[data-nsub],[data-nak],[data-npref],[data-psub],[data-pd],[data-pfl]'); if(!t) return;
+    var t=e.target.closest('[data-top],[data-sub],[data-csub],[data-dep],[data-shift],[data-disp],[data-nsub],[data-nak],[data-npref],[data-psub],[data-pd],[data-pfl],[data-tsub]'); if(!t) return;
     if(t.dataset.top){
       top=t.dataset.top;track('вкладка/'+top);
       document.querySelectorAll('.tab').forEach(function(b){b.classList.toggle('on',b.dataset.top===top)});
@@ -985,6 +1009,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
     }else if(t.dataset.psub){psub=t.dataset.psub;pq='';track('Өндіріс/'+psub)}
     else if(t.dataset.pd){pq='';psub='sum';goDay(t.dataset.pd);return}
     else if(t.dataset.pfl){pfl=t.dataset.pfl}
+    else if(t.dataset.tsub){tsub=t.dataset.tsub}
     else if(t.dataset.disp!==undefined){track('диспетчер/'+t.dataset.disp);cdisp=+t.dataset.disp;store('disp',String(cdisp))}
     else if(t.dataset.npref){npref=npref===t.dataset.npref?'':t.dataset.npref;track('АК/префикс')}
     else if(t.dataset.nsub){nsub=t.dataset.nsub;track('АК/'+nsub)}
