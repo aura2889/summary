@@ -17,7 +17,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Копия на Bitbucket (сайт repo2889.bitbucket.io)
+      - name: Копия на Bitbucket (сайт summary2889.bitbucket.io)
         env:
           BB_TOKEN: ${{ secrets.BITBUCKET_TOKEN }}
           BB_USER: aigulizimbergen@gmail.com
@@ -25,7 +25,7 @@ jobs:
           if [ -z "$BB_TOKEN" ]; then echo "::error::секрет BITBUCKET_TOKEN пустой или не создан"; exit 1; fi
           for U in x-bitbucket-api-token-auth "$BB_USER"; do
             [ -z "$U" ] && continue
-            if out=$(git push --force "https://${U}:${BB_TOKEN}@bitbucket.org/repo2889/repo2889.bitbucket.io.git" HEAD:main 2>&1); then echo "ok: $U"; exit 0; fi
+            if out=$(git push --force "https://${U}:${BB_TOKEN}@bitbucket.org/summary2889/summary2889.bitbucket.io.git" HEAD:main 2>&1); then echo "ok: $U"; exit 0; fi
             echo "::warning::вход как ${U%%@*}: ${out//$BB_TOKEN/***}"
           done
           echo "::error::не удалось записать в Bitbucket"; exit 1
