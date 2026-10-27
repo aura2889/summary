@@ -176,7 +176,7 @@ sh.cell(2,DV0).alignment=Alignment(horizontal='left',vertical='center')
 for j,d in enumerate(DV):
     c_=DV0+j; cl=L(c_)
     h=sh.cell(3,c_,d)
-    h.font=Font(name='Times New Roman',size=11,bold=True); h.fill=copy(_hs.fill); h.border=copy(_hs.border); h.alignment=Alignment(horizontal='center',vertical='center',shrink_to_fit=True)
+    h.font=Font(name='Times New Roman',size=11,bold=True); h.fill=copy(_hs.fill); h.alignment=Alignment(horizontal='center',vertical='center',shrink_to_fit=True)
     sh.column_dimensions[cl].width=9
     i=depts.index(d); c1=D0+4*i
     for r_ in range(5,24,2):
@@ -184,8 +184,8 @@ for j,d in enumerate(DV):
         m=f"MATCH(${PCL}{r_}&\"\",'Выход ТС'!$A:$A,0)"
         ix=lambda col:f"INDEX('Выход ТС'!${L(col)}:${L(col)},{m})"
         cell=sh.cell(r_,c_,f'=IFERROR({ix(c1+2)}+{ix(c1+3)}-{ix(c1)}-{ix(c1+1)},"")')
-        cell.font=Font(name='Times New Roman',size=14,bold=True); cell.border=copy(_bs.border)
-        cell.alignment=Alignment(horizontal='center',vertical='center'); cell.number_format='[Red]-0;[Color10]+0;;'
+        cell.font=Font(name='Times New Roman',size=14,bold=True)
+        cell.alignment=Alignment(horizontal='center',vertical='center'); cell.number_format='[Color10]+0;[Red]-0;;'
 sh.print_area=f"A1:{L(LASTD)}{sh.max_row}"       # печать как раньше, без новых столбцов
 
 # --- перечень госномеров по технике: слева пары (B,C) и (E,F), справа с 47-й строки пары через столбец

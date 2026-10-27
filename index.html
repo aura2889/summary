@@ -465,7 +465,7 @@ table tr.dvr td{border-top:0;padding-top:0}
     var h='<div class="card"><table><tr><th>Преф.</th><th>Тип</th><th>План</th><th>Факт</th><th>Откл.</th><th>Д/Н</th></tr>';
     DATA.types.slice().sort(function(a,b){return b.plan-a.plan}).forEach(function(t){
       if(!t.plan&&!t.fact) return;
-      h+='<tr><td class="pref">'+esc(t.p)+'</td><td>'+esc(t.name)+'</td><td>'+t.plan+'</td><td>'+t.fact+'</td><td class="'+(t.diff<0?'neg':(t.diff>0?'pos':''))+'">'+(t.diff>0?'+':'')+t.diff+'</td><td>'+t.day+'/'+t.night+'</td></tr>';
+      h+='<tr><td class="pref">'+esc(t.p)+'</td><td>'+esc(t.name)+'</td><td>'+t.plan+'</td><td>'+t.fact+'</td><td class="'+(t.diff<0?'neg':(t.diff>0?'pos':''))+'"'+(t.diff?' data-tdv="'+esc(t.p)+'" style="cursor:pointer;text-decoration:underline dotted"':'')+'>'+(t.diff>0?'+':'')+t.diff+(t.diff?' ›':'')+'</td><td>'+t.day+'/'+t.night+'</td></tr>';
     });
     var T=DATA.totals;
     h+='<tr><td></td><td><b>Итого</b></td><td><b>'+T.plan+'</b></td><td><b>'+T.fact+'</b></td><td class="'+(T.diff<0?'neg':'pos')+'"><b>'+T.diff+'</b></td><td><b>'+T.day+'/'+T.night+'</b></td></tr></table></div>';
@@ -743,6 +743,7 @@ table tr.dvr td{border-top:0;padding-top:0}
     if(PC[d]) return go(PC[d]);
     getJ('prod/'+d+'.json').then(function(x){x.date=d;PC[d]=x;go(x)}).catch(function(){go(null)});
   }
+  document.addEventListener('click',function(e){var q=e.target.closest&&e.target.closest('[data-tdv]');if(q&&DATA){e.stopPropagation();var tp=(DATA.types||[]).filter(function(x){return x.p===q.dataset.tdv})[0];if(tp)prSheet(esc(tp.p+' · '+tp.name)+' · '+sg(tp.diff),'<div class="tot6"><div><b>'+tp.plan+'</b><span>план</span></div><div><b>'+tp.fact+'</b><span>факт</span></div><div><b class="'+sgc(tp.diff)+'">'+sg(tp.diff)+'</b><span>откл.</span></div></div><div class="ph">По цехам</div>'+dpRows(tp.p));return}});
   document.addEventListener('click',function(e){var t=e.target.closest&&e.target.closest('[data-cdv]');if(t&&DATA){e.stopPropagation();cdOpen(+t.dataset.cdv)}});
   function prAllTypes(){var r=[];PRX.aks.forEach(function(a){a.types.forEach(function(t){r.push([t,a.n])})});return r}
   function prSearch(){
@@ -1088,6 +1089,15 @@ table tr.dvr td{border-top:0;padding-top:0}
   function dpP(b,sh){return sh==='d'?b.pd:(sh==='n'?b.pn:b.pd+b.pn)}
   function dpF(b,sh){return sh==='d'?b.fd:(sh==='n'?b.fn:b.fd+b.fn)}
   function dpTName(p){var r=(DATA.types||[]).filter(function(t){return t.p===p})[0];return r?r.name:p}
+  function dpRows(p){
+    var X=dpx(); if(!X.has) return '';
+    var a=X.T[p]||{},ord=DATA.depOrder||[];
+    var ks=Object.keys(a).filter(function(d){return dpF(a[d])-dpP(a[d])}).sort(function(x,y){return (dpF(a[x])-dpP(a[x]))-(dpF(a[y])-dpP(a[y]))||ord.indexOf(x)-ord.indexOf(y)});
+    var tt=(DATA.types||[]).filter(function(x){return x.p===p})[0],sp=0;Object.keys(a).forEach(function(d){sp+=dpP(a[d])});
+    var note=tt&&sp!==tt.plan?'<div class="prs" style="padding:8px 0">Сумма плана по цехам ('+sp+') не равна общему плану типа ('+tt.plan+') - расхождение в самом плане, по цехам его не разложить.</div>':'';
+    if(!ks.length) return (note||'<div class="empty" style="padding:8px">По цехам отклонений нет</div>');
+    return note+ks.map(function(d){var v=dpF(a[d])-dpP(a[d]);return '<div class="dv-r"><div class="n">'+esc(d)+'<small>план '+dpP(a[d])+' · факт '+dpF(a[d])+(a[d].pd+a[d].pn?' (день '+a[d].pd+' / ночь '+a[d].pn+')':'')+'</small></div><div class="d '+sgc(v)+'">'+sg(v)+'</div></div>'}).join('');
+  }
   function dpChips(p){
     var X=dpx(); if(!X.has) return ''; var a=X.T[p]||{};
     var ks=Object.keys(a).filter(function(d){return dpF(a[d])-dpP(a[d])}).sort(function(x,y){return (dpF(a[x])-dpP(a[x]))-(dpF(a[y])-dpP(a[y]))});
@@ -1123,7 +1133,7 @@ table tr.dvr td{border-top:0;padding-top:0}
   }
   function devPlan(){
     var ty=(DATA.types||[]).slice(), lo=ty.filter(function(x){return x.diff<0}).sort(function(a,b){return prRank(a.p,a.name)-prRank(b.p,b.name)||a.diff-b.diff}), hi=ty.filter(function(x){return x.diff>0}).sort(function(a,b){return prRank(a.p,a.name)-prRank(b.p,b.name)||b.diff-a.diff});
-    function tile(x){return {t:tname(x),v:sg(x.diff),c:sgc(x.diff),s:'план '+x.plan+' · факт '+x.fact}}
+    function tile(x){return {t:tname(x),v:sg(x.diff),c:sgc(x.diff),s:'план '+x.plan+' · факт '+x.fact,det:dpRows(x.p)}}
     var sl=lo.reduce(function(a,x){return a+x.diff},0), sh=hi.reduce(function(a,x){return a+x.diff},0);
     var s='<div class="dv-sum">План '+DATA.totals.plan+' · факт '+DATA.totals.fact+(DATA.tr?' · в обучении '+DATA.tr+'<br>Отклонение: '+sg(DATA.totals.diff+DATA.tr)+' (с обучением было бы '+sg(DATA.totals.diff)+')':'')+'</div>';
     if(DATA.trl&&DATA.trl.length){

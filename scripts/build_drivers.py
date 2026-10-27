@@ -6,9 +6,23 @@ from common import *
 junk, junk_lost = set(), set()
 idx0, idx1, idx2, cache, amb = {}, {}, {}, {}, {}
 
+def is_mob(num):
+    """сотовый ли номер: 8 7XX…, где код после 87 начинается на 0, 4, 5, 6 или 7 (городские 87 1xx/2xx/3xx - не берём)"""
+    d = re.sub(r'\D', '', str(num))
+    return len(d) == 11 and d[0] == '8' and d[1] == '7' and d[2] in '04567'
+
+OVR = {}
+def load_override(root):
+    """data/phone_override.json: {"ФИО": ["8 7XX XXX XX XX", ...]} - эти номера ставятся первыми"""
+    OVR.clear()
+    try:
+        for k, v in json.load(open(os.path.join(root, 'data', 'phone_override.json'), encoding='utf-8')).items(): OVR[nname(k)] = v
+    except Exception: pass
+
 def build_idx(rows):
     idx = collections.defaultdict(list)
     for nm, ph in rows:
+        ph = [x for x in (ph or []) if is_mob(x)]
         n = nname(nm)
         if n: idx[n].append((str(nm).strip(), ph or []))
     return idx
@@ -77,6 +91,10 @@ def phones_for(name):
                     if p not in first[0] and len(first[0]) < 2: first[0].append(p)
                 break
         if r and r[0] == 'AMBIG' and first is None: amb[name] = (label, r[2])
+    o = OVR.get(nname(name))
+    if o:
+        base = list(first[0]) if first else []
+        first = ([x for x in o + base if is_mob(x)][:2], 'вручную', 'вручную', name) if not first else (list(dict.fromkeys(o + base))[:2], first[1], first[2], first[3])
     cache[name] = first
     return first
 amb = {}
@@ -99,7 +117,7 @@ def build(data, export_path, contacts, mobil):
     -> (drivers_dict, список строк отчёта, список имён без телефона)"""
     global junk, idx0, idx1, idx2
     junk_lost.clear(); cache.clear(); amb.clear()
-    junk = set(contacts['junk'])
+    junk = set(contacts['junk']); load_override(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     idx0 = build_idx([(n, p) for n, p in contacts.get('rows0', [])])
     idx1 = build_idx([(n, p) for n, p in contacts['rows1']])
     idx2 = build_idx([(n, p) for n, p in contacts['rows2']])
@@ -166,7 +184,7 @@ def build(data, export_path, contacts, mobil):
         if k not in mobil: mob_miss.append(num); continue
         out = []
         for nm, ph in mobil[k]:
-            d = {'n': nm}; ph = best2(ph)
+            d = {'n': nm}; ph = [x for x in best2(ph) if is_mob(x)]
             if ph: d['t'] = ph[0]
             if len(ph) > 1: d['t2'] = ph[1]
             out.append(d)

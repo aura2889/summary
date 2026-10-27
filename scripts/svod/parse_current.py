@@ -186,6 +186,10 @@ def parse(cfg):
             elif isnight_blk: night=1; note='ночной блок'
             else: day=1
             dept=norm_dept(d,gar2)
+            if cfg.get('key')=='K8':           # только у диспетчера 8: ЦТТ и БПО - это ЦПКРС-2, РМУ - Гараж-2 (правило 27.10)
+                _u=re.sub(r'[\s.\-№]','',str(d)).upper()
+                if _u in ('ЦТТ','БПО'): dept='ЦПКРС-2'
+                elif _u=='РМУ': dept='Гараж-2'
             if cfg.get('alias'): dept=cfg['alias'].get(re.sub(r'[\s.№]','',str(d)).upper(),dept)
             if c in cfg.get('dept_over',{}) and d==hdr[c]: dept=cfg['dept_over'][c]
             dept=merge_dept(dept)
