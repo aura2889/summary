@@ -127,7 +127,7 @@ def sheet_info(name):
     day = int(m.group(1)); mon = int(m.group(2)) if m.group(2) else None
     rest = re.sub(r'[\s.,]|20\d\d', '', name[m.end():])
     if not (1 <= day <= 31) or (mon is not None and not 1 <= mon <= 12): return None
-    return dict(name=name, day=day, mon=mon, extra=bool(rest))
+    return dict(name=name, day=day, mon=mon, extra=bool(rest), xl=len(rest))
 
 def pick_sheet(names, ref):
     """-> (имя листа, точный ли (за ref), предупреждения)"""
@@ -149,7 +149,7 @@ def today_sheets(names, ref):
     infos = [dict(i=i, **si) for i, n in enumerate(names) if (si := sheet_info(n))]
     cands = [x for x in infos if x['day'] == ref.day and x['mon'] in (None, ref.month)]
     if any(x['mon'] for x in cands): cands = [x for x in cands if x['mon']]
-    return [x['name'] for x in sorted(cands, key=lambda x: (not x['extra'], -x['i']))]      # сначала листы с припиской к названию (правый первым), затем обычные (правый первым)
+    return [x['name'] for x in sorted(cands, key=lambda x: (-x['xl'], -x['i']))]      # чем длиннее приписка к названию («пер», «ауысым», «пересменка»…), тем свежее лист; при равной длине - правый
 
 def latest_before(names, ref):
     """самый свежий по ДАТЕ лист раньше ref (порядок листов в книге не важен: книга годовая, листы могут идти не по порядку); при равных датах - последний по порядку (напр. «17-пер» после «17,10»)"""
