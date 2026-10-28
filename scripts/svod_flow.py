@@ -136,14 +136,20 @@ def pick_sheet(names, ref):
     cands = [x for x in infos if x['day'] == ref.day and x['mon'] in (None, ref.month)]
     if any(x['mon'] for x in cands): cands = [x for x in cands if x['mon']]     # лист с явной датой «14,10» важнее старого листа «14»
     if cands:
-        plain = [x for x in cands if not x['extra']]
-        use = (plain or cands)[-1]
+        use = next(x for x in cands if x['name'] == today_sheets(names, ref)[0])          # лист с припиской («пер», «пересменка»…) свежее обычного; из равных - самый правый; пустые листы пропускает сборка
         if len(cands) > 1: warns.append('несколько листов за сегодня (' + ', '.join(repr(c['name']) for c in cands) + f'), взят {use["name"]!r}')
         return use['name'], True, warns
     lb = latest_before(names, ref)
     if lb: return lb, False, warns
     if infos: return infos[-1]['name'], False, warns
     return None, False, warns
+
+def today_sheets(names, ref):
+    """все листы за сегодня справа налево (самый правый, т.е. самый свежий, первым)"""
+    infos = [dict(i=i, **si) for i, n in enumerate(names) if (si := sheet_info(n))]
+    cands = [x for x in infos if x['day'] == ref.day and x['mon'] in (None, ref.month)]
+    if any(x['mon'] for x in cands): cands = [x for x in cands if x['mon']]
+    return [x['name'] for x in sorted(cands, key=lambda x: (not x['extra'], -x['i']))]      # сначала листы с припиской к названию (правый первым), затем обычные (правый первым)
 
 def latest_before(names, ref):
     """самый свежий по ДАТЕ лист раньше ref (порядок листов в книге не важен: книга годовая, листы могут идти не по порядку); при равных датах - последний по порядку (напр. «17-пер» после «17,10»)"""
@@ -214,7 +220,7 @@ def build(raw_dir, ref, fresh, out_dir, via=()):
         if sheet is None:
             status[role] = dict(state='absent'); warns.append(f'{ROLE_DISP[role]}: не нашёл листов с датами'); continue
         plans = []
-        if exact and fresh.get(role, False): plans.append((sheet, True))
+        if exact and fresh.get(role, False): plans += [(c, True) for c in today_sheets(names, ref)]          # справа налево: пустой лист пропускаем, берём следующий слева
         elif exact: warns.append(f'{ROLE_DISP[role]}: файл за {short} ещё не приходил (в старом файле лист за сегодня не считается)')
         if exact:
             plans.append((latest_before(names, ref), False))
@@ -227,7 +233,7 @@ def build(raw_dir, ref, fresh, out_dir, via=()):
             _adapt(cfg, wbk[sh])
             out, exc, notes = PC.parse(cfg)
             if today and not out:
-                warns.append(f'{ROLE_DISP[role]}: лист {sh!r} за сегодня пустой - беру прошлый'); continue
+                warns.append(f'{ROLE_DISP[role]}: лист {sh!r} за сегодня пустой - смотрю лист левее/прошлый'); continue
             used = (cfg, out, exc, notes, sh, today); break
         if not used:
             status[role] = dict(state='absent'); warns.append(f'{ROLE_DISP[role]}: не удалось взять ни один лист'); continue
