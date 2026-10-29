@@ -1,0 +1,12 @@
+# Будит GitHub-робота сразу после загрузки файлов с рабочего ПК (коммит с сообщением "Outlook: ...")
+pipelines:
+  branches:
+    inbox:
+      - step:
+          name: Разбудить GitHub
+          script:
+            - MSG=$(git log -1 --pretty=%s)
+            - echo "commit - $MSG"
+            - case "$MSG" in Outlook:*) ;; *) echo "не загрузка с ПК, пропускаю"; exit 0;; esac
+            - 'curl -sS -f -X POST -H "Authorization: Bearer $GH_DISPATCH_TOKEN" -H "Accept: application/vnd.github+json" https://api.github.com/repos/u-seed/kbm-tehnika/dispatches -d "{\"event_type\":\"inbox\"}"'
+            - echo "GitHub разбужен"
