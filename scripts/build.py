@@ -12,6 +12,16 @@ INP = os.path.join(ROOT, 'input'); ARC = os.path.join(ROOT, 'archive')
 summary = []
 def say(s): print(s); summary.append(s)
 
+def mobil_for(base, day):
+    """основной список Mobil + списки вахт data/mobil_vahta_*.json, действующие в этот день (from..to включительно)"""
+    import glob
+    out = dict(base)
+    for fp in sorted(glob.glob(os.path.join(ROOT, 'data', 'mobil_vahta_*.json'))):
+        try: v = json.load(open(fp, encoding='utf-8'))
+        except Exception: continue
+        if v.get('from', '0000') <= day <= v.get('to', '9999'): out.update(v.get('drivers', {}))
+    return out
+
 def classify(path):
     """свод / экспорт / вахта / ремонт автоколонны / None - по содержимому, а не по имени файла"""
     try:
@@ -202,7 +212,7 @@ def main():
         exp = os.path.join(RAW, 'export.xlsx')
         if not contacts: errors.append('нет data/contacts.json'); say('❌ нет data/contacts.json')
         elif os.path.exists(exp):
-            drv, rep, miss = build_drivers.build(data, exp, contacts, mobil)
+            drv, rep, miss = build_drivers.build(data, exp, contacts, mobil_for(mobil, data['date']))
             for l in rep: say(l)
             if miss: say(f'Без телефона ({len(miss)}): ' + '; '.join(miss))
             if state.get('export') and state['export'] != data['date']:
