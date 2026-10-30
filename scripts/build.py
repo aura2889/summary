@@ -19,7 +19,11 @@ def mobil_for(base, day):
     for fp in sorted(glob.glob(os.path.join(ROOT, 'data', 'mobil_vahta_*.json'))):
         try: v = json.load(open(fp, encoding='utf-8'))
         except Exception: continue
-        if v.get('from', '0000') <= day <= v.get('to', '9999'): out.update(v.get('drivers', {}))
+        if not (v.get('from', '0000') <= day <= v.get('to', '9999')): continue
+        if v.get('cycle'):                         # вахта работает с a-го числа до b-го следующего месяца
+            a, bb = v['cycle']; dd = int(day[8:10])
+            if not (dd >= a or dd < bb): continue
+        out.update(v.get('drivers', {}))
     return out
 
 def classify(path):
