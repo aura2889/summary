@@ -115,6 +115,27 @@ for i in range(len(depts)):                     # зелёные столбцы 
 ws.row_dimensions[1].height=30; ws.freeze_panes='C3'
 # short sheet from user's formatted template
 tsrc=openpyxl.load_workbook('resources/short_template_user.xlsx')['Ежедневная сводка']
+
+# --- в шаблон добавлен префикс 23 «ТРАЛ с леб» (2 строки) сразу после 22 (ТРАЛ); лишние 2 строки внизу убраны
+def _add_tral_winch(ws, after=13, n=2, last_move=66):
+    mg=[(m.min_row,m.min_col,m.max_row,m.max_col) for m in ws.merged_cells.ranges]
+    for a in mg: ws.unmerge_cells(start_row=a[0],start_column=a[1],end_row=a[2],end_column=a[3])
+    hh={r:ws.row_dimensions[r].height for r in range(1,ws.max_row+1)}
+    ws.move_range(f"A{after+1}:{L(ws.max_column)}{last_move}",rows=n)
+    for a in mg:
+        d=n if after<a[0]<=last_move else 0
+        ws.merge_cells(start_row=a[0]+d,start_column=a[1],end_row=a[2]+d,end_column=a[3])
+    for r in range(after+1,last_move+1):
+        ws.row_dimensions[r+n].height=hh.get(r)
+    for k in range(n):
+        src=after-n+1+k                       # строки ТРАЛ (22): основная и «утт»
+        ws.row_dimensions[after+1+k].height=hh.get(src)
+        for c in range(1,ws.max_column+1):
+            a=ws.cell(src,c); b=ws.cell(after+1+k,c); b.value=None
+            if a.has_style:
+                b.font=copy(a.font); b.fill=copy(a.fill); b.border=copy(a.border); b.alignment=copy(a.alignment); b.number_format=a.number_format
+    ws.cell(after+2,8).value='23'; ws.cell(after+2,9).value='ТРАЛ с леб'
+if not any(str(c.value)=='23' for c in tsrc['H']): _add_tral_winch(tsrc)
 sh=wb['Ежедневная сводка']
 for row in tsrc.iter_rows():
     for c in row:
@@ -132,9 +153,11 @@ FIRSTD=[c.column for c in tsrc[3] if c.value=='ЦДН-1'][0]
 colI={c.value:c.column for c in tsrc[3] if c.value in ('План','Факт','Откл','День','Ночь')}
 PC=[c.column for c in tsrc[3] if c.value=='Техника'][0]-1
 PCL=L(PC)
+_REQ=next(r for r in range(5,80) if str(sh.cell(r,PC).value).startswith('Техникаға'))
+PREF=[r for r in range(5,_REQ) if sh.cell(r,PC).value is not None]      # строки с префиксами (основные, по 2 строки на префикс)
 for c in tsrc[1]:
     if c.value and str(c.value).strip().startswith('күні'): sh.cell(1,c.column).value='күні                                 '+DATE_STR+'ж.'
-for r_ in range(5,24,2):
+for r_ in PREF:
     if sh.cell(r_,PC).value is None: continue
     for c_ in range(FIRSTD,LASTD+1):
         cl=L(c_)
@@ -149,7 +172,7 @@ sh.page_margins=copy(tsrc.page_margins)
 sh.print_options.horizontalCentered=tsrc.print_options.horizontalCentered; sh.print_options.verticalCentered=tsrc.print_options.verticalCentered
 sh.sheet_view.zoomScale=tsrc.sheet_view.zoomScale
 GREEN=Font(name='Times New Roman',size=16,color='FF00B050')
-for r_ in range(4,23,2):
+for r_ in [x-1 for x in PREF]:
     if sh.cell(r_+1,PC).value is None: continue
     for c_ in range(FIRSTD,LASTD+1):
         cl=L(c_)
@@ -157,7 +180,7 @@ for r_ in range(4,23,2):
         t=f"{mk('I')}+{mk('J')}"
         cell=sh.cell(r_,c_,f'=IF({t}=0,"","утт-"&({t}))')
         cell.font=GREEN; cell.alignment=Alignment(horizontal='center',vertical='center'); cell.number_format='General'
-for r_ in range(5,24,2):
+for r_ in PREF:
     if sh.cell(r_,PC).value is None: continue
     for nm,src in (('План','C'),('Факт','E'),('Откл','F'),('День','G'),('Ночь','H')):
         f=f"INDEX('Выход ТС'!${src}:${src},MATCH(${PCL}{r_}&\"\",'Выход ТС'!$A:$A,0))"
@@ -165,7 +188,7 @@ for r_ in range(5,24,2):
         sh.cell(r_,colI[nm]).number_format='General'
 
 # --- отклонение от плана по цехам (факт - план), столбцы справа от таблицы: AE, AF, ... ; в 3-й строке название цеха
-_codes=[str(sh.cell(r_,PC).value) for r_ in range(5,24,2) if sh.cell(r_,PC).value is not None]
+_codes=[str(sh.cell(r_,PC).value) for r_ in PREF if sh.cell(r_,PC).value is not None]
 _fact=collections.Counter()
 for x in ALL: _fact[(x['dept'],x['code'])]+=x['day']+x['night']
 DV=[d for d in depts if any(sum((PD['plan'].get(c) or {}).get(d) or [0,0]) or _fact[(d,c)] for c in _codes)]
@@ -179,7 +202,7 @@ for j,d in enumerate(DV):
     h.font=Font(name='Times New Roman',size=11,bold=True); h.fill=copy(_hs.fill); h.alignment=Alignment(horizontal='center',vertical='center',shrink_to_fit=True)
     sh.column_dimensions[cl].width=9
     i=depts.index(d); c1=D0+4*i
-    for r_ in range(5,24,2):
+    for r_ in PREF:
         if sh.cell(r_,PC).value is None: continue
         m=f"MATCH(${PCL}{r_}&\"\",'Выход ТС'!$A:$A,0)"
         ix=lambda col:f"INDEX('Выход ТС'!${L(col)}:${L(col)},{m})"
@@ -189,12 +212,12 @@ for j,d in enumerate(DV):
 sh.print_area=f"A1:{L(LASTD)}{sh.max_row}"       # печать как раньше, без новых столбцов
 
 # --- перечень госномеров по технике: слева пары (B,C) и (E,F), справа с 47-й строки пары через столбец
-PLIST=[str(sh.cell(r_,PC).value) for r_ in range(5,24,2) if sh.cell(r_,PC).value is not None]
+PLIST=[str(sh.cell(r_,PC).value) for r_ in PREF if sh.cell(r_,PC).value is not None]
 dord={d:i for i,d in enumerate(depts)}
 items=sorted([x for x in ALL if x['code'] in PLIST and (x['day'] or x['night'])],key=lambda x:(PLIST.index(x['code']),dord.get(x['dept'],99),x['plate']))
 # очистить зону списка (значения и заливки), выровнять по левому краю
 LF=PatternFill(fill_type=None)
-zones=[(3,68,2,7),(47,68,9,30)]
+zones=[(3,68,2,7),(49,68,9,30)]
 for r1_,r2_,c1_,c2_ in zones:
     for r_ in range(r1_,r2_+1):
         for c_ in range(c1_,c2_+1):
@@ -202,11 +225,11 @@ for r1_,r2_,c1_,c2_ in zones:
             a=copy(cell.alignment); a.horizontal='left'; a.vertical='center'; a.shrink_to_fit=False; cell.alignment=a
 cols=[]   # (первая строка, последняя строка, столбец номера)
 for c0 in (2,5): cols.append((3,68,c0))
-for c0 in (15,18,21,24,27): cols.append((47,68,c0))
+for c0 in (9,12,15,18,21): cols.append((49,68,c0))   # правая часть списка: с 49-й строки, начиная со столбца I
 FILL=PatternFill('solid',fgColor='EBF1DE')
 HF=Font(name='Times New Roman',size=14,bold=True)
 YEL=PatternFill('solid',fgColor='FFFF00')
-LBL={str(sh.cell(r2,PC).value):str(sh.cell(r2,PC+1).value).strip() for r2 in range(5,24,2) if sh.cell(r2,PC).value is not None and sh.cell(r2,PC+1).value}
+LBL={str(sh.cell(r2,PC).value):str(sh.cell(r2,PC+1).value).strip() for r2 in PREF if sh.cell(r2,PC).value is not None and sh.cell(r2,PC+1).value}
 print(LBL)
 pos=0; placed=0; ci=0; r_=cols[0][0]; prevg=None; gi=-1
 def nextcol():

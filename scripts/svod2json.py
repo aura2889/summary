@@ -74,6 +74,7 @@ def convert(path):
         if isinstance(name, str) and isinstance(plan, (int, float)):
             row = {'p': str(wd.cell(r, 8).value) if wd.cell(r, 8).value is not None else '', 'name': name, 'plan': num(plan), 'fact': num(wd.cell(r, 11).value), 'diff': num(wd.cell(r, 12).value),
                    'day': num(wd.cell(r, 13).value), 'night': num(wd.cell(r, 14).value), 'cells': {}}
+            if row['p'] == '23': row['name'] = 'ТРАЛ с лебедкой'
             for dname, c in zip(deps, cols):
                 v = wd.cell(r, c).value
                 if v in (None, ''): continue
