@@ -129,16 +129,39 @@ def sheet_info(name):
     if not (1 <= day <= 31) or (mon is not None and not 1 <= mon <= 12): return None
     return dict(name=name, day=day, mon=mon, extra=bool(rest), xl=len(rest))
 
+def _infos(names):
+    """листы с датой; лист без месяца («02,ауысым», «14») наследует месяц ближайшего слева листа с явным месяцем (книга годовая - иначе «02,ауысым» из июня примут за сегодня)"""
+    infos, cur = [], None
+    for i, n in enumerate(names):
+        si = sheet_info(n)
+        if not si: continue
+        x = dict(i=i, **si)
+        if x['mon']: cur = x['mon']
+        elif cur: x['mon'] = cur; x['inh'] = True
+        infos.append(x)
+    return infos
+
+def _cands(names, ref):
+    """-> (листы за ref, опечатка_в_месяце). Опечатка: диспетчер назвал последний лист «02,10» вместо «02,11» - берём его, если он в книге последний и день совпал"""
+    infos = _infos(names)
+    cands = [x for x in infos if x['day'] == ref.day and x['mon'] in (None, ref.month)]
+    if any(not x.get('inh') and x['mon'] for x in cands): cands = [x for x in cands if not x.get('inh') and x['mon']]     # лист с явной датой «14,10» важнее старого листа «14»
+    if cands: return cands, False
+    if infos:
+        last = infos[-1]; pm = ref.month - 1 or 12
+        if last['day'] == ref.day and not last.get('inh') and last['mon'] == pm: return [last], True
+    return [], False
+
 def pick_sheet(names, ref):
     """-> (имя листа, точный ли (за ref), предупреждения)"""
-    infos = [dict(i=i, **si) for i, n in enumerate(names) if (si := sheet_info(n))]
     warns = []
-    cands = [x for x in infos if x['day'] == ref.day and x['mon'] in (None, ref.month)]
-    if any(x['mon'] for x in cands): cands = [x for x in cands if x['mon']]     # лист с явной датой «14,10» важнее старого листа «14»
+    cands, typo = _cands(names, ref)
     if cands:
         use = next(x for x in cands if x['name'] == today_sheets(names, ref)[0])          # лист с припиской («пер», «пересменка»…) свежее обычного; из равных - самый правый; пустые листы пропускает сборка
-        if len(cands) > 1: warns.append('несколько листов за сегодня (' + ', '.join(repr(c['name']) for c in cands) + f'), взят {use["name"]!r}')
+        if typo: warns.append(f'лист {use["name"]!r} - в названии другой месяц, но это последний лист книги и день совпал: беру его как {ref.strftime("%d.%m")}')
+        elif len(cands) > 1: warns.append('несколько листов за сегодня (' + ', '.join(repr(c['name']) for c in cands) + f'), взят {use["name"]!r}')
         return use['name'], True, warns
+    infos = _infos(names)
     lb = latest_before(names, ref)
     if lb: return lb, False, warns
     if infos: return infos[-1]['name'], False, warns
@@ -146,20 +169,19 @@ def pick_sheet(names, ref):
 
 def today_sheets(names, ref):
     """все листы за сегодня справа налево (самый правый, т.е. самый свежий, первым)"""
-    infos = [dict(i=i, **si) for i, n in enumerate(names) if (si := sheet_info(n))]
-    cands = [x for x in infos if x['day'] == ref.day and x['mon'] in (None, ref.month)]
-    if any(x['mon'] for x in cands): cands = [x for x in cands if x['mon']]
+    cands, _ = _cands(names, ref)
     return [x['name'] for x in sorted(cands, key=lambda x: (-x['xl'], -x['i']))]      # чем длиннее приписка к названию («пер», «ауысым», «пересменка»…), тем свежее лист; при равной длине - правый
 
 def latest_before(names, ref):
     """самый свежий по ДАТЕ лист раньше ref (порядок листов в книге не важен: книга годовая, листы могут идти не по порядку); при равных датах - последний по порядку (напр. «17-пер» после «17,10»)"""
     best = None
-    for i, n in enumerate(names):
-        si = sheet_info(n)
-        if not si: continue
-        d = sheet_date(n, ref)
-        if d is None or d >= ref: continue
-        if best is None or d >= best[0]: best = (d, n)
+    for x in _infos(names):
+        mon = x['mon'] or ref.month; year = ref.year
+        if x['mon'] is None and x['day'] > ref.day: mon = ref.month - 1 or 12; year = ref.year if ref.month > 1 else ref.year - 1
+        try: d = datetime.date(year, mon, x['day'])
+        except ValueError: continue
+        if d >= ref: continue
+        if best is None or d >= best[0]: best = (d, x['name'])
     return best[1] if best else None
 
 def sheet_date(si_name, ref):

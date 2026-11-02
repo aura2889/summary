@@ -78,31 +78,24 @@ main{padding:12px 12px 40px;max-width:760px;margin:0 auto}
 .seg{display:flex;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:3px;margin:4px 0 12px}
 .seg button{flex:1;border:0;background:none;color:var(--muted);border-radius:8px;padding:8px;font:inherit;font-weight:600}
 .seg button.on{background:var(--brand2);color:#fff}
-.seg.s4 button{font-size:13px;padding:8px 2px}
+.seg.s3 button{font-size:13px;padding:8px 2px}
 .xlw{overflow:auto;max-height:calc(100vh - 170px);border:1px solid var(--line);border-radius:10px;background:var(--card);-webkit-overflow-scrolling:touch}
 .xl{border-collapse:separate;border-spacing:0;font-variant-numeric:tabular-nums;font-size:14px;width:max-content;min-width:100%}
-.xl th,.xl td{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:3px 7px;text-align:center;white-space:nowrap}
-.xl thead th{position:sticky;top:0;z-index:3;background:var(--brand);color:#fff;font-weight:800;padding:8px 7px}
-.xl td.nm{text-align:left;font-weight:700;background:var(--card)}
+.xl th,.xl td{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:3px 4px;text-align:center;white-space:nowrap}
+.xl thead th{position:sticky;top:0;z-index:3;background:var(--brand);color:#fff;font-weight:800;padding:8px 4px;font-size:13px}
+.xl td.nm{text-align:left;font-weight:700;font-size:11px;white-space:normal;line-height:1.1;background:var(--card)}
 .xl td.pn{font-size:12px;color:var(--muted);font-weight:700}
 .xl td.pl,.xl th.pl{background:var(--plan-bg);color:var(--plan-ink);font-weight:800}
 .xl td.fa,.xl th.fa{background:var(--fact-bg);color:var(--fact-ink);font-weight:800}
 .xl td.dy{background:var(--day);color:var(--day-ink);font-weight:700}
 .xl td.dv{font-weight:800}
-.xl td.v{color:var(--blue-ink);font-weight:800;font-size:15px;height:24px}
+.xl td.v{color:var(--blue-ink);font-weight:800;font-size:14px;height:24px}
+.xl th:nth-child(1),.xl td.pn{position:sticky;left:0;min-width:30px;width:30px;max-width:30px;padding:3px 2px;background:var(--card);z-index:2}
+.xl th:nth-child(2),.xl td.nm{position:sticky;left:30px;min-width:84px;width:84px;max-width:84px;padding:3px 4px;z-index:2;border-right:2px solid var(--line)}
+.xl thead th:nth-child(1),.xl thead th:nth-child(2){z-index:5;background:var(--brand)}
 .xl td.u{color:var(--ok);font-size:11px;font-weight:700;height:15px;padding-top:1px;padding-bottom:0;border-bottom:0}
 .xl tr.blk td.sep{border-top:2px solid var(--line)}
-.xlp thead th{padding:6px 4px;line-height:1.15;font-size:12px;min-width:58px;white-space:normal;vertical-align:bottom}
-.xlp thead th b{display:block;font-size:15px}
-.xlp thead th:first-child,.xlp td:first-child{position:sticky;left:0;z-index:2;min-width:74px;text-align:left}
-.xlp thead th:first-child{z-index:4}
-.xlp td:first-child{background:var(--card);font-weight:800;border-right:2px solid var(--line)}
-.xlp td.v{height:auto;padding:4px 3px;line-height:1.15}
-.xlp td.v small{display:block;font-size:11px;font-weight:600;color:var(--muted)}
-.xlp td.v i{display:block;font-style:normal;font-size:11px;font-weight:700;color:var(--ok)}
-.xlp td.mt{font-weight:800;font-size:15px}
-.xlp tr.lp td:first-child{background:var(--plan-bg);color:var(--plan-ink)}.xlp tr.lf td:first-child{background:var(--fact-bg);color:var(--fact-ink)}.xlp tr.ly td:first-child{background:var(--day);color:var(--day-ink)}
-@media (min-width:760px){.seg.s4{max-width:620px}}
+@media (min-width:760px){.seg.s3{max-width:620px}}
 
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:10px}
 .card h3{margin:0 0 8px;font-size:15px;display:flex;gap:6px;align-items:baseline;flex-wrap:wrap}
@@ -523,32 +516,17 @@ table tr.dvr td{border-top:0;padding-top:0}
   function xlCell(c){return c?(c.e?c.e+'='+c.v:c.v):''}
   function citsPC(){
     var D=DATA.daily,deps=D.deps;
-    var h='<div class="xlw"><table class="xl"><thead><tr><th>№</th><th style="text-align:left">Техника</th><th class="pl">План</th><th class="fa">Факт</th><th>Откл</th><th>День</th><th>Ночь</th>'+deps.map(function(d){return '<th>'+esc(d)+'</th>'}).join('')+'</tr></thead><tbody>';
+    var h='<div class="xlw"><table class="xl"><thead><tr><th>№</th><th style="text-align:left">Техника</th><th class="pl">План</th><th class="fa">Факт</th><th>Откл</th>'+deps.map(function(d){return '<th>'+esc(d)+'</th>'}).join('')+'</tr></thead><tbody>';
     D.rows.forEach(function(r){
       var u=deps.map(function(d){var c=r.cells[d];return '<td class="u">'+(c&&c.u?'утт-'+c.u:'')+'</td>'}).join('');
       var v=deps.map(function(d){return '<td class="v">'+esc(String(xlCell(r.cells[d])))+'</td>'}).join('');
-      h+='<tr class="blk"><td class="pn sep" rowspan="2">'+esc(r.p||'')+'</td><td class="nm sep" rowspan="2">'+esc(r.name)+'</td><td class="pl sep" rowspan="2">'+r.plan+'</td><td class="fa sep" rowspan="2">'+r.fact+'</td><td class="dv sep" rowspan="2">'+xlDev(r.diff)+'</td><td class="dy sep" rowspan="2">'+(r.day||'')+'</td><td class="dy sep" rowspan="2">'+(r.night||'')+'</td>'+u+'</tr><tr>'+v+'</tr>';
-    });
-    return h+'</tbody></table></div>';
-  }
-  function citsPh(){
-    var D=DATA.daily,R=D.rows;
-    var deps=D.deps.filter(function(d){return R.some(function(r){return r.cells[d]})});
-    var h='<div class="xlw"><table class="xl xlp"><thead><tr><th>Техника</th>'+R.map(function(r){return '<th><b>'+esc(r.p||'')+'</b>'+esc(r.name)+'</th>'}).join('')+'</tr></thead><tbody>';
-    [['lp','План',function(r){return r.plan},'pl'],['lf','Факт',function(r){return r.fact},'fa'],['','Откл.',function(r){return xlDev(r.diff)},'dv'],['ly','День',function(r){return r.day||''},'dy'],['ly','Ночь',function(r){return r.night||''},'dy']].forEach(function(m){
-      h+='<tr class="'+m[0]+'"><td>'+m[1]+'</td>'+R.map(function(r){return '<td class="mt '+m[3]+'">'+m[2](r)+'</td>'}).join('')+'</tr>';
-    });
-    deps.forEach(function(d,i){
-      h+='<tr><td'+(i===0?' class="sep"':'')+'>'+esc(d)+'</td>'+R.map(function(r){
-        var c=r.cells[d]; if(!c) return '<td class="v"></td>';
-        return '<td class="v">'+c.v+(c.e?'<small>'+esc(c.e)+'</small>':'')+(c.u?'<i>утт '+c.u+'</i>':'')+'</td>';
-      }).join('')+'</tr>';
+      h+='<tr class="blk"><td class="pn sep" rowspan="2">'+esc(r.p||'')+'</td><td class="nm sep" rowspan="2">'+esc(r.name)+'</td><td class="pl sep" rowspan="2">'+r.plan+'</td><td class="fa sep" rowspan="2">'+r.fact+'</td><td class="dv sep" rowspan="2">'+xlDev(r.diff)+'</td>'+u+'</tr><tr>'+v+'</tr>';
     });
     return h+'</tbody></table></div>';
   }
   function viewCits(){
     var D=DATA.daily; if(!D||!D.rows.length) return '<div class="empty">Нет данных режимного листа</div>';
-    var h=seg('data-csub',[['type','По технике'],['dep','План по цехам'],['ph','Для телефона'],['pc','Для ПК']],csub).replace('class="seg"','class="seg s4"');
+    var h=seg('data-csub',[['type','По технике'],['dep','План по цехам'],['pc','Для ПК']],csub).replace('class="seg"','class="seg s3"');
     if(csub==='type'){
       h+='<div class="pq" style="grid-template-columns:repeat('+(D.rows.length>10?Math.ceil(D.rows.length/2):D.rows.length)+',minmax(0,1fr))">'+D.rows.map(function(r,ri){return '<button class="pqb" data-cgo="'+ri+'">'+esc(r.p||PBYN[r.name]||'?')+'</button>'}).join('')+'</div>';
       h+='<div class="cg">';
@@ -570,8 +548,6 @@ table tr.dvr td{border-top:0;padding-top:0}
         h+='</div>';
       });
       h+='</div>';
-    }else if(csub==='ph'){
-      h+=citsPh();
     }else if(csub==='pc'){
       h+=citsPC();
     }else{
