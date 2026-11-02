@@ -141,16 +141,34 @@ def _infos(names):
         infos.append(x)
     return infos
 
+def _prev_date(x, ref):
+    mon = x['mon'] or ref.month; year = ref.year
+    if x['mon'] is None and x['day'] > ref.day: mon = ref.month - 1 or 12; year = ref.year if ref.month > 1 else ref.year - 1
+    elif x['mon'] and x['mon'] > ref.month: year = ref.year - 1
+    try: return datetime.date(year, mon, x['day'])
+    except ValueError: return None
+
+def _typo_sheets(infos, ref):
+    """нет листа с датой ref. Диспетчер мог ошибиться в месяце («02,10» вместо «02,11»). Смотрим последовательность в конце книги:
+    последние 6 листов; лист с днём ref (месяц другой) берём, если лист перед ним - вчерашний (допускаем разрыв до 3 дней), т.е. даты шли подряд и «откатились» назад"""
+    win = infos[-6:]
+    cand = [x for x in win if x['day'] == ref.day and not x.get('inh') and x['mon'] and x['mon'] != ref.month]
+    if not cand: return []
+    first = min(cand, key=lambda x: x['i'])
+    prev = [x for x in infos if x['i'] < first['i'] and x['day'] != ref.day]
+    if not prev: return []
+    d = _prev_date(prev[-1], ref)
+    if d is None or not (ref - datetime.timedelta(days=3) <= d < ref): return []
+    return [x for x in cand if x['i'] >= first['i']]
+
 def _cands(names, ref):
-    """-> (листы за ref, опечатка_в_месяце). Опечатка: диспетчер назвал последний лист «02,10» вместо «02,11» - берём его, если он в книге последний и день совпал"""
+    """-> (листы за ref, опечатка_в_месяце)"""
     infos = _infos(names)
     cands = [x for x in infos if x['day'] == ref.day and x['mon'] in (None, ref.month)]
     if any(not x.get('inh') and x['mon'] for x in cands): cands = [x for x in cands if not x.get('inh') and x['mon']]     # лист с явной датой «14,10» важнее старого листа «14»
     if cands: return cands, False
-    if infos:
-        last = infos[-1]; pm = ref.month - 1 or 12
-        if last['day'] == ref.day and not last.get('inh') and last['mon'] == pm: return [last], True
-    return [], False
+    t = _typo_sheets(infos, ref)
+    return (t, True) if t else ([], False)
 
 def pick_sheet(names, ref):
     """-> (имя листа, точный ли (за ref), предупреждения)"""
@@ -158,7 +176,7 @@ def pick_sheet(names, ref):
     cands, typo = _cands(names, ref)
     if cands:
         use = next(x for x in cands if x['name'] == today_sheets(names, ref)[0])          # лист с припиской («пер», «пересменка»…) свежее обычного; из равных - самый правый; пустые листы пропускает сборка
-        if typo: warns.append(f'лист {use["name"]!r} - в названии другой месяц, но это последний лист книги и день совпал: беру его как {ref.strftime("%d.%m")}')
+        if typo: warns.append(f'лист {use["name"]!r} - в названии другой месяц, но по порядку листов (перед ним вчерашний) это сегодняшний: беру его как {ref.strftime("%d.%m")}')
         elif len(cands) > 1: warns.append('несколько листов за сегодня (' + ', '.join(repr(c['name']) for c in cands) + f'), взят {use["name"]!r}')
         return use['name'], True, warns
     infos = _infos(names)
