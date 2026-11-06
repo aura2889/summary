@@ -183,7 +183,7 @@ def main():
             data['okd'] = [svod_flow.ROLE_DISP[r] for r, st in status.items() if st['state'] == 'ok']          # у кого файл за сегодня (для плашки)
             if not newroles:                                   # пересборка без новых файлов - время последнего обновления не трогаем
                 pv = load(os.path.join(ARC, ref.isoformat(), 'data.json')) or {}
-                if pv.get('upd'): data['upd'] = pv['upd']
+                data['upd'] = pv['upd'] if pv.get('upd') else aq_now().strftime('%Y-%m-%dT%H:%M')        # раньше свода за этот день не было (напр., прошлая сборка упала) - плашка «Свод обновлён» всё равно нужна
             if svod_flow.LAST_TRAIN: data['tr'] = len(svod_flow.LAST_TRAIN); data['trl'] = svod_flow.LAST_TRAIN       # на обучении (не в выходе)
             data['xl'] = 1
             data['nf'] = len(svod_flow.ROLES) - len(stale) - len(absent)
