@@ -233,7 +233,7 @@ def unknown_items(path, role, ref):
     if 'hrow' in spec: cfg['hrow'] = spec['hrow']
     _adapt(cfg, wbk[sh])
     out = PC.parse(cfg)[0]
-    return ({x['dept'] for x in out} - set(KNOWN['depts']) - {'ПЧ'}) | ({x['code'] for x in out} - set(KNOWN['codes']))
+    return ({x['dept'] for x in out if not x.get('place')} - set(KNOWN['depts']) - {'ПЧ'}) | ({x['code'] for x in out} - set(KNOWN['codes']))
 
 def build(raw_dir, ref, fresh, out_dir, via=()):
     """raw_dir/<ROLE>.xlsx; fresh = {ROLE: True если файл пришёл сегодня}. -> (путь к xlsx, статусы ролей, предупреждения, ошибки)"""
@@ -289,7 +289,9 @@ def build(raw_dir, ref, fresh, out_dir, via=()):
     if not ALL: return None, status, warns, ['нет ни одного распознанного файла диспетчера']
     # ---- проверки (строгий режим): новое незнакомое - не публиковать
     if KNOWN:
-        nd = sorted({x['dept'] for x in ALL} - set(KNOWN['depts']) - {'ПЧ'})
+        pl = sorted({x['dept'] for x in ALL if x.get('place')})
+        if pl: warns.append('техника направлена в местность: ' + ', '.join(f'{d} ({sum(1 for x in ALL if x.get("place") and x["dept"] == d)} маш.)' for d in pl))
+        nd = sorted({x['dept'] for x in ALL if not x.get('place')} - set(KNOWN['depts']) - {'ПЧ'})
         nc = sorted({x['code'] for x in ALL} - set(KNOWN['codes']))
         if nd: errs.append('новый(е) отдел(ы): ' + ', '.join(nd) + ' (файлы: ' + ', '.join(sorted({x['src'] for x in ALL if x['dept'] in nd})) + ')')
         if nc: errs.append('новый(е) префикс(ы): ' + ', '.join(nc) + ' (' + ', '.join(sorted({x['plate'] for x in ALL if x['code'] in nc})[:6]) + ')')

@@ -1,4 +1,4 @@
-import openpyxl, re, pickle
+import os, openpyxl, re, pickle
 from openpyxl.styles.colors import COLOR_INDEX
 D="input/"   # файлы дня кладутся в папку input/ под именами D3.xlsx, MS.xlsx, D7.xlsx, SVOD.xlsx, BUS.xlsx, K8.xlsx, SB.xlsx
 FILES=[
@@ -91,6 +91,20 @@ def _norm_dept(raw, gar2=False):
     if u in ('ИГУ','ИГУОТР','ОГИР'): return 'ОГиР'
     if u.startswith('ЦПП-МПГУ') or u.startswith('МПГУ') or u=='ЦПП': return 'ЦПП'
     return s
+_KD=None
+def _is_place(name):
+    """подпись внутри колонки, не похожая ни на один известный отдел (и не опечатка в нём) - это местность, куда направлена техника (Форт-Шевченко и т.п.)"""
+    global _KD
+    import difflib, json as _j
+    if _KD is None:
+        try: _KD=_j.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)),'known.json'),encoding='utf-8'))['depts']
+        except Exception: _KD=[]
+    if not _KD: return False
+    n=str(name).strip()
+    if n in _KD: return False
+    nl=n.lower().replace(' ','')
+    return all(difflib.SequenceMatcher(None,nl,k.lower().replace(' ','')).ratio()<0.75 for k in _KD)
+
 def parse(cfg):
     wb=openpyxl.load_workbook(cfg['path']); ws=wb[cfg['sheet']]
     gar2=cfg.get('garazh2',False) or ('ГАРАЖ-2' in str(ws['L1'].value or '').upper().replace(' ',''))
@@ -129,6 +143,7 @@ def parse(cfg):
             if cfg['key']=='MS' and c==2: s='ТБ'
             cur[c]=('IGN' if IGN.search(s) else s)
     rawhdr=dict(cur)
+    labeled=set()
     for r in range(r0,r1+1):
         if night_start and r==night_start: 
             # reset to row below headers
@@ -154,7 +169,7 @@ def parse(cfg):
                 if t.lower()=='хитачи': notes.append((cell.coordinate,t,cur.get(c),'пометка типа техники, отдел не меняется')); continue
                 if re.search(r'(көлік|жалпы|менеджер|нач участка|жоспар|нақты|айырма|себеб|мекеме|түр|санi|саны)',t,re.I): continue
                 # label: new dept for this column
-                cur[c]='IGN' if IGN.search(t) else t
+                cur[c]='IGN' if IGN.search(t) else t; labeled.add(c)
                 if r>=3 and isnight_blk: pass
                 continue
             d=cur.get(c)
@@ -194,12 +209,15 @@ def parse(cfg):
             if cfg.get('alias'): dept=cfg['alias'].get(re.sub(r'[\s.№]','',str(d)).upper(),dept)
             if c in cfg.get('dept_over',{}) and d==hdr[c]: dept=cfg['dept_over'][c]
             dept=merge_dept(dept)
+            place=False
+            if c in labeled and d==cur.get(c) and _is_place(dept):
+                dept=dept[:1].upper()+dept[1:]; place=True      # подпись внутри колонки с незнакомым названием = техника направлена в местность (Форт и т.п.)
             if fk is None and fillhex(cell) in ('FF66FF',): note=(note+'; ' if note else '')+'розовая заливка (одна машина в двух отделах)'
             if re.search(r'[Хх]\s*$',tail): pass
             # plate id
             plate=re.sub(r'\s+','',main).upper()
             plate=re.sub(r'(Д/Н|Н|Д)$','',plate) if not re.search(r'\d$',plate) else plate
-            out.append(dict(cell=cell.coordinate,src=cfg['key'],srcname=cfg['name'],hdr=str(d).strip(),dept=dept,plate=main.strip(),code=code,day=day,night=night,note=note,raw=s.strip(),pid=plate))
+            out.append(dict(cell=cell.coordinate,src=cfg['key'],srcname=cfg['name'],hdr=str(d).strip(),dept=dept,plate=main.strip(),code=code,day=day,night=night,note=note,raw=s.strip(),pid=plate,**({'place':True} if place else {})))
     return out,excl,notes
 if __name__=='__main__':
     ALL=[];EXC=[];NOTES=[]
