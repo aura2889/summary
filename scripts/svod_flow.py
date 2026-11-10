@@ -170,14 +170,23 @@ def _cands(names, ref):
     t = _typo_sheets(infos, ref)
     return (t, True) if t else ([], False)
 
-def pick_sheet(names, ref):
+CUT = datetime.time(13, 15)          # до этого времени листы с припиской («10-2», «10 пер», «10 ауысым»…) - черновик на пересменку, не берём
+
+def is_late(arr, ref):
+    """файл роли пришёл сегодня после 13:15 (arr - 'YYYY-MM-DDTHH:MM' из state['t'])"""
+    try: t = datetime.datetime.strptime(arr, '%Y-%m-%dT%H:%M')
+    except Exception: return False
+    return t.date() == ref and t.time() >= CUT
+
+def pick_sheet(names, ref, late=True):
     """-> (имя листа, точный ли (за ref), предупреждения)"""
     warns = []
     cands, typo = _cands(names, ref)
     if cands:
-        use = next(x for x in cands if x['name'] == today_sheets(names, ref)[0])          # лист с припиской («пер», «пересменка»…) свежее обычного; из равных - самый правый; пустые листы пропускает сборка
+        use = next(x for x in cands if x['name'] == today_sheets(names, ref, late)[0])          # лист с припиской («пер», «пересменка»…) свежее обычного; из равных - самый правый; пустые листы пропускает сборка
         if typo: warns.append(f'лист {use["name"]!r} - в названии другой месяц, но по порядку листов (перед ним вчерашний) это сегодняшний: беру его как {ref.strftime("%d.%m")}')
-        elif len(cands) > 1: warns.append('несколько листов за сегодня (' + ', '.join(repr(c['name']) for c in cands) + f'), взят {use["name"]!r}')
+        elif len(cands) > 1:
+            warns.append('несколько листов за сегодня (' + ', '.join(repr(c['name']) for c in cands) + f'), взят {use["name"]!r}' + ('' if late else f' (лист с припиской - черновик пересменки, его возьму, когда файл придёт после {CUT:%H:%M})'))
         return use['name'], True, warns
     infos = _infos(names)
     lb = latest_before(names, ref)
@@ -185,9 +194,10 @@ def pick_sheet(names, ref):
     if infos: return infos[-1]['name'], False, warns
     return None, False, warns
 
-def today_sheets(names, ref):
-    """все листы за сегодня справа налево (самый правый, т.е. самый свежий, первым)"""
+def today_sheets(names, ref, late=True):
+    """все листы за сегодня справа налево (самый правый, т.е. самый свежий, первым); до 13:15 (late=False) - только листы без приписки"""
     cands, _ = _cands(names, ref)
+    if not late and any(x['xl'] == 0 for x in cands): cands = [x for x in cands if x['xl'] == 0]
     return [x['name'] for x in sorted(cands, key=lambda x: (-x['xl'], -x['i']))]      # чем длиннее приписка к названию («пер», «ауысым», «пересменка»…), тем свежее лист; при равной длине - правый
 
 def latest_before(names, ref):
@@ -235,7 +245,7 @@ def unknown_items(path, role, ref):
     out = PC.parse(cfg)[0]
     return ({x['dept'] for x in out if not x.get('place')} - set(KNOWN['depts']) - {'ПЧ'}) | ({x['code'] for x in out} - set(KNOWN['codes']))
 
-def build(raw_dir, ref, fresh, out_dir, via=()):
+def build(raw_dir, ref, fresh, out_dir, via=(), arr=None):
     """raw_dir/<ROLE>.xlsx; fresh = {ROLE: True если файл пришёл сегодня}. -> (путь к xlsx, статусы ролей, предупреждения, ошибки)"""
     ds = ref.strftime('%d.%m.%Y'); short = ref.strftime('%d.%m')
     warns, errs, status, ALL, EXC, NOTES = [], [], {}, [], [], []
@@ -255,12 +265,13 @@ def build(raw_dir, ref, fresh, out_dir, via=()):
         if not os.path.exists(path):
             status[role] = dict(state='absent'); warns.append(f'{ROLE_DISP[role]}: файла ещё не было ни разу - в своде его нет'); continue
         wbk = openpyxl.load_workbook(path); names = wbk.sheetnames
-        sheet, exact, w = pick_sheet(names, ref)
+        late = is_late((arr or {}).get(role), ref)
+        sheet, exact, w = pick_sheet(names, ref, late)
         warns += [f'{ROLE_DISP[role]}: {x}' for x in w]
         if sheet is None:
             status[role] = dict(state='absent'); warns.append(f'{ROLE_DISP[role]}: не нашёл листов с датами'); continue
         plans = []
-        if exact and fresh.get(role, False): plans += [(c, True) for c in today_sheets(names, ref)]          # справа налево: пустой лист пропускаем, берём следующий слева
+        if exact and fresh.get(role, False): plans += [(c, True) for c in today_sheets(names, ref, late)]          # справа налево: пустой лист пропускаем, берём следующий слева
         elif exact: warns.append(f'{ROLE_DISP[role]}: файл за {short} ещё не приходил (в старом файле лист за сегодня не считается)')
         if exact:
             plans.append((latest_before(names, ref), False))
@@ -295,6 +306,11 @@ def build(raw_dir, ref, fresh, out_dir, via=()):
         nc = sorted({x['code'] for x in ALL} - set(KNOWN['codes']))
         if nd: errs.append('новый(е) отдел(ы): ' + ', '.join(nd) + ' (файлы: ' + ', '.join(sorted({x['src'] for x in ALL if x['dept'] in nd})) + ')')
         if nc: errs.append('новый(е) префикс(ы): ' + ', '.join(nc) + ' (' + ', '.join(sorted({x['plate'] for x in ALL if x['code'] in nc})[:6]) + ')')
+    _pd = {}
+    for x in ALL:
+        if x.get('src') != 'MAN' and x.get('plate'): _pd.setdefault(x['plate'].strip(), []).append(x['dept'])
+    for p_, ds_ in sorted(_pd.items()):
+        if len(set(ds_)) > 1: warns.append(f'машина {p_} стоит сразу в нескольких отделах ({", ".join(sorted(set(ds_)))}) - посчитана в каждом, проверьте файл диспетчера')
     for n in NOTES:
         if n[1] == 'нет шапки': warns.append(f'ячейка {n[2]} ({n[0]}) без шапки: {n[3]}')
     if errs: return None, status, warns, errs

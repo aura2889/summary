@@ -169,7 +169,7 @@ def main():
         fresh = {r: state.get(r) == ref.isoformat() for r in svod_flow.ROLES}
         tmpd = os.path.join(ROOT, '.svod_tmp')
         via = tuple(r for r in ('D7', 'K8') if state.get('via', {}).get(r) == 'GAR2' and state.get(r) == ref.isoformat() and os.path.exists(os.path.join(RAW, 'GAR2.xlsx')))
-        xl, status, warns, errs = svod_flow.build(RAW, ref, fresh, tmpd, via)
+        xl, status, warns, errs = svod_flow.build(RAW, ref, fresh, tmpd, via, state.get('t', {}))
         for w in warns: say('⚠ ' + w)
         if errs:
             for e in errs: say('❌ ' + e)
