@@ -170,10 +170,10 @@ def _cands(names, ref):
     t = _typo_sheets(infos, ref)
     return (t, True) if t else ([], False)
 
-CUT = datetime.time(13, 15)          # до этого времени листы с припиской («10-2», «10 пер», «10 ауысым»…) - черновик на пересменку, не берём
+CUT = datetime.time(11, 45)          # до этого времени листы с припиской («10-2», «10 пер», «10 ауысым»…) - черновик на пересменку, не берём
 
 def is_late(arr, ref):
-    """файл роли пришёл сегодня после 13:15 (arr - 'YYYY-MM-DDTHH:MM' из state['t'])"""
+    """файл роли пришёл сегодня после 11:45 (arr - 'YYYY-MM-DDTHH:MM' из state['t'])"""
     try: t = datetime.datetime.strptime(arr, '%Y-%m-%dT%H:%M')
     except Exception: return False
     return t.date() == ref and t.time() >= CUT
@@ -195,7 +195,7 @@ def pick_sheet(names, ref, late=True):
     return None, False, warns
 
 def today_sheets(names, ref, late=True):
-    """все листы за сегодня справа налево (самый правый, т.е. самый свежий, первым); до 13:15 (late=False) - только листы без приписки"""
+    """все листы за сегодня справа налево (самый правый, т.е. самый свежий, первым); до 11:45 (late=False) - только листы без приписки"""
     cands, _ = _cands(names, ref)
     if not late and any(x['xl'] == 0 for x in cands): cands = [x for x in cands if x['xl'] == 0]
     return [x['name'] for x in sorted(cands, key=lambda x: (-x['xl'], -x['i']))]      # чем длиннее приписка к названию («пер», «ауысым», «пересменка»…), тем свежее лист; при равной длине - правый
