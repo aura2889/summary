@@ -89,6 +89,8 @@ main{padding:12px 12px 40px;max-width:760px;margin:0 auto}
 .xl td.fa,.xl th.fa{background:var(--fact-bg);color:var(--fact-ink);font-weight:800}
 .xl td.dy{background:var(--day);color:var(--day-ink);font-weight:700}
 .xl td.dv{font-weight:800}
+.pkt{width:100%;border-collapse:collapse;font-size:13px}.pkt th{font-size:11px;color:var(--muted);font-weight:600;text-align:right;padding:6px 4px}.pkt th:first-child,.pkt td:first-child{text-align:left}.pkt td{padding:7px 4px;text-align:right;border-top:1px solid var(--line)}
+.xt tr.xr{cursor:pointer}.xt tr.xr:hover td{background:var(--plan-bg)}.xt td.pref{color:var(--muted)}.xo{color:var(--muted);font-weight:500;font-size:11px;margin-left:4px}
 .xl td.v.tapc{cursor:pointer}.xl td.v.tapc:hover{background:var(--plan-bg)}
 .xl td.v{color:var(--blue-ink);font-weight:800;font-size:14px;height:24px}
 .xl th:nth-child(1),.xl td.pn{position:sticky;left:0;min-width:30px;width:30px;max-width:30px;padding:3px 2px;background:var(--card);z-index:2}
@@ -310,7 +312,7 @@ table tr.dvr td{border-top:0;padding-top:0}
     }).catch(function(){if(++dtry<4)setTimeout(loadDates,3000*dtry)});
   }
   function load(){
-    loadDrivers(); loadRepair();
+    loadDrivers(); loadRepair(); planLoad();
     fetch(base()+'data.json?'+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){
       DATA=d; DATA.veh.forEach(function(v,i){v._i=i});
       var names=depList().map(function(x){return x.name});
@@ -488,7 +490,7 @@ table tr.dvr td{border-top:0;padding-top:0}
     return h||'<div class="empty">Ничего не найдено</div>';
   }
 
-  function viewTypes(){
+  function viewTypesOld(){
     var h='<div class="card"><table><tr><th>Преф.</th><th>Тип</th><th>План</th><th>Факт</th><th>Откл.</th><th>Д/Н</th></tr>';
     DATA.types.slice().sort(function(a,b){return b.plan-a.plan}).forEach(function(t){
       if(!t.plan&&!t.fact) return;
@@ -498,6 +500,66 @@ table tr.dvr td{border-top:0;padding-top:0}
     h+='<tr><td></td><td><b>Итого</b></td><td><b>'+T.plan+'</b></td><td><b>'+T.fact+'</b></td><td class="'+(T.diff<0?'neg':'pos')+'"><b>'+T.diff+'</b></td><td><b>'+T.day+'/'+T.night+'</b></td></tr></table></div>';
     return h;
   }
+
+  /* ---------- «По типам»: план по бюджету 2026 (Excel, КБМ ДТТ по цехам и автоколоннам) + план Мобил Сервис ---------- */
+  var PLAN=null, PLANE=false;
+  function planLoad(){ if(PLAN||PLANE) return; getJ('plan.json').then(function(d){PLAN=d;if(DATA&&top==='all'&&sub==='types')render()}).catch(function(){PLANE=true}) }
+  function mobIdx(){var n=(DATA.disp||[]).map(function(x){return x.name});return n.indexOf('Мобил Сервис')}
+  function xtData(){
+    var T={};(DATA.types||[]).forEach(function(t){T[t.p]=t});
+    var M={}, rows=PLAN.rows.map(function(r){return {r:r,k:r.k,t:T[r.k]||null,xl:r.d+r.n}});
+    var X={};rows.forEach(function(w){X[w.k]=w});
+    // план Мобил Сервис = общий план типа из сводки минус бюджет КБМ (пока Мобил по цехам не загружен); пикапы 13 и 13.1 - вместе
+    function pl(k){var t=T[k];return t?t.plan:0}
+    rows.forEach(function(w){var o=PLAN.mobil&&PLAN.mobil[w.k];M[w.k]=o?(o.d+o.n):Math.max(0,pl(w.k)-w.xl)});
+    if(!(PLAN.mobil&&PLAN.mobil['13'])&&X['13']&&X['13.1']){M['13']=Math.max(0,pl('13')+pl('13.1')-X['13'].xl-X['13.1'].xl);M['13.1']=0}
+    rows.forEach(function(w){w.m=M[w.k]||0;w.plan=w.xl+w.m;w.fact=w.t?w.t.fact:0;w.diff=w.fact-w.plan});
+    (DATA.types||[]).forEach(function(t){if(X[t.p]||(!t.plan&&!t.fact))return;rows.push({r:null,k:t.p,t:t,xl:0,m:t.plan,plan:t.plan,fact:t.fact,diff:t.fact-t.plan,extra:1})});
+    return rows;
+  }
+  function viewTypes(){
+    if(!PLAN){planLoad();return viewTypesOld()}
+    var rows=xtData(), P=0,F=0,D=0,N=0;
+    var h='<div class="card"><table class="xt"><tr><th>Преф.</th><th>Тип</th><th>План</th><th>Факт</th><th>Откл.</th><th>Д/Н</th></tr>';
+    rows.forEach(function(w){
+      var t=w.t,nm=w.r?w.r.name:(t?t.name:w.k),pre=w.r?(w.r.p||'↳'):w.k;
+      P+=w.plan;F+=w.fact;D+=t?t.day:0;N+=t?t.night:0;
+      h+='<tr class="xr" data-xk="'+esc(w.k)+'"><td class="pref">'+esc(pre)+'</td><td>'+esc(nm)+(w.extra?' <small class="xo">вне бюджета КБМ</small>':'')+'</td><td>'+w.plan+'</td><td>'+w.fact+'</td><td class="'+(w.diff<0?'neg':(w.diff>0?'pos':''))+'">'+(w.diff>0?'+':'')+w.diff+' ›</td><td>'+(t?t.day+'/'+t.night:'0/0')+'</td></tr>';
+    });
+    var TT=DATA.totals,tr0=DATA.tr||0,dd=TT.fact+tr0-P;      // как в шапке: «в обучении» не вычитаем из выхода
+    h+='<tr><td></td><td><b>Итого</b></td><td><b>'+P+'</b></td><td><b>'+(TT.fact+tr0)+'</b></td><td class="'+(dd<0?'neg':'pos')+'"><b>'+(dd>0?'+':'')+dd+'</b></td><td><b>'+TT.day+'/'+TT.night+'</b></td></tr></table></div>';
+    h+='<div class="prs" style="padding:6px 4px">Порядок и план КБМ - по бюджету 2026 (Excel «ТС КБМ по цехам»). Нажмите на строку: план по цехам и автоколоннам. План Мобил Сервис пока берётся из общего плана сводки (разница с бюджетом КБМ).</div>';
+    return h;
+  }
+  function xtOpen(k){
+    var w=xtData().filter(function(x){return x.k===k})[0]; if(!w) return;
+    var mi=mobIdx(), t=w.t, r=w.r, nm=r?r.name:(t?t.name:k);
+    var vs=(DATA.veh||[]).filter(function(v){return v.p===k&&(v.d||v.n)}), kb=vs.filter(function(v){return v.g!==mi}), mb=vs.filter(function(v){return v.g===mi});
+    var h='<div class="tot6"><div><b>'+w.plan+'</b><span>план</span></div><div><b>'+w.fact+'</b><span>факт</span></div><div><b class="'+sgc(w.diff)+'">'+sg(w.diff)+'</b><span>откл.</span></div><div><b>'+(t?t.day+'/'+t.night:'0/0')+'</b><span>день/ночь</span></div></div>';
+    h+='<div class="ph">КБМ ДТТ <small>план '+w.xl+(r?' (день '+r.d+' / ночь '+r.n+')':'')+' · факт '+kb.length+'</small></div>';
+    if(r&&w.xl){
+      var F={};kb.forEach(function(v){F[v.dep]=(F[v.dep]||0)+1});var used={};
+      PLAN.shops.forEach(function(s){
+        var a=r.shops[s.n]; if(!a) return;
+        var f=s.dep?(F[s.dep]||0):null; if(s.dep) used[s.dep]=1;
+        var v=f==null?null:f-(a[0]+a[1]);
+        h+='<div class="dv-r"><div class="n">'+esc(s.n)+'<small>план '+(a[0]+a[1])+' (день '+a[0]+' / ночь '+a[1]+')'+(f==null?'':' · факт '+f)+'</small></div><div class="d '+(v==null?'dv-z':sgc(v))+'">'+(v==null?'':sg(v))+'</div></div>';
+      });
+      Object.keys(F).filter(function(d){return !used[d]}).forEach(function(d){h+='<div class="dv-r"><div class="n">'+esc(d)+'<small>нет в плане · факт '+F[d]+'</small></div><div class="d dv-pos">'+sg(F[d])+'</div></div>'});
+    }else if(kb.length) h+='<div class="prs" style="padding:4px 0">В бюджете КБМ плана нет, факт '+kb.length+'.</div>';
+    else h+='<div class="prs" style="padding:4px 0">В бюджете КБМ плана и факта нет.</div>';
+    if(w.m||mb.length) h+='<div class="ph">Мобил Сервис <small>план '+w.m+' · факт '+mb.length+'</small></div><div class="prs" style="padding:0 0 4px">План Мобил - по общему плану сводки'+(PLAN.mobil&&PLAN.mobil[k]?'':' (по цехам пока не загружен)')+'.</div>';
+    if(r&&Object.keys(r.cols).length){
+      var ks=Object.keys(r.cols).sort(function(a,b){return a-b}), g1=[0,0],g2=[0,0], rows='';
+      ks.forEach(function(c){var a=r.cols[c];(+c<=6?g1:g2)[0]+=a[0];(+c<=6?g1:g2)[1]+=a[1];
+        rows+='<div class="dv-r"><div class="n">а/к '+esc(c)+'<small>'+(+c<=6?'Гараж 1':'Гараж 2')+' · день '+a[0]+' / ночь '+a[1]+'</small></div><div class="d">'+(a[0]+a[1])+'</div></div>'});
+      h+='<div class="ph">По автоколоннам <small>план КБМ</small></div>'+
+         (g1[0]+g1[1]?'<div class="dv-r"><div class="n"><b>Гараж 1</b> (а/к 1–6)<small>день '+g1[0]+' / ночь '+g1[1]+'</small></div><div class="d">'+(g1[0]+g1[1])+'</div></div>':'')+
+         (g2[0]+g2[1]?'<div class="dv-r"><div class="n"><b>Гараж 2</b> (а/к 7–8)<small>день '+g2[0]+' / ночь '+g2[1]+'</small></div><div class="d">'+(g2[0]+g2[1])+'</div></div>':'')+rows;
+    }
+    prSheet(esc((r&&r.p?r.p+' · ':'')+nm)+' · '+sg(w.diff),h);
+  }
+  document.addEventListener('click',function(e){var q=e.target.closest&&e.target.closest('tr[data-xk]');if(q&&DATA&&PLAN){track('По типам/строка');xtOpen(q.dataset.xk)}});
 
   /* ---------- Для ЦИТС: режимный лист (лист «Ежедневная сводка», I3:AD23) ---------- */
   var PBYN={'ППУ':'34','Экскаватор':'47','Вакуум уст.':'49','Автокран':'28','ТРАЛ':'22','АРОК (КМУ)':'27','ЦА-320':'31','АЦН':'35','Бульдозер':'50','Погрузчик':'53'};   // запасной вариант для старых дней
@@ -864,6 +926,8 @@ table tr.dvr td{border-top:0;padding-top:0}
     var t=PRX.tot, z=pcz(t.c), h='', s=0;
     h+='<div class="tot6"><div><b>'+t.plan+'</b><span>план</span></div><div><b>'+t.fact+'</b><span>факт</span></div><div><b class="'+sgc(t.dev)+'">'+sg(t.dev)+'</b><span>отклонение</span></div><div><b>'+Math.round(t.fact/t.plan*1000)/10+'%</b><span>выполнение</span></div></div>';
     h+='<div class="tot6 t2"><div><b>'+pct(t.kip)+'</b><span>КИП</span></div><div><b>'+pct(t.ktg)+'</b><span>КТГ</span></div><div><b>'+t.fd+'</b><span>вышло ДТТ</span></div><div><b>'+t.fr+'</b><span>вышло аренда</span></div></div>';
+    h+='<div class="ph">Физически техники (ДТТ, собственная) <small>столбец «Бүгінге» - на сегодня</small></div><div class="tot6 t2"><div><b>'+t.own+'</b><span>в парке сегодня</span></div><div><b>'+t.own0+'</b><span>на 01.01.2026</span></div><div><b class="'+sgc(t.own-t.own0)+'">'+sg(t.own-t.own0)+'</b><span>с начала года</span></div><div><b>'+t.rent+'</b><span>аренда (по списку)</span></div></div>';
+    h+='<div class="card"><table class="pkt"><tr><th>Автоколонна</th><th>В парке</th><th>01.01</th><th>На линии</th><th>Ремонт</th><th>Резерв</th></tr>'+PRX.aks.map(function(a){return '<tr><td>АК '+a.n+' · '+pakn(a)+'</td><td><b>'+a.own+'</b></td><td>'+a.own0+'</td><td>'+a.line+'</td><td>'+a.rep+'</td><td>'+a.res+'</td></tr>'}).join('')+'<tr><td><b>Итого</b></td><td><b>'+t.own+'</b></td><td>'+t.own0+'</td><td>'+t.line+'</td><td>'+t.rep+'</td><td>'+t.res+'</td></tr></table></div>';
     h+='<div class="ph">Откуда отклонение '+sg(t.dev)+' <small>нажмите</small></div><div class="pgt">';
     Object.keys(PCN).forEach(function(k){s+=z[k];h+=tile(z[k]?'data-pc="'+k+'"':'',sg(z[k]),sgc(z[k]),PCI[k]+' '+PCN[k])});
     if(t.dev-s) h+=tile('data-pc="rest"',sg(t.dev-s),sgc(t.dev-s),'• Прочее');
