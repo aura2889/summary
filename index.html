@@ -89,6 +89,7 @@ main{padding:12px 12px 40px;max-width:760px;margin:0 auto}
 .xl td.fa,.xl th.fa{background:var(--fact-bg);color:var(--fact-ink);font-weight:800}
 .xl td.dy{background:var(--day);color:var(--day-ink);font-weight:700}
 .xl td.dv{font-weight:800}
+.xl td.v.tapc{cursor:pointer}.xl td.v.tapc:hover{background:var(--plan-bg)}
 .xl td.v{color:var(--blue-ink);font-weight:800;font-size:14px;height:24px}
 .xl th:nth-child(1),.xl td.pn{position:sticky;left:0;min-width:30px;width:30px;max-width:30px;padding:3px 2px;background:var(--card);z-index:2}
 .xl th:nth-child(2),.xl td.nm{position:sticky;left:30px;min-width:84px;width:84px;max-width:84px;padding:3px 4px;z-index:2;border-right:2px solid var(--line)}
@@ -255,6 +256,12 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
 .dpc{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;margin:6px 0 2px}.dpc>small{color:var(--muted);font-size:12px;font-weight:700}.dpz{color:var(--muted);font-size:12.5px}
 .dpb{font-size:12.5px;color:var(--muted);font-weight:600;margin-left:6px;font-style:normal}.dep .dpb{display:block;margin:3px 0 0}.dpb b{font-size:inherit}.cdb{font-size:12px;font-weight:700;font-style:normal}
 table tr.dvr td{border-top:0;padding-top:0}
+
+.sw{position:relative;display:block}.sw .search{padding-right:76px;margin-bottom:10px}
+.search::-webkit-search-cancel-button,.search::-webkit-search-decoration{-webkit-appearance:none;appearance:none;display:none}
+.sx{position:absolute;right:5px;top:5px;bottom:15px;width:62px;border:0;background:var(--line);color:var(--ink);font-size:32px;font-weight:700;line-height:1;cursor:pointer;display:none;align-items:center;justify-content:center;border-radius:9px;-webkit-tap-highlight-color:transparent}
+.sx:hover{filter:brightness(.93)}
+.sw.has .sx{display:flex}.sx:active{background:var(--line)}
 </style>
 </head>
 <body>
@@ -517,9 +524,9 @@ table tr.dvr td{border-top:0;padding-top:0}
   function citsPC(){
     var D=DATA.daily,deps=D.deps;
     var h='<div class="xlw"><table class="xl"><thead><tr><th>№</th><th style="text-align:left">Техника</th><th class="pl">План</th><th class="fa">Факт</th><th>Откл</th>'+deps.map(function(d){return '<th>'+esc(d)+'</th>'}).join('')+'</tr></thead><tbody>';
-    D.rows.forEach(function(r){
+    D.rows.forEach(function(r,ri){
       var u=deps.map(function(d){var c=r.cells[d];return '<td class="u">'+(c&&c.u?'утт-'+c.u:'')+'</td>'}).join('');
-      var v=deps.map(function(d){return '<td class="v">'+esc(String(xlCell(r.cells[d])))+'</td>'}).join('');
+      var v=deps.map(function(d){var c=r.cells[d];return c?'<td class="v tapc" data-cc="'+ri+'|'+esc(d)+'" role="button" tabindex="0">'+esc(String(xlCell(c)))+'</td>':'<td class="v"></td>'}).join('');
       h+='<tr class="blk"><td class="pn sep" rowspan="2">'+esc(r.p||'')+'</td><td class="nm sep" rowspan="2">'+esc(r.name)+'</td><td class="pl sep" rowspan="2">'+r.plan+'</td><td class="fa sep" rowspan="2">'+r.fact+'</td><td class="dv sep" rowspan="2">'+xlDev(r.diff)+'</td>'+u+'</tr><tr>'+v+'</tr>';
     });
     return h+'</tbody></table></div>';
@@ -1289,6 +1296,23 @@ table tr.dvr td{border-top:0;padding-top:0}
   });
   document.addEventListener('keydown',function(e){if((e.key==='Enter'||e.key===' ')&&e.target.dataset&&e.target.dataset.cc&&DATA&&DATA.daily){e.preventDefault();ccOpen(e.target.dataset.cc)}});
   document.addEventListener('keydown',function(e){if(e.key==='Escape')devClose();if((e.key==='Enter'||e.key===' ')&&e.target.dataset&&e.target.dataset.dev){e.preventDefault();devOpen('plan')}});
+
+  // ---- крестик очистки в строках поиска: большая зона нажатия (родной крестик браузера крошечный)
+  function wrapSearch(){
+    document.querySelectorAll('input.search').forEach(function(i){
+      var w=i.parentNode; if(w&&w.classList&&w.classList.contains('sw')){w.classList.toggle('has',!!i.value);return}
+      w=document.createElement('span'); w.className='sw'+(i.value?' has':'');
+      i.parentNode.insertBefore(w,i); w.appendChild(i);
+      var b=document.createElement('button'); b.type='button'; b.className='sx'; b.setAttribute('aria-label','Очистить'); b.tabIndex=-1; b.textContent='×'; w.appendChild(b);
+    });
+  }
+  document.addEventListener('input',function(e){var t=e.target;if(t&&t.classList&&t.classList.contains('search')&&t.parentNode.classList.contains('sw'))t.parentNode.classList.toggle('has',!!t.value)});
+  document.addEventListener('pointerdown',function(e){var b=e.target.closest&&e.target.closest('.sx');if(b)e.preventDefault()});
+  document.addEventListener('click',function(e){
+    var b=e.target.closest&&e.target.closest('.sx'); if(!b) return;
+    var i=b.parentNode.querySelector('input'); i.value=''; i.dispatchEvent(new Event('input',{bubbles:true})); b.parentNode.classList.remove('has'); i.focus();
+  });
+  new MutationObserver(wrapSearch).observe(document.body,{childList:true,subtree:true}); wrapSearch();
   var calM=null;
   function closeCal(){var c=document.querySelector('.cal');if(c)c.remove()}
   function openCal(){
