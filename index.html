@@ -93,6 +93,8 @@ main{padding:12px 12px 40px;max-width:760px;margin:0 auto}
 .pkc{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;cursor:pointer}.pkc:hover{border-color:var(--blue)}
 .pkh{display:flex;align-items:baseline;gap:8px;margin-bottom:10px}.pkh b{font-size:16px}.pkh span{color:var(--muted);font-size:12px;flex:1;line-height:1.2}.pkh i{font-style:normal;color:var(--muted);font-size:20px}
 .pkn{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center}.pkn b{display:block;font-size:20px}.pkn small{color:var(--muted);font-size:11px}
+.k55{color:#8a1f5c;font-weight:800;font-size:1.3em;white-space:nowrap}.k55 i{font-style:normal;font-weight:800;color:#8a1f5c}.k55 sub{font-size:.55em;font-weight:700;vertical-align:baseline;position:relative;top:.35em;margin-left:1px}
+:root[data-theme="dark"] .k55,:root[data-theme="dark"] .k55 i{color:#e58fc0}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .k55,:root:not([data-theme="light"]) .k55 i{color:#e58fc0}}
 .pkt{width:100%;border-collapse:collapse;font-size:13px}.pkt th{font-size:11px;color:var(--muted);font-weight:600;text-align:right;padding:6px 4px}.pkt th:first-child,.pkt td:first-child{text-align:left}.pkt td{padding:7px 4px;text-align:right;border-top:1px solid var(--line)}
 .xt tr.xr{cursor:pointer}.xt tr.xr:hover td{background:var(--plan-bg)}.xt td.pref{color:var(--muted)}.xo{color:var(--muted);font-weight:500;font-size:11px;margin-left:4px}
 .xl td.v.tapc{cursor:pointer}.xl td.v.tapc:hover{background:var(--plan-bg)}
@@ -294,7 +296,7 @@ table tr.dvr td{border-top:0;padding-top:0}
     gs.setAttribute('data-goatcounter','https://'+GC_CODE+'.goatcounter.com/count');document.head.appendChild(gs)}catch(e){}}
   function track(p){try{if(window.goatcounter&&window.goatcounter.count)window.goatcounter.count({path:p,title:p,event:true})}catch(e){}}
   var searched=false;
-  var DATA=null, DRV=null, DATES=null, curDay='', top='all', sub='deps', csub='type', cpf='', dep=null, shift='d', q='', dq='', cdisp=0;
+  var DATA=null, DRV=null, DATES=null, curDay='', top='all', sub='deps', csub='type', cpf='', dep=null, shift='d', q='', dq='', cq='', cdisp=0;
   // порядок типов техники внутри отдела (по префиксам); остальное — после, по количеству
   var ORDER=['35','35.1','35.2','31','28','30','63','29','22','23','22.1','34','47','46','49','62','27','50','53','13','13.1','20'];
   var LAT={A:'А',B:'В',C:'С',E:'Е',H:'Н',K:'К',M:'М',O:'О',P:'Р',T:'Т',X:'Х',Y:'У'};
@@ -613,24 +615,34 @@ table tr.dvr td{border-top:0;padding-top:0}
 
   function xlDev(v){return v?'<span class="'+(v<0?'neg':'pos')+'">'+(v>0?'+':'')+v+'</span>':''}
   function xlCell(c){return c?(c.e?c.e+'='+c.v:c.v):''}
+  // автокран 50т (префикс 30): в строке «Автокран» (28) отдельным цветом «+1» с индексом 55; в итоги строки не входит
+  function x55(){var m={};(DATA.veh||[]).forEach(function(v){if(v.p==='30'&&(v.d||v.n))m[v.dep]=(m[v.dep]||0)+1});return m}
+  function k55(n,alone){return '<span class="k55">'+(alone?'':'<i>+</i>')+n+'<sub>55</sub></span>'}
+  function isCrane(r){return (r.p||PBYN[r.name])==='28'}
   function citsPC(){
     var D=DATA.daily,deps=D.deps;
     var h='<div class="xlw"><table class="xl"><thead><tr><th>№</th><th style="text-align:left">Техника</th><th class="pl">План</th><th class="fa">Факт</th><th>Откл</th>'+deps.map(function(d){return '<th>'+esc(d)+'</th>'}).join('')+'</tr></thead><tbody>';
     D.rows.forEach(function(r,ri){
       var u=deps.map(function(d){var c=r.cells[d];return '<td class="u">'+(c&&c.u?'утт-'+c.u:'')+'</td>'}).join('');
-      var v=deps.map(function(d){var c=r.cells[d];return c?'<td class="v tapc" data-cc="'+ri+'|'+esc(d)+'" role="button" tabindex="0">'+esc(String(xlCell(c)))+'</td>':'<td class="v"></td>'}).join('');
+      var X5=isCrane(r)?x55():{};
+      var v=deps.map(function(d){var c=r.cells[d],k=X5[d];return (c||k)?'<td class="v tapc" data-cc="'+ri+'|'+esc(d)+'" role="button" tabindex="0">'+(c?esc(String(xlCell(c))):'')+(k?k55(k,!c):'')+'</td>':'<td class="v"></td>'}).join('');
       h+='<tr class="blk"><td class="pn sep" rowspan="2">'+esc(r.p||'')+'</td><td class="nm sep" rowspan="2">'+esc(r.name)+'</td><td class="pl sep" rowspan="2">'+r.plan+'</td><td class="fa sep" rowspan="2">'+r.fact+'</td><td class="dv sep" rowspan="2">'+xlDev(r.diff)+'</td>'+u+'</tr><tr>'+v+'</tr>';
     });
     return h+'</tbody></table></div>';
   }
   function viewCits(){
     var D=DATA.daily; if(!D||!D.rows.length) return '<div class="empty">Нет данных режимного листа</div>';
+    return '<input class="search" id="cq" type="search" inputmode="search" enterkeyhint="search" placeholder="Поиск: номер машины, тип техники, отдел или водитель" value="'+esc(cq)+'"><div id="cbody">'+citsBody()+'</div>';
+  }
+  function citsBody(){
+    var D=DATA.daily;
     var h=seg('data-csub',[['type','По технике'],['dep','План по цехам'],['pc','Для ПК']],csub).replace('class="seg"','class="seg s3"');
+    if(cq.trim()) return h+viewSearch(cq.trim(),[],true);
     if(csub==='type'){
       h+='<div class="pq" style="grid-template-columns:repeat('+(D.rows.length>10?Math.ceil(D.rows.length/2):D.rows.length)+',minmax(0,1fr))">'+D.rows.map(function(r,ri){return '<button class="pqb" data-cgo="'+ri+'">'+esc(r.p||PBYN[r.name]||'?')+'</button>'}).join('')+'</div>';
       h+='<div class="cg">';
       D.rows.forEach(function(r,ri){
-        var keys=D.deps.filter(function(d){return r.cells[d]});
+        var X5=isCrane(r)?x55():{}, keys=D.deps.filter(function(d){return r.cells[d]||X5[d]});
         h+='<div class="card cc" id="cc-'+ri+'"><h3>'+esc(r.name)+'</h3><div class="stats">'+
           '<div class="stat plan"><b>'+r.plan+'</b><span>план</span></div>'+
           '<div class="stat fact"><b>'+r.fact+'</b><span>факт</span></div>'+
@@ -639,9 +651,9 @@ table tr.dvr td{border-top:0;padding-top:0}
           '<div class="stat"><b>'+r.night+'</b><span>ночь</span></div></div>';
         if(keys.length){
           h+='<div class="cells">'+keys.map(function(d){
-            var c=r.cells[d];
+            var c=r.cells[d]||null;
             var bx=(dpx().T[r.p]||{})[d],dvb=bx&&dpx().has?dpF(bx)-dpP(bx):0;
-            return '<div class="cell tapc" data-cc="'+ri+'|'+esc(d)+'" role="button" tabindex="0"><small>'+esc(d)+(c.u?'<u>утт '+c.u+'</u>':'')+'</small><b>'+(c.e?c.e+'='+c.v:c.v)+(dvb?' <span class="cdb '+sgc(dvb)+'">'+sg(dvb)+'</span>':'')+'</b></div>';
+            return '<div class="cell tapc" data-cc="'+ri+'|'+esc(d)+'" role="button" tabindex="0"><small>'+esc(d)+(c&&c.u?'<u>утт '+c.u+'</u>':'')+'</small><b>'+(c?(c.e?c.e+'='+c.v:c.v):'')+(X5[d]?k55(X5[d],!c):'')+(dvb?' <span class="cdb '+sgc(dvb)+'">'+sg(dvb)+'</span>':'')+'</b></div>';
           }).join('')+'</div>';
         }else h+='<div class="empty" style="padding:6px">Не распределено по отделам</div>';
         h+='</div>';
@@ -1165,7 +1177,7 @@ table tr.dvr td{border-top:0;padding-top:0}
     planApply();
     hidePop();
     header();
-    var keepQ=document.activeElement&&(document.activeElement.id==='q'||document.activeElement.id==='rq'||document.activeElement.id==='dq'),kq=document.activeElement&&document.activeElement.id==='rq'?nq:(document.activeElement&&document.activeElement.id==='dq'?dq:q);
+    var keepQ=document.activeElement&&(document.activeElement.id==='q'||document.activeElement.id==='rq'||document.activeElement.id==='dq'||document.activeElement.id==='cq'),kq=document.activeElement&&document.activeElement.id==='rq'?nq:(document.activeElement&&document.activeElement.id==='dq'?dq:(document.activeElement&&document.activeElement.id==='cq'?cq:q));
     var oc=document.querySelector('.chips:not(.g4)'), sl=oc?oc.scrollLeft:null;
     $('#app').innerHTML=(curDay?'<div class="arch">Архив: данные на '+fmtDate(DATA.date)+'. Для текущих данных выберите «Сегодня» вверху.</div>':'')+topNote()+(top==='all'?viewAll():(top==='cits'?viewCits():(top==='nach'?viewNach():(top==='prod'?viewProd():viewDisp()))))+'<div class="foot">Данные диспетчерской сводки на '+fmtDate(DATA.date)+'</div>';
     var nc=document.querySelector('.chips:not(.g4)');   // строка отделов: не сбрасывать прокрутку, выбранный отдел держать на виду
@@ -1175,7 +1187,7 @@ table tr.dvr td{border-top:0;padding-top:0}
       if(ac){var cr=nc.getBoundingClientRect(), ar=ac.getBoundingClientRect(), L=ar.left-cr.left+nc.scrollLeft;
         if(ar.left<cr.left||ar.right>cr.right) nc.scrollLeft=Math.max(0,L-(nc.clientWidth-ar.width)/2)}
     }
-        if(keepQ){var el=$('#q')||$('#rq')||$('#dq');if(el){el.focus();el.setSelectionRange(kq.length,kq.length)}}
+        if(keepQ){var el=$('#q')||$('#rq')||$('#dq')||$('#cq');if(el){el.focus();el.setSelectionRange(kq.length,kq.length)}}
   }
 
   document.addEventListener('click',function(e){
@@ -1215,6 +1227,7 @@ table tr.dvr td{border-top:0;padding-top:0}
   document.addEventListener('input',function(e){
     if(e.target.id==='pq'){pq=e.target.value;if(!searched&&pq.trim().length>=2){searched=true;track('поиск')}var pr=$('#pres');if(pr)pr.innerHTML=prodBody();return}
     if(e.target.id==='rq'){nq=e.target.value;if(!searched&&nq.trim().length>=2){searched=true;track('поиск')}hidePop();var nr=$('#nres');if(nr)nr.innerHTML=nachBody();return}
+    if(e.target.id==='cq'){cq=e.target.value;if(!searched&&cq.trim().length>=2){searched=true;track('поиск')}hidePop();var cb=$('#cbody');if(cb)cb.innerHTML=citsBody();return}
     if(e.target.id==='dq'){dq=e.target.value;if(!searched&&dq.trim().length>=2){searched=true;track('поиск')}hidePop();var db=$('#dbody');if(db)db.innerHTML=dispBody();return}
     if(e.target.id==='q'){q=e.target.value;if(!searched&&q.trim().length>=2){searched=true;track('поиск')}var r=$('#dres');if(r){hidePop();r.innerHTML=depsBody()}else render()}
   });
@@ -1223,7 +1236,7 @@ table tr.dvr td{border-top:0;padding-top:0}
   function goDay(v){
     if(!DATES) return;
     if(DATES.indexOf(v)<0){alert('За эту дату данных нет');header();return}
-    track('архив');curDay=(v===DATES[0])?'':v; dep=null; q=''; dq=''; nq=''; nak=0; sub='deps';
+    track('архив');curDay=(v===DATES[0])?'':v; dep=null; q=''; dq=''; cq=''; nq=''; nak=0; sub='deps';
     $('#app').innerHTML='<div class="empty">Загрузка…</div>'; load();
   }
 
@@ -1373,7 +1386,7 @@ table tr.dvr td{border-top:0;padding-top:0}
   // ---- «Для ЦИТС»: нажатие на ячейку (отдел × тип техники) - какие именно машины и водители
   function ccOpen(key){
     var i=key.indexOf('|'), r=DATA.daily.rows[+key.slice(0,i)], d=key.slice(i+1); if(!r) return;
-    var pp=r.p||PBYN[r.name], vs=DATA.veh.filter(function(v){return v.dep===d&&v.p===pp});
+    var pp=r.p||PBYN[r.name], vs=DATA.veh.filter(function(v){return v.dep===d&&(v.p===pp||(pp==='28'&&v.p==='30'&&(v.d||v.n)))});
     var c=r.cells[d]||{}, el=devShell(), h='';
     h+='<div class="sh"><div class="shh"><b>'+esc(r.name)+' · '+esc(d)+'</b><button class="shx" data-devx="1" aria-label="Закрыть">×</button></div>'+
        '<div class="shs"><small style="color:var(--muted)">'+vs.length+' ед.'+(c.e?' ('+esc(c.e)+')':'')+'</small></div><div class="shb">';
