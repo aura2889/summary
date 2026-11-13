@@ -103,7 +103,7 @@ main{padding:12px 12px 40px;max-width:760px;margin:0 auto}
 .xl th:nth-child(2),.xl td.nm{position:sticky;left:30px;min-width:84px;width:84px;max-width:84px;padding:3px 4px;z-index:2;border-right:2px solid var(--line)}
 .xl thead th:nth-child(1),.xl thead th:nth-child(2){z-index:5;background:var(--brand)}
 .xl td.u{color:var(--ok);font-size:11px;font-weight:700;height:15px;padding-top:1px;padding-bottom:0;border-bottom:0}
-.xl.xs th:nth-child(1),.xl.xs td.nm{position:sticky;left:0;min-width:92px;width:92px;max-width:92px;padding:3px 4px;z-index:2;border-right:2px solid var(--line)}.xl.xs th:nth-child(2){left:auto;min-width:0;width:auto;max-width:none;position:sticky;top:0}.xl tr.blk td.sep{border-top:2px solid var(--line)}
+.xlw.xw{display:inline-block;max-width:100%;vertical-align:top}.xlw.xw .xl{min-width:0}.xl th.pl,.xl td.pl{min-width:0}.xl.xs th:nth-child(1),.xl.xs td.nm{position:sticky;left:0;min-width:92px;width:92px;max-width:92px;padding:3px 4px;z-index:2;border-right:2px solid var(--line)}.xl.xs th:nth-child(2){left:auto;min-width:0;width:auto;max-width:none;position:sticky;top:0}.xl tr.blk td.sep{border-top:2px solid var(--line)}
 @media (min-width:760px){.seg.s3{max-width:620px}}
 
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:10px}
@@ -640,19 +640,20 @@ table tr.dvr td{border-top:0;padding-top:0}
   function citsPlanShop(){
     var X=dpx(); if(!X.has) return '<div class="empty">План по цехам для этого дня не загружен</div>';
     var deps=planDeps().filter(function(d){return X.D[d]});
-    var h='<div class="chips">'+deps.map(function(d){return '<button class="chip'+(d===cpd?' on':'')+'" data-cpd="'+esc(d)+'">'+esc(d)+'</button>'}).join('')+'</div>';
+    var h='<div class="chips">'+deps.map(function(d){return '<button class="chip'+(d===cpd?' on':'')+'" data-cpd="'+(d===cpd?'':esc(d))+'">'+esc(d)+'</button>'}).join('')+'</div>';
     if(deps.indexOf(cpd)<0){
       var P=0,F=0;
-      h+='<div class="xlw"><table class="xl xs"><thead><tr><th style="text-align:left">Цех</th><th class="pl">План</th><th class="fa">Факт</th><th>Откл</th></tr></thead><tbody>'+deps.map(function(d){var T=X.D[d],pl=0,fa=0;Object.keys(T).forEach(function(p){pl+=dpP(T[p]);fa+=dpF(T[p])});P+=pl;F+=fa;
+      h+='<div class="xlw xw"><table class="xl xs"><thead><tr><th style="text-align:left">Цех</th><th class="pl">План</th><th class="fa">Факт</th><th>Откл</th></tr></thead><tbody>'+deps.map(function(d){var T=X.D[d],pl=0,fa=0;Object.keys(T).forEach(function(p){pl+=dpP(T[p]);fa+=dpF(T[p])});P+=pl;F+=fa;
         return '<tr class="tapc" data-cpd="'+esc(d)+'"><td class="nm" style="font-size:13px">'+ed(d)+'</td><td class="pl">'+pl+'</td><td class="fa">'+fa+'</td><td class="dv">'+xlDev(fa-pl)+'</td></tr>'}).join('')+
         '<tr><td class="nm"><b>ИТОГО</b></td><td class="pl">'+P+'</td><td class="fa">'+F+'</td><td class="dv">'+xlDev(F-P)+'</td></tr></tbody></table></div>';
       return h;
     }
     var d=cpd,T=X.D[d],ps=Object.keys(T).filter(function(p){return dpP(T[p])||dpF(T[p])}).sort(function(a,b){return parseFloat(a)-parseFloat(b)||(a<b?-1:1)});
+    h+='<div><button class="chip" data-cpd="" style="margin:6px 0">← все цеха</button> <b>'+ed(d)+'</b></div>';
     var R={};PLAN.rows.forEach(function(r){R[r.k]=r});
     var c={},tg1=[0,0],tg2=[0,0],tm=[0,0],P=0,F=0;
     PLAN.rows.forEach(function(r){if(r.sc&&r.sc[d])Object.keys(r.sc[d]).forEach(function(k){var x=c[k]||(c[k]=[0,0]);x[0]+=r.sc[d][k][0];x[1]+=r.sc[d][k][1]})});
-    h+='<div class="xlw"><table class="xl"><thead><tr><th>№</th><th style="text-align:left">Техника</th><th>Гараж 1</th><th>Гараж 2</th><th>Мобил Сервис</th><th class="pl">План</th><th class="fa">Факт</th><th>Откл</th></tr></thead><tbody>';
+    h+='<div class="xlw xw"><table class="xl"><thead><tr><th>№</th><th style="text-align:left">Техника</th><th>Гараж 1</th><th>Гараж 2</th><th>Мобил Сервис</th><th class="pl">План</th><th class="fa">Факт</th><th>Откл</th></tr></thead><tbody>';
     function add(t,x){if(x){t[0]+=x[0];t[1]+=x[1]}}
     ps.forEach(function(p){
       var rw=R[p],sg_=(rw&&rw.sg&&rw.sg[d])||{},g1=sg_['Гараж 1'],g2=sg_['Гараж 2'],m=PLAN.mobil&&PLAN.mobil[p]&&PLAN.mobil[p].shops[d],b=T[p],pl=dpP(b),fa=dpF(b);
@@ -678,7 +679,7 @@ table tr.dvr td{border-top:0;padding-top:0}
   function isCrane(r){return (r.p||PBYN[r.name])==='28'}
   function citsPC(){
     var D=DATA.daily,deps=D.deps;
-    var h='<div class="xlw"><table class="xl"><thead><tr><th>№</th><th style="text-align:left">Техника</th><th class="pl">План</th><th class="fa">Факт</th><th>Откл</th>'+deps.map(function(d){return '<th>'+ed(d)+'</th>'}).join('')+'</tr></thead><tbody>';
+    var h='<div class="xlw"><table class="xl"><thead><tr><th>№</th><th style="text-align:left">Техника</th><th class="pl">План</th><th class="fa">Факт</th><th>Откл</th>'+deps.map(function(d){return '<th>'+esc(d)+'</th>'}).join('')+'</tr></thead><tbody>';
     D.rows.forEach(function(r,ri){
       var u=deps.map(function(d){var c=r.cells[d];return '<td class="u">'+(c&&c.u?'утт-'+c.u:'')+'</td>'}).join('');
       var X5=isCrane(r)?x55():{};
@@ -1185,16 +1186,17 @@ table tr.dvr td{border-top:0;padding-top:0}
     var ak=Object.keys(cols).sort(function(a,b){return a-b}).concat(['М']), ord=DATA.depOrder||[];
     var ds=Object.keys(deps).sort(function(x,y){var ix=ord.indexOf(x),iy=ord.indexOf(y);return (ix<0?999:ix)-(iy<0?999:iy)});
     function nm(k){return k==='М'?'Мобил':'АК '+k}
-    var tot={},h='<div class="pw">План по цехам по автоколоннам (КБМ + Мобил Сервис). В ячейке: день/ночь</div>';
+    var tot={},h='<div class="pw">План по цехам по автоколоннам (КБМ + Мобил Сервис). В ячейке: день/ночь. Факт по цеху - сводка диспетчеров за '+fmtDate(DATA.date)+' (по колоннам не делится)</div>';
     h+='<div class="chips"><button class="chip'+(!psk?' on':'')+'" data-psk="">Все АК</button>'+ak.map(function(k){return '<button class="chip'+(psk===k?' on':'')+'" data-psk="'+k+'">'+nm(k)+'</button>'}).join('')+'</div>';
-    var sel=psk&&ak.indexOf(psk)>=0?[psk]:ak;
-    h+='<div class="xlw"><table class="xl xs"><thead><tr><th style="text-align:left;width:92px;min-width:92px;max-width:92px">Цех</th>'+sel.map(function(k){return '<th>'+nm(k)+'</th>'}).join('')+'<th class="pl">Всего</th></tr></thead><tbody>';
+    var sel=psk&&ak.indexOf(psk)>=0?[psk]:ak, all=sel===ak, X=dpx();
+    h+='<div class="xlw xw"><table class="xl xs"><thead><tr><th style="text-align:left;width:92px;min-width:92px;max-width:92px">Цех</th>'+sel.map(function(k){return '<th>'+nm(k)+'</th>'}).join('')+'<th class="pl">План</th>'+(all?'<th class="fa">Факт</th><th>Откл</th>':'')+'</tr></thead><tbody>';
+    var FT=0;
     ds.forEach(function(d){
       var sd=0,sn=0,cells=sel.map(function(k){var x=M[d][k];if(x){sd+=x[0];sn+=x[1];var t=tot[k]||(tot[k]=[0,0]);t[0]+=x[0];t[1]+=x[1]}return '<td class="v'+(k==='М'?' mb':'')+'">'+dn(x)+'</td>'}).join('');
-      if(sd+sn) h+='<tr class="blk"><td class="nm" style="font-size:12px;width:92px;min-width:92px;max-width:92px">'+ed(d)+'</td>'+cells+'<td class="pl">'+(sd+sn)+'</td></tr>';
+      if(sd+sn) h+='<tr class="blk"><td class="nm" style="font-size:12px;width:92px;min-width:92px;max-width:92px">'+ed(d)+'</td>'+cells+'<td class="pl">'+(sd+sn)+'</td>'+(all?(function(){var T=X.D[d]||{},fa=0;Object.keys(T).forEach(function(p){fa+=dpF(T[p])});FT+=fa;return '<td class="fa">'+fa+'</td><td class="dv">'+xlDev(fa-sd-sn)+'</td>'})():'')+'</tr>';
     });
     var g=[0,0];sel.forEach(function(k){var t=tot[k]||[0,0];g[0]+=t[0];g[1]+=t[1]});
-    h+='<tr class="blk"><td class="nm" style="width:92px;min-width:92px;max-width:92px"><b>ИТОГО</b></td>'+sel.map(function(k){var t=tot[k]||[0,0];return '<td class="v"><b>'+t[0]+'/'+t[1]+'</b></td>'}).join('')+'<td class="pl">'+(g[0]+g[1])+'</td></tr></tbody></table></div>';
+    h+='<tr class="blk"><td class="nm" style="width:92px;min-width:92px;max-width:92px"><b>ИТОГО</b></td>'+sel.map(function(k){var t=tot[k]||[0,0];return '<td class="v"><b>'+t[0]+'/'+t[1]+'</b></td>'}).join('')+'<td class="pl">'+(g[0]+g[1])+'</td>'+(all?'<td class="fa">'+FT+'</td><td class="dv">'+xlDev(FT-g[0]-g[1])+'</td>':'')+'</tr></tbody></table></div>';
     return h;
   }
   function prodBody(){
