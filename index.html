@@ -103,7 +103,7 @@ main{padding:12px 12px 40px;max-width:760px;margin:0 auto}
 .xl th:nth-child(2),.xl td.nm{position:sticky;left:30px;min-width:84px;width:84px;max-width:84px;padding:3px 4px;z-index:2;border-right:2px solid var(--line)}
 .xl thead th:nth-child(1),.xl thead th:nth-child(2){z-index:5;background:var(--brand)}
 .xl td.u{color:var(--ok);font-size:11px;font-weight:700;height:15px;padding-top:1px;padding-bottom:0;border-bottom:0}
-.xlw.xw{display:inline-block;max-width:100%;vertical-align:top}.xlw.xw .xl{min-width:0}.xl th.pl,.xl td.pl{min-width:0}.xl.xs th:nth-child(1),.xl.xs td.nm{position:sticky;left:0;min-width:92px;width:92px;max-width:92px;padding:3px 4px;z-index:2;border-right:2px solid var(--line)}.xl.xs th:nth-child(2){left:auto;min-width:0;width:auto;max-width:none;position:sticky;top:0}.xl tr.blk td.sep{border-top:2px solid var(--line)}
+.xlw.xw{display:block;max-width:820px}.xlw.xw .xl{min-width:100%}.xl th.pl,.xl td.pl{min-width:0}.xl.xs th:nth-child(1),.xl.xs td.nm{position:sticky;left:0;min-width:92px;width:92px;max-width:92px;padding:3px 4px;z-index:2;border-right:2px solid var(--line)}.xl.xs th:nth-child(2){left:auto;min-width:0;width:auto;max-width:none;position:sticky;top:0}.xl tr.blk td.sep{border-top:2px solid var(--line)}
 @media (min-width:760px){.seg.s3{max-width:620px}}
 
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:10px}
@@ -594,7 +594,7 @@ table tr.dvr td{border-top:0;padding-top:0}
     if(c.u) s+=(s?' ':'')+'<u>утт '+c.u+'</u>';
     return s;
   }
-  var cps='pre', cpd='';
+  var cps='shop', cpd='';
   function planDeps(){
     var set={};PLAN.rows.forEach(function(r){Object.keys(r.shops).forEach(function(d){set[d]=1})});
     Object.keys(PLAN.mobil||{}).forEach(function(k){Object.keys(PLAN.mobil[k].shops).forEach(function(d){set[d]=1})});
@@ -668,7 +668,7 @@ table tr.dvr td{border-top:0;padding-top:0}
   }
   function citsPlan(){
     if(!PLAN){planLoad();return '<div class="empty">Загрузка плана…</div>'}
-    return seg('data-cps',[['pre','По префиксам'],['shop','По цехам']],cps)+(cps==='shop'?citsPlanShop():citsPlanPre());
+    return seg('data-cps',[['shop','По цехам'],['pre','По префиксам']],cps)+(cps==='shop'?citsPlanShop():citsPlanPre());
   }
 
   function xlDev(v){return v?'<span class="'+(v<0?'neg':'pos')+'">'+(v>0?'+':'')+v+'</span>':''}
@@ -1197,6 +1197,16 @@ table tr.dvr td{border-top:0;padding-top:0}
     });
     var g=[0,0];sel.forEach(function(k){var t=tot[k]||[0,0];g[0]+=t[0];g[1]+=t[1]});
     h+='<tr class="blk"><td class="nm" style="width:92px;min-width:92px;max-width:92px"><b>ИТОГО</b></td>'+sel.map(function(k){var t=tot[k]||[0,0];return '<td class="v"><b>'+t[0]+'/'+t[1]+'</b></td>'}).join('')+'<td class="pl">'+(g[0]+g[1])+'</td>'+(all?'<td class="fa">'+FT+'</td><td class="dv">'+xlDev(FT-g[0]-g[1])+'</td>':'')+'</tr></tbody></table></div>';
+    // факт и план по автоколоннам - из отчёта Өндіріс ақпары (ДТТ; Мобил - аренда)
+    var A={};((PRX&&PRX.aks)||[]).forEach(function(a){A[String(a.n)]=a});
+    var pt=(PRX&&PRX.tot)||{};
+    function ap(k){return k==='М'?pt.pr:(A[k]?A[k].pd:null)}
+    function af(k){return k==='М'?pt.fr:(A[k]?A[k].fd:null)}
+    var rp='',rf='',rd='';
+    sel.forEach(function(k){var p=ap(k),f=af(k);rp+='<td class="v">'+(p==null?'':p)+'</td>';rf+='<td class="v"><b>'+(f==null?'':f)+'</b></td>';rd+='<td class="v">'+(p==null||f==null?'':xlDev(f-p))+'</td>'});
+    var sp=0,sf=0;sel.forEach(function(k){sp+=ap(k)||0;sf+=af(k)||0});
+    var ex=all?'<td></td><td></td>':'';
+    h=h.replace('</tbody></table></div>','<tr class="blk"><td class="nm" style="'+'width:92px;min-width:92px;max-width:92px'+'"><b>План (Өндіріс)</b></td>'+rp+'<td class="pl">'+sp+'</td>'+ex+'</tr><tr class="blk"><td class="nm" style="width:92px;min-width:92px;max-width:92px"><b>Факт (Өндіріс)</b></td>'+rf+'<td class="fa">'+sf+'</td>'+ex+'</tr><tr class="blk"><td class="nm" style="width:92px;min-width:92px;max-width:92px"><b>Откл.</b></td>'+rd+'<td class="dv">'+xlDev(sf-sp)+'</td>'+ex+'</tr></tbody></table></div>');
     return h;
   }
   function prodBody(){
