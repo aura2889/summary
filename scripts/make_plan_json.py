@@ -5,7 +5,9 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 wb = openpyxl.load_workbook(os.path.join(ROOT, 'data', 'plan_budget_2026.xlsx'), data_only=True)
 ws = wb['ТС КБМ по цехам']; lst = wb['Список (для фильтра)']
 DEPS = json.load(open(os.path.join(ROOT, 'data.json'), encoding='utf-8')).get('depOrder', [])
-ALIAS = {'Эл.Цех': 'ЭЦ', 'ППД': 'ЦППД', 'ОКС, ДРиСУ': 'ОКС', 'МГ': 'МГС', 'ГАПиТ': 'ГАПиИТ', 'оппоIR': 'IR'}
+# названия цехов как на сайте (в Excel они иначе); несколько столбцов Excel -> один цех суммируются
+ALIAS = {'Эл.Цех': 'ЭЦ', 'ППД': 'ЦППД', 'ОКС, ДРиСУ': 'ОКС', 'МГ': 'МГС', 'ГАПиТ': 'ГАПиИТ', 'оппоIR': 'IR',
+         'Диспетчерская группа': 'ЦИТС', 'СӨС': 'ОБиОТ', 'Нейрон': 'ОБиОТ', 'ОРП': 'Отделкадр', 'ДТТ-1': 'Гараж-1', 'ДТТ-2': 'Гараж-2'}
 def clean(s): return re.sub(r'\s+', ' ', str(s or '')).strip().replace('Cедельный', 'Седельный')
 def pk(v):
     s = str(v); return s[:-2] if s.endswith('.0') else s
@@ -24,7 +26,8 @@ for r in range(6, 53):
     d = n = 0; sh = {}
     for s in shops:
         x, y = ws.cell(r, s['c']).value or 0, ws.cell(r, s['c'] + 1).value or 0
-        if x or y: sh[s['n']] = [x, y]; d += x; n += y
+        if x or y:
+            k = s['dep'] or s['n']; b = sh.setdefault(k, [0, 0]); b[0] += x; b[1] += y; d += x; n += y
     rows.append(dict(k=key, p=p, name=name, d=d, n=n, shops=sh, cols={}, _r=r))
 idx = {}
 for i, r in enumerate(rows): idx[(r['k'])] = r
@@ -34,7 +37,11 @@ for pre, mk, shop, sm, col, gar, q in [[c.value for c in x] for x in lst.iter_ro
     r = idx.get(k)
     if not r: continue
     b = r['cols'].setdefault(str(col), [0, 0]); b[0 if sm == 'День' else 1] += q
-out = dict(year=2026, title='План по бюджету 2026 г. (ТС ПУ)', shops=[dict(n=s['n'], dep=s['dep']) for s in shops],
+order = []
+for s in shops:
+    k = s['dep'] or s['n']
+    if k not in order: order.append(k)
+out = dict(year=2026, title='План по бюджету 2026 г. (ТС ПУ)', shops=[dict(n=k, dep=k) for k in order],
            rows=[{k: v for k, v in r.items() if k != '_r'} for r in rows])
 json.dump(out, open(os.path.join(ROOT, 'plan.json'), 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
 print(len(rows), sum(r['d'] + r['n'] for r in rows), [s['n'] for s in shops if not s['dep']])

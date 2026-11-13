@@ -89,6 +89,10 @@ main{padding:12px 12px 40px;max-width:760px;margin:0 auto}
 .xl td.fa,.xl th.fa{background:var(--fact-bg);color:var(--fact-ink);font-weight:800}
 .xl td.dy{background:var(--day);color:var(--day-ink);font-weight:700}
 .xl td.dv{font-weight:800}
+.pka{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px;margin:6px 0 14px}
+.pkc{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;cursor:pointer}.pkc:hover{border-color:var(--blue)}
+.pkh{display:flex;align-items:baseline;gap:8px;margin-bottom:10px}.pkh b{font-size:16px}.pkh span{color:var(--muted);font-size:12px;flex:1;line-height:1.2}.pkh i{font-style:normal;color:var(--muted);font-size:20px}
+.pkn{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center}.pkn b{display:block;font-size:20px}.pkn small{color:var(--muted);font-size:11px}
 .pkt{width:100%;border-collapse:collapse;font-size:13px}.pkt th{font-size:11px;color:var(--muted);font-weight:600;text-align:right;padding:6px 4px}.pkt th:first-child,.pkt td:first-child{text-align:left}.pkt td{padding:7px 4px;text-align:right;border-top:1px solid var(--line)}
 .xt tr.xr{cursor:pointer}.xt tr.xr:hover td{background:var(--plan-bg)}.xt td.pref{color:var(--muted)}.xo{color:var(--muted);font-weight:500;font-size:11px;margin-left:4px}
 .xl td.v.tapc{cursor:pointer}.xl td.v.tapc:hover{background:var(--plan-bg)}
@@ -503,16 +507,36 @@ table tr.dvr td{border-top:0;padding-top:0}
 
   /* ---------- «По типам»: план по бюджету 2026 (Excel, КБМ ДТТ по цехам и автоколоннам) + план Мобил Сервис ---------- */
   var PLAN=null, PLANE=false;
-  function planLoad(){ if(PLAN||PLANE) return; getJ('plan.json').then(function(d){PLAN=d;if(DATA&&top==='all'&&sub==='types')render()}).catch(function(){PLANE=true}) }
+  function planLoad(){ if(PLAN||PLANE) return; getJ('plan.json').then(function(d){PLAN=d;if(DATA)render()}).catch(function(){PLANE=true}) }
   function mobIdx(){var n=(DATA.disp||[]).map(function(x){return x.name});return n.indexOf('Мобил Сервис')}
+  function mobPlans(){      // план Мобил Сервис по типам = общий план сводки минус бюджет КБМ; пикапы 13 и 13.1 - вместе
+    var T={};(DATA.types||[]).forEach(function(t){T[t.p]=t});
+    var X={},M={};PLAN.rows.forEach(function(r){X[r.k]=r.d+r.n});
+    function pl(k){return T[k]?(T[k].plan0!=null?T[k].plan0:T[k].plan):0}
+    PLAN.rows.forEach(function(r){var o=PLAN.mobil&&PLAN.mobil[r.k];M[r.k]=o?(o.d+o.n):Math.max(0,pl(r.k)-X[r.k])});
+    if(!(PLAN.mobil&&PLAN.mobil['13'])&&X['13']!=null&&X['13.1']!=null){M['13']=Math.max(0,pl('13')+pl('13.1')-X['13']-X['13.1']);M['13.1']=0}
+    return M;
+  }
+  // подставляем в DATA план по цехам из Excel (КБМ) + расчётную долю Мобил (из прежнего плана: что выше бюджета КБМ)
+  function planApply(){
+    if(!DATA||!PLAN||DATA._px) return; DATA._px=1;
+    var M=mobPlans(), R={};PLAN.rows.forEach(function(r){R[r.k]=r});
+    (DATA.types||[]).forEach(function(t){
+      var r=R[t.p]; if(!r) return;
+      var old=t.dp||{}, nd={}, mob={}, left=M[t.p]||0;
+      Object.keys(r.shops).forEach(function(k){nd[k]=[r.shops[k][0],r.shops[k][1]]});
+      Object.keys(old).forEach(function(k){
+        var x=nd[k]||[0,0], ad=[Math.max(0,old[k][0]-x[0]),Math.max(0,old[k][1]-x[1])];
+        for(var i=0;i<2;i++){var q=Math.min(ad[i],left);ad[i]=q;left-=q}
+        if(ad[0]||ad[1]){mob[k]=ad;nd[k]=[x[0]+ad[0],x[1]+ad[1]]}
+      });
+      t.dp0=old; t.dp=nd; t.mob=mob; t.mobLeft=left;
+    });
+  }
   function xtData(){
     var T={};(DATA.types||[]).forEach(function(t){T[t.p]=t});
-    var M={}, rows=PLAN.rows.map(function(r){return {r:r,k:r.k,t:T[r.k]||null,xl:r.d+r.n}});
+    var M=mobPlans(), rows=PLAN.rows.map(function(r){return {r:r,k:r.k,t:T[r.k]||null,xl:r.d+r.n}});
     var X={};rows.forEach(function(w){X[w.k]=w});
-    // план Мобил Сервис = общий план типа из сводки минус бюджет КБМ (пока Мобил по цехам не загружен); пикапы 13 и 13.1 - вместе
-    function pl(k){var t=T[k];return t?t.plan:0}
-    rows.forEach(function(w){var o=PLAN.mobil&&PLAN.mobil[w.k];M[w.k]=o?(o.d+o.n):Math.max(0,pl(w.k)-w.xl)});
-    if(!(PLAN.mobil&&PLAN.mobil['13'])&&X['13']&&X['13.1']){M['13']=Math.max(0,pl('13')+pl('13.1')-X['13'].xl-X['13.1'].xl);M['13.1']=0}
     rows.forEach(function(w){w.m=M[w.k]||0;w.plan=w.xl+w.m;w.fact=w.t?w.t.fact:0;w.diff=w.fact-w.plan});
     (DATA.types||[]).forEach(function(t){if(X[t.p]||(!t.plan&&!t.fact))return;rows.push({r:null,k:t.p,t:t,xl:0,m:t.plan,plan:t.plan,fact:t.fact,diff:t.fact-t.plan,extra:1})});
     return rows;
@@ -548,7 +572,12 @@ table tr.dvr td{border-top:0;padding-top:0}
       Object.keys(F).filter(function(d){return !used[d]}).forEach(function(d){h+='<div class="dv-r"><div class="n">'+esc(d)+'<small>нет в плане · факт '+F[d]+'</small></div><div class="d dv-pos">'+sg(F[d])+'</div></div>'});
     }else if(kb.length) h+='<div class="prs" style="padding:4px 0">В бюджете КБМ плана нет, факт '+kb.length+'.</div>';
     else h+='<div class="prs" style="padding:4px 0">В бюджете КБМ плана и факта нет.</div>';
-    if(w.m||mb.length) h+='<div class="ph">Мобил Сервис <small>план '+w.m+' · факт '+mb.length+'</small></div><div class="prs" style="padding:0 0 4px">План Мобил - по общему плану сводки'+(PLAN.mobil&&PLAN.mobil[k]?'':' (по цехам пока не загружен)')+'.</div>';
+    if(w.m||mb.length){
+      h+='<div class="ph">Мобил Сервис <small>план '+w.m+' · факт '+mb.length+'</small></div>';
+      var mo=t&&t.mob?t.mob:{}, mk=Object.keys(mo);
+      mk.forEach(function(d){var a=mo[d];h+='<div class="dv-r"><div class="n">'+esc(d)+'<small>план '+(a[0]+a[1])+' (день '+a[0]+' / ночь '+a[1]+')</small></div><div class="d dv-z"></div></div>'});
+      h+='<div class="prs" style="padding:0 0 4px">План Мобил - расчёт: общий план сводки минус бюджет КБМ'+(t&&t.mobLeft?'; '+t.mobLeft+' ед. по цехам не распределены':'')+'. Точный план Мобила по цехам пока не загружен.</div>';
+    }
     if(r&&Object.keys(r.cols).length){
       var ks=Object.keys(r.cols).sort(function(a,b){return a-b}), g1=[0,0],g2=[0,0], rows='';
       ks.forEach(function(c){var a=r.cols[c];(+c<=6?g1:g2)[0]+=a[0];(+c<=6?g1:g2)[1]+=a[1];
@@ -926,8 +955,6 @@ table tr.dvr td{border-top:0;padding-top:0}
     var t=PRX.tot, z=pcz(t.c), h='', s=0;
     h+='<div class="tot6"><div><b>'+t.plan+'</b><span>план</span></div><div><b>'+t.fact+'</b><span>факт</span></div><div><b class="'+sgc(t.dev)+'">'+sg(t.dev)+'</b><span>отклонение</span></div><div><b>'+Math.round(t.fact/t.plan*1000)/10+'%</b><span>выполнение</span></div></div>';
     h+='<div class="tot6 t2"><div><b>'+pct(t.kip)+'</b><span>КИП</span></div><div><b>'+pct(t.ktg)+'</b><span>КТГ</span></div><div><b>'+t.fd+'</b><span>вышло ДТТ</span></div><div><b>'+t.fr+'</b><span>вышло аренда</span></div></div>';
-    h+='<div class="ph">Физически техники (ДТТ, собственная) <small>столбец «Бүгінге» - на сегодня</small></div><div class="tot6 t2"><div><b>'+t.own+'</b><span>в парке сегодня</span></div><div><b>'+t.own0+'</b><span>на 01.01.2026</span></div><div><b class="'+sgc(t.own-t.own0)+'">'+sg(t.own-t.own0)+'</b><span>с начала года</span></div><div><b>'+t.rent+'</b><span>аренда (по списку)</span></div></div>';
-    h+='<div class="card"><table class="pkt"><tr><th>Автоколонна</th><th>В парке</th><th>01.01</th><th>На линии</th><th>Ремонт</th><th>Резерв</th></tr>'+PRX.aks.map(function(a){return '<tr><td>АК '+a.n+' · '+pakn(a)+'</td><td><b>'+a.own+'</b></td><td>'+a.own0+'</td><td>'+a.line+'</td><td>'+a.rep+'</td><td>'+a.res+'</td></tr>'}).join('')+'<tr><td><b>Итого</b></td><td><b>'+t.own+'</b></td><td>'+t.own0+'</td><td>'+t.line+'</td><td>'+t.rep+'</td><td>'+t.res+'</td></tr></table></div>';
     h+='<div class="ph">Откуда отклонение '+sg(t.dev)+' <small>нажмите</small></div><div class="pgt">';
     Object.keys(PCN).forEach(function(k){s+=z[k];h+=tile(z[k]?'data-pc="'+k+'"':'',sg(z[k]),sgc(z[k]),PCI[k]+' '+PCN[k])});
     if(t.dev-s) h+=tile('data-pc="rest"',sg(t.dev-s),sgc(t.dev-s),'• Прочее');
@@ -1000,14 +1027,34 @@ table tr.dvr td{border-top:0;padding-top:0}
     prSheet('Аренда',h);
   }
 
-  var PMP=[['own','В парке ДТТ','a.own'],['line','ДТТ на линии (факт)','a.fd'],['rep','В ремонте','a.rep'],['res','Резерв (отказ заказчика)','a.res'],['buy','Куплено в 2026 (факт из плана)','a.buy_f+" из "+a.buy_p'],['wo','К списанию','a.wo'],['rent','Аренда: машин по списку','a.rent'],['hf','Аренда: выходов (факт)','a.fr'],['kip','КИП','pct(a.kip)'],['ktg','КТГ','pct(a.ktg)']];
+  var PMP=[['line','ДТТ на линии (факт)','a.fd'],['rep','В ремонте','a.rep'],['res','Резерв (отказ заказчика)','a.res'],['buy','Куплено в 2026 (факт из плана)','a.buy_f+" из "+a.buy_p'],['wo','К списанию','a.wo'],['kip','КИП','pct(a.kip)'],['ktg','КТГ','pct(a.ktg)']];
   var PMS=[['shtat','Штат','(a.s||{}).shtat||0'],['list','По списку','(a.s||{}).list||0'],['need','Нужно для плана','(a.s||{}).need||0'],['vahta','На вахте','(a.s||{}).vahta||0'],['vac','Отпуск','((a.s||{}).vac||0)+((a.s||{}).vacp||0)+((a.s||{}).vac0||0)'],['sick','Больничный','((a.s||{}).sick||0)+((a.s||{}).sick5||0)'],['vacancy','Вакансии','(a.s||{}).vacancy||0']];
   function pmv(m,a){return eval(m[2])}      // выражения заданы выше в коде, не пользовательские
   function prMetrics(L,title){
     var t=PRX.tot;
     return '<div class="ph">'+title+' <small>нажмите — по колоннам</small></div><div class="pgt">'+L.map(function(m){return tile('data-pm="'+m[0]+'"',pmv(m,t),'',m[1])}).join('')+'</div>';
   }
-  function prPark(){return prMetrics(PMP,'Парк')}
+  function prPark(){
+    var t=PRX.tot, d=t.own-t.own0;
+    var h='<div class="ph">Техника в парке <small>ДТТ, собственная (столбец «Бүгінге»)</small></div><div class="tot6 t2"><div><b>'+t.own+'</b><span>в парке сегодня</span></div><div><b>'+t.line+'</b><span>на линии</span></div><div><b>'+t.rep+'</b><span>в ремонте</span></div><div><b>'+t.res+'</b><span>резерв</span></div></div>';
+    h+='<div class="prs" style="padding:2px 4px 0">На 01.01.2026 было '+t.own0+' ед. · с начала года <b class="'+sgc(d)+'">'+sg(d)+'</b></div>';
+    h+='<div class="ph">По автоколоннам <small>нажмите - по префиксам, ремонт, резерв</small></div><div class="pka">'+PRX.aks.map(function(a){
+      return '<div class="pkc" data-pp="'+a.n+'"><div class="pkh"><b>АК '+a.n+'</b><span>'+esc(pakn(a))+'</span><i>›</i></div><div class="pkn"><div><b>'+a.own+'</b><small>в парке</small></div><div><b>'+a.line+'</b><small>на линии</small></div><div><b>'+a.rep+'</b><small>ремонт</small></div><div><b>'+a.res+'</b><small>резерв</small></div></div></div>'}).join('')+'</div>';
+    return h+prMetrics(PMP,'Другие показатели');
+  }
+  function prAkParkOpen(n){
+    var a=PRX.aks.filter(function(x){return x.n===n})[0]; if(!a) return;
+    var h='<div class="tot6"><div><b>'+a.own+'</b><span>в парке</span></div><div><b>'+a.line+'</b><span>на линии</span></div><div><b>'+a.rep+'</b><span>ремонт</span></div><div><b>'+a.res+'</b><span>резерв</span></div></div>';
+    var lp='', ts=a.types.map(function(x){if(x.p)lp=x.p;return {x:x,par:x.p?'':lp}}).filter(function(q){var x=q.x;return x.own||x.line||x.rep||x.res||x.wo});
+    h+='<div class="ph">В парке '+a.own+' — по префиксам <small>в порядке файла</small></div>';
+    ts.forEach(function(q){
+      var x=q.x, bits=['на линии '+x.line]; if(x.rep) bits.push('ремонт '+x.rep); if(x.res) bits.push('резерв '+x.res); if(x.wo) bits.push('к списанию '+x.wo);
+      h+='<div class="prr"><div class="prt"><span class="prp">'+esc(x.p||'↳')+'</span> '+esc(x.name)+(q.par?' <small>(к '+esc(q.par)+')</small>':'')+'</div><div class="prn"><span>'+bits.join(' · ')+'</span><b>'+x.own+'</b></div>'+
+        (x.p&&x.rep?prRepList(a.n,x.p):'')+(x.p&&x.wo?prRepList(a.n,x.p,1):'')+'</div>';
+    });
+    if(a.res) h+='<div class="prs">Резерв ('+a.res+') - машины, которые заказчик временно снял. В файле «Өндіріс ақпары» указан только тип, госномеров резерва там нет.</div>';
+    prSheet('АК '+a.n+' · '+esc(pakn(a)),h);
+  }
   function prStaff(){return prMetrics(PMS,'Люди')}
   function prMetricOpen(k){
     var m=PMP.concat(PMS).filter(function(x){return x[0]===k})[0]; if(!m) return;
@@ -1043,9 +1090,10 @@ table tr.dvr td{border-top:0;padding-top:0}
   }
   document.addEventListener('click',function(e){
     if(!DATA||top!=='prod'||!PRX) return;
-    var t=e.target.closest('[data-pk],[data-pt],[data-pm],[data-pg],[data-pc],[data-prent]'); if(!t) return;
+    var t=e.target.closest('[data-pk],[data-pp],[data-pt],[data-pm],[data-pg],[data-pc],[data-prent]'); if(!t) return;
     if(t.dataset.prent) prRentOpen();
     else if(t.dataset.pk) prAkOpen(+t.dataset.pk);
+    else if(t.dataset.pp) prAkParkOpen(+t.dataset.pp);
     else if(t.dataset.pt!==undefined) prTypeOpen(t.dataset.pt);
     else if(t.dataset.pm) prMetricOpen(t.dataset.pm);
     else if(t.dataset.pg) prCustOpen(t.dataset.pg);
@@ -1114,6 +1162,7 @@ table tr.dvr td{border-top:0;padding-top:0}
     return h;
   }
   function render(){
+    planApply();
     hidePop();
     header();
     var keepQ=document.activeElement&&(document.activeElement.id==='q'||document.activeElement.id==='rq'||document.activeElement.id==='dq'),kq=document.activeElement&&document.activeElement.id==='rq'?nq:(document.activeElement&&document.activeElement.id==='dq'?dq:q);
