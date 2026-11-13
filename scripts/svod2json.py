@@ -77,6 +77,7 @@ def convert(path):
             if row['p'] == '23': row['name'] = 'ТРАЛ с лебедкой'
             for dname, c in zip(deps, cols):
                 v = wd.cell(r, c).value
+                if isinstance(v, str) and '₅₅' in v: v = re.sub(r'\s*\+?\d*₅₅', '', v)      # автокран 50т (+N₅₅) на сайте считается отдельно из veh
                 if v in (None, ''): continue
                 cell = {}
                 if isinstance(v, str):
