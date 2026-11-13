@@ -163,27 +163,13 @@ for r_ in PREF:
         cl=L(c_)
         mk=lambda col:f"SUMIFS({RNG(col)},{RNG('D')},{cl}$3,{RNG('F')},${PCL}{r_}&\"\")"
         d=mk('I'); n=mk('J')
-        sh.cell(r_,c_,f'=IF({d}+{n}=0,"",IF({n}=0,{d},IF({d}=0,"0+"&{n}&"="&{n},{d}&"+"&{n}&"="&({d}+{n}))))')
+        base=f'IF({d}+{n}=0,"",IF({n}=0,{d},IF({d}=0,"0+"&{n}&"="&{n},{d}&"+"&{n}&"="&({d}+{n}))))'
+        if str(sh.cell(r_,PC).value)=='28':       # автокран 50т (код 30) - отдельной единицей в скобках: «1+1(55)», «1(55)»; в итоги строки не входит
+            k55=(f"COUNTIFS({RNG('D')},{cl}$3,{RNG('F')},\"30\",{RNG('I')},\">0\")+COUNTIFS({RNG('D')},{cl}$3,{RNG('F')},\"30\",{RNG('I')},\"<=0\",{RNG('J')},\">0\")")
+            sh.cell(r_,c_,f'=IF({k55}=0,{base},IF(({base})="",({k55})&"(55)",({base})&"+"&({k55})&"(55)"))')
+        else:
+            sh.cell(r_,c_,'='+base)
         sh.cell(r_,c_).number_format='General'
-# --- автокран 50т (код 30): в строке «Автокран» (28) отдельным цветом «+1₅₅» (или «1₅₅», если в цехе только он). В итоги строки не входит.
-from openpyxl.cell.rich_text import CellRichText, TextBlock
-from openpyxl.cell.text import InlineFont
-_cr=[r_ for r_ in PREF if str(sh.cell(r_,PC).value)=='28']
-if _cr:
-    r_=_cr[0]
-    for c_ in range(FIRSTD,LASTD+1):
-        dn=sh.cell(3,c_).value
-        k55=len({x['plate'] for x in ALL if x['code']=='30' and x['dept']==dn and (x['day'] or x['night'])})
-        if not k55: continue
-        d=sum(x['day'] for x in ALL if x['code']=='28' and x['dept']==dn); n=sum(x['night'] for x in ALL if x['code']=='28' and x['dept']==dn)
-        base='' if d+n==0 else (str(d) if n==0 else (f'0+{n}={n}' if d==0 else f'{d}+{n}={d+n}'))
-        f0=sh.cell(r_,c_).font; sz=float(f0.sz or 16)
-        IF=lambda **k: InlineFont(rFont=f0.name or 'Times New Roman',**k)
-        parts=[]
-        if base: parts.append(TextBlock(IF(sz=sz,b=f0.b,color=(f0.color.rgb if f0.color is not None and isinstance(f0.color.rgb,str) else None)),base))
-        parts.append(TextBlock(IF(sz=sz*1.3,b=True,color='FF8A1F5C'),('+' if base else '')+str(k55)))
-        parts.append(TextBlock(IF(sz=sz*0.75,b=True,color='FF8A1F5C'),'₅₅'))
-        sh.cell(r_,c_).value=CellRichText(*parts)
 sh.page_setup.orientation=tsrc.page_setup.orientation; sh.page_setup.paperSize=tsrc.page_setup.paperSize
 sh.sheet_properties.pageSetUpPr=copy(tsrc.sheet_properties.pageSetUpPr)
 sh.page_setup.fitToWidth=1; sh.page_setup.fitToHeight=1
