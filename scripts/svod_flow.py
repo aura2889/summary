@@ -96,7 +96,7 @@ def _sheet_role(rows):
     if r1 and r1[0].startswith('ДИСПЕТЧЕРА') and any('ЦПП-МПГУ' in c for c in r2): return 'K8'                                          # новый вид файла К-8 (с 16.10)
     if r1 and r1[0] == 'ЦДН-1' and any('ДБИПКРС(1)' in c for c in r1) and 'РСУ' in r1: return 'GAR2'      # объединённый файл Д7+К-8 (с 23.10)
     if any('ДБИПКРС' in c for c in r1): return 'D7'
-    if r2 and r2[0] == '№': return 'MS'
+    if r2 and r2[0] == '№' and any(c.startswith('ЦДН') for c in r2): return 'MS'      # файл Мобил: во 2-й строке отделы (ЦДН…); у файлов «Көліктер ақпары» (план/факт по автоколоннам) их нет - это не файл Мобил
     if r2 and r2[0] == 'СБ': return 'SB'
     if 'СМЦ' in r2: return 'SVOD'
     if any('ЦПП-МПГУ' in c for c in r1): return 'K8'
