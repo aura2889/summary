@@ -34,6 +34,7 @@ types.remove('23'); types.insert(types.index('50')+1,'23')
 types[14:]=sorted(types[14:],key=lambda c:float(c))   # строки 17 и ниже - по возрастанию номера позиции
 dvol=collections.Counter()
 for x in ALL: dvol[x['dept']]+=x['day']+x['night']
+LBL={'ОБиОТ':'ОБиОТ (ПЧ+БД+Чакур)','ПРЦЭО':'ПРЦЭО (+СМУ УТТ)','ОКС':'ОКС (+ДРиСУ)'}     # подписи цехов с объединёнными отделами
 depts=[d for d in PD['depts'] if d!='ОБиОТ']+[d for d,_ in dvol.most_common() if d not in PD['depts'] and d!='ОБиОТ']+['ОБиОТ']
 PRI={'34','47','49','28','22','27','31','35','50'}
 thin=Side(style='thin'); B=Border(left=thin,right=thin,top=thin,bottom=thin)
@@ -70,7 +71,7 @@ for r in (1,2):
 for i,d in enumerate(depts):
     c1=D0+4*i
     ws.cell(1,c1,'План'); ws.merge_cells(start_row=1,start_column=c1,end_row=1,end_column=c1+1)
-    ws.cell(1,c1+2,d); ws.merge_cells(start_row=1,start_column=c1+2,end_row=1,end_column=c1+3)
+    ws.cell(1,c1+2,LBL.get(d,d)); ws.merge_cells(start_row=1,start_column=c1+2,end_row=1,end_column=c1+3)
     for k,t in enumerate(('Д','Н','Д','Н')): ws.cell(2,c1+k,t)
     for c in (c1,c1+1): sty(ws.cell(1,c),GRN,True,True); sty(ws.cell(2,c),GRN,True,True)
     for c in (c1+2,c1+3): sty(ws.cell(1,c),YEL,True,True); sty(ws.cell(2,c),YEL,True,True)
@@ -91,8 +92,8 @@ for k,code in enumerate(types):
         c1=D0+4*i; dl=L(c1+2)
         pd=(PD['plan'].get(code) or {}).get(d) or [0,0]
         ws.cell(r,c1,pd[0]); ws.cell(r,c1+1,pd[1])
-        ws.cell(r,c1+2,f"=SUMIFS({RNG('I')},{RNG('D')},{dl}$1,{RNG('F')},$A{r})")
-        ws.cell(r,c1+3,f"=SUMIFS({RNG('J')},{RNG('D')},{dl}$1,{RNG('F')},$A{r})")
+        ws.cell(r,c1+2,f"=SUMIFS({RNG('I')},{RNG('D')},\"{d}\",{RNG('F')},$A{r})")
+        ws.cell(r,c1+3,f"=SUMIFS({RNG('J')},{RNG('D')},\"{d}\",{RNG('F')},$A{r})")
         for c in (c1,c1+1): sty(ws.cell(r,c),GRN,False)
         for c in (c1+2,c1+3): sty(ws.cell(r,c),YEL if pri else None,b28)
 tr=r0+len(types)
@@ -203,7 +204,7 @@ sh.cell(2,DV0,'Откл. по цехам (факт − план)'); sh.cell(2,DV
 sh.cell(2,DV0).alignment=Alignment(horizontal='left',vertical='center')
 for j,d in enumerate(DV):
     c_=DV0+j; cl=L(c_)
-    h=sh.cell(3,c_,d)
+    h=sh.cell(3,c_,LBL.get(d,d))
     h.font=Font(name='Times New Roman',size=11,bold=True); h.fill=copy(_hs.fill); h.alignment=Alignment(horizontal='center',vertical='center',shrink_to_fit=True)
     sh.column_dimensions[cl].width=9
     i=depts.index(d); c1=D0+4*i

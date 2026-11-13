@@ -43,7 +43,8 @@ def convert(path):
     disp = [{'name': disp_names[i], 'src': disp_src[i]} for i in order]
     # ---- типы и итоги
     ws = wb['Выход ТС']
-    depOrder = [str(ws.cell(1, c).value) for c in range(11, ws.max_column + 1, 4) if ws.cell(1, c).value]       # K, O, S… (перед каждым цехом 2 столбца плана)
+    _cl = lambda x: re.sub(r'\s*\(.*\)\s*$', '', str(x))      # подпись «ОБиОТ (ПЧ+БД+Чакур)» -> «ОБиОТ»
+    depOrder = [_cl(ws.cell(1, c).value) for c in range(11, ws.max_column + 1, 4) if ws.cell(1, c).value]       # K, O, S… (перед каждым цехом 2 столбца плана)
     types, totals = [], None
     for r in range(3, ws.max_row + 1):
         b = ws.cell(r, 2).value
@@ -67,7 +68,7 @@ def convert(path):
     c_end = next((c for c in range(c0, wd.max_column + 1) if str(wd.cell(2, c).value or '').startswith('Откл. по цехам')), wd.max_column + 1)   # с этого столбца - отклонения по цехам, это не режимная таблица
     for c in range(c0, c_end):
         v = wd.cell(3, c).value
-        if v: deps.append(str(v)); cols.append(c)
+        if v: deps.append(_cl(v)); cols.append(c)
     rows = []
     for r in range(4, wd.max_row + 1):
         name, plan = wd.cell(r, 9).value, wd.cell(r, 10).value

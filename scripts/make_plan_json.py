@@ -37,11 +37,38 @@ for pre, mk, shop, sm, col, gar, q in [[c.value for c in x] for x in lst.iter_ro
     r = idx.get(k)
     if not r: continue
     b = r['cols'].setdefault(str(col), [0, 0]); b[0 if sm == 'День' else 1] += q
+    dp_ = ALIAS.get(clean(shop), clean(shop)); i_ = 0 if sm == 'День' else 1
+    r.setdefault('sg', {}).setdefault(dp_, {}).setdefault(str(gar), [0, 0])[i_] += q      # цех -> гараж -> [день, ночь]
+    r.setdefault('sc', {}).setdefault(dp_, {}).setdefault(str(col), [0, 0])[i_] += q      # цех -> автоколонна -> [день, ночь]
 order = []
 for s in shops:
     k = s['dep'] or s['n']
     if k not in order: order.append(k)
-out = dict(year=2026, title='План по бюджету 2026 г. (ТС ПУ)', shops=[dict(n=k, dep=k) for k in order],
+# Мобил Сервис (третья сторона): зафиксированный план по цехам и типам
+mob = json.load(open(os.path.join(ROOT, 'data', 'plan_mobil.json'), encoding='utf-8'))['rows']
+known = {r['k'] for r in rows}
+for k in mob:
+    if k not in known:      # тип есть только у Мобила (например, автокран 100т)
+        nm = {'63': 'Автокран 100т', '40': 'Прицеп'}.get(k, 'Тип ' + k)
+        rows.append(dict(k=k, p=k, name=nm, d=0, n=0, shops={}, cols={}, _r=0))
+mobil = {k: dict(d=sum(v[0] for v in sh.values()), n=sum(v[1] for v in sh.values()), shops=sh) for k, sh in mob.items()}
+out = dict(year=2026, mobil=mobil, title='План по бюджету 2026 г. (ТС ПУ)', shops=[dict(n=k, dep=k) for k in order],
            rows=[{k: v for k, v in r.items() if k != '_r'} for r in rows])
 json.dump(out, open(os.path.join(ROOT, 'plan.json'), 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
 print(len(rows), sum(r['d'] + r['n'] for r in rows), [s['n'] for s in shops if not s['dep']])
+
+# план по цехам для свода Excel (scripts/svod/resources/plan_dept.json): КБМ (файл по колоннам) + Мобил Сервис
+pdp = os.path.join(ROOT, 'scripts', 'svod', 'resources', 'plan_dept.json')
+old = json.load(open(pdp, encoding='utf-8'))
+plan = {}; total = {k: 0 for k in old['total']}
+for r in rows:
+    k = r['k']; sh = {d: list(v) for d, v in r['shops'].items()}
+    for d, v in (mob.get(k) or {}).items():
+        x = sh.setdefault(d, [0, 0]); x[0] += v[0]; x[1] += v[1]
+    sh = {d: v for d, v in sh.items() if v[0] or v[1]}
+    if sh: plan[k] = sh
+    total[k] = sum(v[0] + v[1] for v in sh.values())
+old['plan'] = plan; old['total'] = total
+old['depts'] = [d for d in old['depts'] if d not in ('БД', 'СМУ УТТ', 'Нейрон')]
+json.dump(old, open(pdp, 'w', encoding='utf-8'), ensure_ascii=False)
+print('plan_dept', sum(total.values()))
