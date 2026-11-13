@@ -301,6 +301,8 @@ table tr.dvr td{border-top:0;padding-top:0}
   var ORDER=['35','35.1','35.2','31','28','30','63','29','22','23','22.1','34','47','46','49','62','27','50','53','13','13.1','20'];
   var LAT={A:'А',B:'В',C:'С',E:'Е',H:'Н',K:'К',M:'М',O:'О',P:'Р',T:'Т',X:'Х',Y:'У'};
   var $=function(s){return document.querySelector(s)};
+  var DLB={'ОБиОТ':'ОБиОТ (ПЧ+БД)','ПРЦЭО':'ПРЦЭО (+СМУ УТТ)'};
+  function ed(d){return esc(DLB[d]||d)}
   function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
   function store(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}}
   function fmtDate(iso){var p=iso.split('-');return p[2]+'.'+p[1]+'.'+p[0]}
@@ -481,7 +483,7 @@ table tr.dvr td{border-top:0;padding-top:0}
       h+='<div class="sec">Техника'+(f.length>60?' (первые 60 из '+f.length+')':'')+'</div><div class="card">';
       f.slice(0,60).forEach(function(v){
         var sh=v.d&&v.n?'день+ночь':(v.d?'день':'ночь');
-        h+='<div class="hit" data-i="'+v._i+'"><div><b>'+esc(v.num)+'</b><br><small>'+esc(v.t)+'</small></div><div style="text-align:right"><b>'+esc(v.dep)+'</b><br><small>'+(byDisp&&DATA.disp&&DATA.disp[v.g]?esc(DATA.disp[v.g].name)+' · ':'')+sh+'</small></div></div>';
+        h+='<div class="hit" data-i="'+v._i+'"><div><b>'+esc(v.num)+'</b><br><small>'+esc(v.t)+'</small></div><div style="text-align:right"><b>'+ed(v.dep)+'</b><br><small>'+(byDisp&&DATA.disp&&DATA.disp[v.g]?esc(DATA.disp[v.g].name)+' · ':'')+sh+'</small></div></div>';
       });
       h+='</div>';
     }
@@ -489,7 +491,7 @@ table tr.dvr td{border-top:0;padding-top:0}
       h+='<div class="sec">Водители'+(drs.length>40?' (первые 40 из '+drs.length+')':'')+'</div><div class="card">';
       drs.slice(0,40).forEach(function(d){
         h+='<div class="drc"><b>'+esc(d.n)+'</b>'+(d.t||d.t2?'<div class="ph">'+(d.t?tel(d.t):'')+(d.t2?tel(d.t2):'')+(d.s?' <small style="opacity:.6">(общий номер)</small>':'')+'</div>':'<div class="ph"><small style="opacity:.6">номер не найден</small></div>')+
-          '<div class="vs">'+d.v.map(function(v){return numChip(v)+'<small>'+esc(v.t)+' · '+esc(v.dep)+'</small>'}).join(' ')+'</div></div>';
+          '<div class="vs">'+d.v.map(function(v){return numChip(v)+'<small>'+esc(v.t)+' · '+ed(v.dep)+'</small>'}).join(' ')+'</div></div>';
       });
       h+='</div>';
     }
@@ -571,13 +573,13 @@ table tr.dvr td{border-top:0;padding-top:0}
         var v=f==null?null:f-(a[0]+a[1]);
         h+='<div class="dv-r"><div class="n">'+esc(s.n)+'<small>план '+(a[0]+a[1])+' (день '+a[0]+' / ночь '+a[1]+')'+(f==null?'':' · факт '+f)+'</small></div><div class="d '+(v==null?'dv-z':sgc(v))+'">'+(v==null?'':sg(v))+'</div></div>';
       });
-      Object.keys(F).filter(function(d){return !used[d]}).forEach(function(d){h+='<div class="dv-r"><div class="n">'+esc(d)+'<small>нет в плане · факт '+F[d]+'</small></div><div class="d dv-pos">'+sg(F[d])+'</div></div>'});
+      Object.keys(F).filter(function(d){return !used[d]}).forEach(function(d){h+='<div class="dv-r"><div class="n">'+ed(d)+'<small>нет в плане · факт '+F[d]+'</small></div><div class="d dv-pos">'+sg(F[d])+'</div></div>'});
     }else if(kb.length) h+='<div class="prs" style="padding:4px 0">В бюджете КБМ плана нет, факт '+kb.length+'.</div>';
     else h+='<div class="prs" style="padding:4px 0">В бюджете КБМ плана и факта нет.</div>';
     if(w.m||mb.length){
       h+='<div class="ph">Мобил Сервис <small>план '+w.m+' · факт '+mb.length+'</small></div>';
       var mo=t&&t.mob?t.mob:{}, mk=Object.keys(mo);
-      mk.forEach(function(d){var a=mo[d];h+='<div class="dv-r"><div class="n">'+esc(d)+'<small>план '+(a[0]+a[1])+' (день '+a[0]+' / ночь '+a[1]+')</small></div><div class="d dv-z"></div></div>'});
+      mk.forEach(function(d){var a=mo[d];h+='<div class="dv-r"><div class="n">'+ed(d)+'<small>план '+(a[0]+a[1])+' (день '+a[0]+' / ночь '+a[1]+')</small></div><div class="d dv-z"></div></div>'});
       h+='<div class="prs" style="padding:0 0 4px">План Мобил - расчёт: общий план сводки минус бюджет КБМ'+(t&&t.mobLeft?'; '+t.mobLeft+' ед. по цехам не распределены':'')+'. Точный план Мобила по цехам пока не загружен.</div>';
     }
     if(r&&Object.keys(r.cols).length){
@@ -609,7 +611,7 @@ table tr.dvr td{border-top:0;padding-top:0}
     var a=X.T[cpf]||{},ord=DATA.depOrder||[],ds=Object.keys(a).filter(function(d){return dpP(a[d])||dpF(a[d])}).sort(function(x,y){var ix=ord.indexOf(x),iy=ord.indexOf(y);return (ix<0?999:ix)-(iy<0?999:iy)});
     var pl=0,fa=0;ds.forEach(function(d){pl+=dpP(a[d]);fa+=dpF(a[d])});
     h+='<div class="card"><h3>'+esc(cpf+' · '+dpTName(cpf))+'</h3><div class="stats"><div class="stat plan"><b>'+pl+'</b><span>план</span></div><div class="stat fact"><b>'+fa+'</b><span>факт</span></div><div class="stat"><b class="'+sgc(fa-pl)+'">'+sg(fa-pl)+'</b><span>откл.</span></div></div>';
-    h+=ds.map(function(d){var b=a[d],v=dpF(b)-dpP(b);return '<div class="dv-r"><div class="n">'+esc(d)+'<small>план: день '+b.pd+' · ночь '+b.pn+' — факт: день '+b.fd+' · ночь '+b.fn+'</small></div><div class="d">'+dpP(b)+' → '+dpF(b)+' <span class="'+sgc(v)+'">'+(v?sg(v):'')+'</span></div></div>'}).join('')+'</div>';
+    h+=ds.map(function(d){var b=a[d],v=dpF(b)-dpP(b);return '<div class="dv-r"><div class="n">'+ed(d)+'<small>план: день '+b.pd+' · ночь '+b.pn+' — факт: день '+b.fd+' · ночь '+b.fn+'</small></div><div class="d">'+dpP(b)+' → '+dpF(b)+' <span class="'+sgc(v)+'">'+(v?sg(v):'')+'</span></div></div>'}).join('')+'</div>';
     return h;
   }
 
@@ -621,7 +623,7 @@ table tr.dvr td{border-top:0;padding-top:0}
   function isCrane(r){return (r.p||PBYN[r.name])==='28'}
   function citsPC(){
     var D=DATA.daily,deps=D.deps;
-    var h='<div class="xlw"><table class="xl"><thead><tr><th>№</th><th style="text-align:left">Техника</th><th class="pl">План</th><th class="fa">Факт</th><th>Откл</th>'+deps.map(function(d){return '<th>'+esc(d)+'</th>'}).join('')+'</tr></thead><tbody>';
+    var h='<div class="xlw"><table class="xl"><thead><tr><th>№</th><th style="text-align:left">Техника</th><th class="pl">План</th><th class="fa">Факт</th><th>Откл</th>'+deps.map(function(d){return '<th>'+ed(d)+'</th>'}).join('')+'</tr></thead><tbody>';
     D.rows.forEach(function(r,ri){
       var u=deps.map(function(d){var c=r.cells[d];return '<td class="u">'+(c&&c.u?'утт-'+c.u:'')+'</td>'}).join('');
       var X5=isCrane(r)?x55():{};
@@ -653,7 +655,7 @@ table tr.dvr td{border-top:0;padding-top:0}
           h+='<div class="cells">'+keys.map(function(d){
             var c=r.cells[d]||null;
             var bx=(dpx().T[r.p]||{})[d],dvb=bx&&dpx().has?dpF(bx)-dpP(bx):0;
-            return '<div class="cell tapc" data-cc="'+ri+'|'+esc(d)+'" role="button" tabindex="0"><small>'+esc(d)+(c&&c.u?'<u>утт '+c.u+'</u>':'')+'</small><b>'+(c?(c.e?c.e+'='+c.v:c.v):'')+(X5[d]?k55(X5[d],!c):'')+(dvb?' <span class="cdb '+sgc(dvb)+'">'+sg(dvb)+'</span>':'')+'</b></div>';
+            return '<div class="cell tapc" data-cc="'+ri+'|'+esc(d)+'" role="button" tabindex="0"><small>'+ed(d)+(c&&c.u?'<u>утт '+c.u+'</u>':'')+'</small><b>'+(c?(c.e?c.e+'='+c.v:c.v):'')+(X5[d]?k55(X5[d],!c):'')+(dvb?' <span class="cdb '+sgc(dvb)+'">'+sg(dvb)+'</span>':'')+'</b></div>';
           }).join('')+'</div>';
         }else h+='<div class="empty" style="padding:6px">Не распределено по отделам</div>';
         h+='</div>';
@@ -694,7 +696,7 @@ table tr.dvr td{border-top:0;padding-top:0}
       var a=byDep[d], g={}, keys=[];
       a.forEach(function(v){var k=v.p;if(!g[k]){g[k]={t:v.t,a:[]};keys.push(k)}g[k].a.push(v)});
       keys.sort(function(x,y){var rx=ORDER.indexOf(x),ry=ORDER.indexOf(y);return (rx>-1?rx:1000-g[x].a.length)-(ry>-1?ry:1000-g[y].a.length)});
-      h+='<div class="card"><h3>'+esc(d)+'<em>— '+a.length+' ед.</em></h3>';
+      h+='<div class="card"><h3>'+ed(d)+'<em>— '+a.length+' ед.</em></h3>';
       keys.forEach(function(k){
         var x=g[k]; x.a.sort(function(p,q){return p.num.localeCompare(q.num,'ru',{numeric:true})});
         h+='<div class="tl">'+esc(x.t)+' — '+x.a.length+'</div><div class="nums">'+x.a.map(numChip).join('')+'</div>';
@@ -1139,7 +1141,7 @@ table tr.dvr td{border-top:0;padding-top:0}
   function showPop(el){
     var v=DATA.veh[+el.dataset.i], p=$('#pop'), h='';
     var sh=v.d&&v.n?'день + ночь':(v.d?'день':'ночь');
-    h+='<div class="pn">'+esc(v.num)+'</div><div class="pm">'+esc(v.t)+' · '+esc(v.dep)+' · '+sh+'</div>';
+    h+='<div class="pn">'+esc(v.num)+'</div><div class="pm">'+esc(v.t)+' · '+ed(v.dep)+' · '+sh+'</div>';
     var list=DRV&&DRV.map?DRV.map[v.num]:undefined;
     if(!DRV) h+='<div class="no">Данные по водителям не загружены</div>';
     else if(list===undefined) h+='<div class="no">Водитель не найден<br><small>номера нет в экспорте путевых листов</small></div>';
@@ -1264,13 +1266,13 @@ table tr.dvr td{border-top:0;padding-top:0}
     var tt=(DATA.types||[]).filter(function(x){return x.p===p})[0],sp=0;Object.keys(a).forEach(function(d){sp+=dpP(a[d])});
     var note=tt&&sp!==tt.plan?'<div class="prs" style="padding:8px 0">Сумма плана по цехам ('+sp+') не равна общему плану типа ('+tt.plan+') - расхождение в самом плане, по цехам его не разложить.</div>':'';
     if(!ks.length) return (note||'<div class="empty" style="padding:8px">По цехам отклонений нет</div>');
-    return note+ks.map(function(d){var v=dpF(a[d])-dpP(a[d]);return '<div class="dv-r"><div class="n">'+esc(d)+'<small>план '+dpP(a[d])+' · факт '+dpF(a[d])+(a[d].pd+a[d].pn?' (день '+a[d].pd+' / ночь '+a[d].pn+')':'')+'</small></div><div class="d '+sgc(v)+'">'+sg(v)+'</div></div>'}).join('');
+    return note+ks.map(function(d){var v=dpF(a[d])-dpP(a[d]);return '<div class="dv-r"><div class="n">'+ed(d)+'<small>план '+dpP(a[d])+' · факт '+dpF(a[d])+(a[d].pd+a[d].pn?' (день '+a[d].pd+' / ночь '+a[d].pn+')':'')+'</small></div><div class="d '+sgc(v)+'">'+sg(v)+'</div></div>'}).join('');
   }
   function dpChips(p){
     var X=dpx(); if(!X.has) return ''; var a=X.T[p]||{};
     var ks=Object.keys(a).filter(function(d){return dpF(a[d])-dpP(a[d])}).sort(function(x,y){return (dpF(a[x])-dpP(a[x]))-(dpF(a[y])-dpP(a[y]))});
     if(!ks.length) return '<div class="dpc"><small>Откл. по цехам:</small> <span class="dpz">нет, все цехи по плану</span></div>';
-    return '<div class="dpc"><small>Откл. по цехам:</small>'+ks.map(function(d){var v=dpF(a[d])-dpP(a[d]);return '<span class="pcc">'+esc(d)+' <small>'+dpF(a[d])+' из '+dpP(a[d])+'</small> <b class="'+sgc(v)+'">'+sg(v)+'</b></span>'}).join('')+'</div>';
+    return '<div class="dpc"><small>Откл. по цехам:</small>'+ks.map(function(d){var v=dpF(a[d])-dpP(a[d]);return '<span class="pcc">'+ed(d)+' <small>'+dpF(a[d])+' из '+dpP(a[d])+'</small> <b class="'+sgc(v)+'">'+sg(v)+'</b></span>'}).join('')+'</div>';
   }
   function pkey(s){return String(s).toUpperCase().replace(/\s+/g,'').replace(/(Д\/Н|Д|Н)$/,'')}
   function devShell(){
@@ -1309,7 +1311,7 @@ table tr.dvr td{border-top:0;padding-top:0}
       DATA.trl.forEach(function(x){var m=String(x.num).match(/(\d{2}(?:[.,]\d)?)\s*[-\s]/),p=m?m[1].replace(',','.'):'?';(g[p]=g[p]||[]).push(x)});
       var keys=Object.keys(g).sort(function(a,b){return prRank(a,nm[a]||'')-prRank(b,nm[b]||'')||parseFloat(a)-parseFloat(b)});
       s+='<div class="dv-t">В обучении ('+DATA.trl.length+')</div>'+dvGrid('tr',keys.map(function(p){
-        return {t:esc(p+(nm[p]?' · '+nm[p]:'')),v:g[p].length+' ед.',c:'dv-y',det:g[p].map(function(x){return '<div class="dv-r"><div class="n">'+esc(x.num)+'<small>'+esc(x.dep)+' · '+esc(x.disp)+'</small></div></div>'}).join('')};
+        return {t:esc(p+(nm[p]?' · '+nm[p]:'')),v:g[p].length+' ед.',c:'dv-y',det:g[p].map(function(x){return '<div class="dv-r"><div class="n">'+esc(x.num)+'<small>'+ed(x.dep)+' · '+esc(x.disp)+'</small></div></div>'}).join('')};
       }),true);
     }
     s+='<div class="dv-t">Не хватает до плана ('+sg(sl)+')</div>'+(lo.length?dvGrid('lo',lo.map(tile),true):'<div class="empty">Нет</div>');
@@ -1320,7 +1322,7 @@ table tr.dvr td{border-top:0;padding-top:0}
       Object.keys(X.D).forEach(function(d){var pl=0,fa=0,rows=[];Object.keys(X.D[d]).forEach(function(p){var b=X.D[d][p],v=dpF(b)-dpP(b);pl+=dpP(b);fa+=dpF(b);if(v)rows.push({p:p,b:b,v:v})});
         var dv=fa-pl;if(!dv&&!rows.length)return;
         rows.sort(function(x,y){return prRank(x.p,dpTName(x.p))-prRank(y.p,dpTName(y.p))||x.v-y.v});
-        dl.push({t:esc(d),v:sg(dv),c:sgc(dv),dv:dv,s:'план '+pl+' · факт '+fa,det:rows.map(function(r){return '<div class="dv-r"><div class="n">'+esc(r.p+' · '+dpTName(r.p))+'<small>план '+dpP(r.b)+' · факт '+dpF(r.b)+'</small></div><div class="d '+sgc(r.v)+'">'+sg(r.v)+'</div></div>'}).join('')})});
+        dl.push({t:ed(d),v:sg(dv),c:sgc(dv),dv:dv,s:'план '+pl+' · факт '+fa,det:rows.map(function(r){return '<div class="dv-r"><div class="n">'+esc(r.p+' · '+dpTName(r.p))+'<small>план '+dpP(r.b)+' · факт '+dpF(r.b)+'</small></div><div class="d '+sgc(r.v)+'">'+sg(r.v)+'</div></div>'}).join('')})});
       dl.sort(function(x,y){return x.dv-y.dv});
       var dlo=dl.filter(function(x){return x.dv<0}),dhi=dl.filter(function(x){return x.dv>0}).reverse();
       if(dlo.length) s+='<div class="dv-t">По цехам: не хватает ('+sg(dlo.reduce(function(a,x){return a+x.dv},0))+')</div>'+dvGrid('dlo',dlo,true);
@@ -1388,7 +1390,7 @@ table tr.dvr td{border-top:0;padding-top:0}
     var i=key.indexOf('|'), r=DATA.daily.rows[+key.slice(0,i)], d=key.slice(i+1); if(!r) return;
     var pp=r.p||PBYN[r.name], vs=DATA.veh.filter(function(v){return v.dep===d&&(v.p===pp||(pp==='28'&&v.p==='30'&&(v.d||v.n)))});
     var c=r.cells[d]||{}, el=devShell(), h='';
-    h+='<div class="sh"><div class="shh"><b>'+esc(r.name)+' · '+esc(d)+'</b><button class="shx" data-devx="1" aria-label="Закрыть">×</button></div>'+
+    h+='<div class="sh"><div class="shh"><b>'+esc(r.name)+' · '+ed(d)+'</b><button class="shx" data-devx="1" aria-label="Закрыть">×</button></div>'+
        '<div class="shs"><small style="color:var(--muted)">'+vs.length+' ед.'+(c.e?' ('+esc(c.e)+')':'')+'</small></div><div class="shb">';
     if(!vs.length) h+='<div class="empty">Нет данных по машинам</div>';
     vs.forEach(function(v){
