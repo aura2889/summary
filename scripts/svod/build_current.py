@@ -137,8 +137,9 @@ def _add_tral_winch(ws, after=13, n=2, last_move=66):
                 b.font=copy(a.font); b.fill=copy(a.fill); b.border=copy(a.border); b.alignment=copy(a.alignment); b.number_format=a.number_format
     ws.cell(after+2,8).value='23'; ws.cell(after+2,9).value='ТРАЛ с леб'
 if not any(str(c.value)=='23' for c in tsrc['H']): _add_tral_winch(tsrc)
-def _ins_oqu(ws, last=26):
+def _ins_oqu(ws, last=None, ytop=3, ybot=26):
     """в основную таблицу (строки 1..last) вставляется столбец «Оқу» (в обучении) после «Откл»: всё правее сдвигается на 1 столбец"""
+    last=last or ws.max_row
     col=[c.column for c in ws[3] if c.value=='Откл'][0]+1
     mg=[(m.min_row,m.min_col,m.max_row,m.max_col) for m in ws.merged_cells.ranges if m.min_row<=last]
     for a in mg: ws.unmerge_cells(start_row=a[0],start_column=a[1],end_row=a[2],end_column=a[3])
@@ -148,11 +149,11 @@ def _ins_oqu(ws, last=26):
         src=ws.cell(r,col-1); dst=ws.cell(r,col)
         if src.has_style:
             dst.font=copy(src.font); dst.border=copy(src.border); dst.alignment=copy(src.alignment); dst.number_format='General'
-        dst.fill=PatternFill('solid',fgColor='FFFFFF00') if r>=3 else copy(src.fill)    # весь столбец от 3-й строки жёлтый
+        dst.fill=PatternFill('solid',fgColor='FFFFFF00') if ytop<=r<=ybot else copy(src.fill)    # жёлтый - строки 3..26; ниже стиль как у соседнего столбца
     ws.cell(3,col).value='Оқу'
     ORG=PatternFill('solid',fgColor='FFFCD5B5')           # оранжевый, акцент 6, светлее 60% - «День»/«Ночь», чтобы не сливались с жёлтым «Оқу»
     for c in (col+1,col+2):
-        for r in range(3,last+1):
+        for r in range(3,ybot+1):
             f=ws.cell(r,c).fill
             if f.fill_type=='solid' and str(f.fgColor.rgb).upper().endswith('FFFF00'): ws.cell(r,c).fill=ORG
 _ins_oqu(tsrc)
@@ -229,7 +230,7 @@ _wt.column_dimensions['A'].width=14; _wt.column_dimensions['B'].width=20; _wt.co
 for r_ in PREF:
     if sh.cell(r_,PC).value is None: continue
     cell=sh.cell(r_,OQC,f"=IF(COUNTIF('В обучении'!$C:$C,${PCL}{r_}&\"\")=0,\"\",COUNTIF('В обучении'!$C:$C,${PCL}{r_}&\"\"))")
-    cell.font=Font(name='Times New Roman',size=14,bold=True); cell.alignment=Alignment(horizontal='center',vertical='center')
+    cell.font=copy(sh.cell(r_,colI['День']).font); cell.alignment=Alignment(horizontal='center',vertical='center')
 sh.print_area=f"A1:{L(LASTD)}{sh.max_row}"       # печать как раньше, без новых столбцов
 
 # --- перечень госномеров по технике: слева пары (B,C) и (E,F), справа с 47-й строки пары через столбец
