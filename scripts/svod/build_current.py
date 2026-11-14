@@ -137,6 +137,25 @@ def _add_tral_winch(ws, after=13, n=2, last_move=66):
                 b.font=copy(a.font); b.fill=copy(a.fill); b.border=copy(a.border); b.alignment=copy(a.alignment); b.number_format=a.number_format
     ws.cell(after+2,8).value='23'; ws.cell(after+2,9).value='ТРАЛ с леб'
 if not any(str(c.value)=='23' for c in tsrc['H']): _add_tral_winch(tsrc)
+def _ins_oqu(ws, last=26):
+    """в основную таблицу (строки 1..last) вставляется столбец «Оқу» (в обучении) после «Откл»: всё правее сдвигается на 1 столбец"""
+    col=[c.column for c in ws[3] if c.value=='Откл'][0]+1
+    mg=[(m.min_row,m.min_col,m.max_row,m.max_col) for m in ws.merged_cells.ranges if m.min_row<=last]
+    for a in mg: ws.unmerge_cells(start_row=a[0],start_column=a[1],end_row=a[2],end_column=a[3])
+    ws.move_range(f"{L(col)}1:{L(ws.max_column)}{last}",cols=1)
+    for a in mg: ws.merge_cells(start_row=a[0],start_column=a[1]+(1 if a[1]>=col else 0),end_row=a[2],end_column=a[3]+(1 if a[3]>=col else 0))
+    for r in range(1,last+1):
+        src=ws.cell(r,col-1); dst=ws.cell(r,col)
+        if src.has_style:
+            dst.font=copy(src.font); dst.border=copy(src.border); dst.alignment=copy(src.alignment); dst.number_format='General'
+        dst.fill=PatternFill('solid',fgColor='FFFFFF00') if r>=3 else copy(src.fill)    # весь столбец от 3-й строки жёлтый
+    ws.cell(3,col).value='Оқу'
+    ORG=PatternFill('solid',fgColor='FFFCD5B5')           # оранжевый, акцент 6, светлее 60% - «День»/«Ночь», чтобы не сливались с жёлтым «Оқу»
+    for c in (col+1,col+2):
+        for r in range(3,last+1):
+            f=ws.cell(r,c).fill
+            if f.fill_type=='solid' and str(f.fgColor.rgb).upper().endswith('FFFF00'): ws.cell(r,c).fill=ORG
+_ins_oqu(tsrc)
 sh=wb['Ежедневная сводка']
 for row in tsrc.iter_rows():
     for c in row:
@@ -146,6 +165,8 @@ for row in tsrc.iter_rows():
 for m in tsrc.merged_cells.ranges: sh.merge_cells(str(m))
 for k,v in tsrc.column_dimensions.items():
     sh.column_dimensions[k].width=v.width; sh.column_dimensions[k].min=v.min; sh.column_dimensions[k].max=v.max
+_o=sh.column_dimensions['O']; _o.min=16; _o.max=31       # цехи сдвинуты на 1 столбец: P..AE
+sh.column_dimensions['M'].width=6.5
 for k,v in tsrc.row_dimensions.items():
     if v.height: sh.row_dimensions[k].height=v.height
 sh.sheet_view.showGridLines=tsrc.sheet_view.showGridLines
@@ -193,14 +214,9 @@ for r_ in PREF:
         sh.cell(r_,colI[nm],f'=IFERROR({f},"")' if nm in ('План','Факт','Откл') else f'=IFERROR(IF({f}=0,"",{f}),"")')
         sh.cell(r_,colI[nm]).number_format='General'
 
-# --- «В обучении»: столбец AE справа от таблицы (число машин этого типа в обучении; нет - пусто). Список машин - на листе «В обучении»
+# --- «Оқу» (в обучении): столбец сразу после «Откл» - число машин этого типа в обучении, нет - пусто. Список машин - на листе «В обучении»
 import re as _re
-_codes=[str(sh.cell(r_,PC).value) for r_ in PREF if sh.cell(r_,PC).value is not None]
-DV0=LASTD+1
-for c_ in range(DV0,sh.max_column+1):                 # старый блок «Откл. по цехам» убран полностью
-    for r_ in range(1,sh.max_row+1):
-        sh.cell(r_,c_).value=None
-    sh.column_dimensions[L(c_)].hidden=False
+OQC=colI['Откл']+1
 _wt=wb.create_sheet('В обучении')
 _wt.append(['Отдел','Номер','Префикс','Диспетчер'])
 for _c in _wt[1]: _c.font=Font(bold=True)
@@ -210,15 +226,10 @@ for e in EXC:
     _p=_m.group(1).replace(',','.') if _m else '?'
     _wt.append([e[3],_pl,'28' if _p=='30' else _p,e[0]])
 _wt.column_dimensions['A'].width=14; _wt.column_dimensions['B'].width=20; _wt.column_dimensions['C'].width=9; _wt.column_dimensions['D'].width=12
-sh.cell(2,DV0,'В обучении'); sh.cell(2,DV0).font=Font(name='Times New Roman',size=12,bold=True)
-sh.cell(2,DV0).alignment=Alignment(horizontal='center',vertical='center')
-_h=sh.cell(3,DV0,'В обуч.'); _hs=sh.cell(3,LASTD)
-_h.font=Font(name='Times New Roman',size=11,bold=True); _h.fill=copy(_hs.fill); _h.alignment=Alignment(horizontal='center',vertical='center',shrink_to_fit=True)
-sh.column_dimensions[L(DV0)].width=10
 for r_ in PREF:
     if sh.cell(r_,PC).value is None: continue
-    cell=sh.cell(r_,DV0,f"=IF(COUNTIF('В обучении'!$C:$C,${PCL}{r_}&\"\")=0,\"\",COUNTIF('В обучении'!$C:$C,${PCL}{r_}&\"\"))")
-    cell.font=Font(name='Times New Roman',size=14,bold=True,color='B7791F'); cell.alignment=Alignment(horizontal='center',vertical='center')
+    cell=sh.cell(r_,OQC,f"=IF(COUNTIF('В обучении'!$C:$C,${PCL}{r_}&\"\")=0,\"\",COUNTIF('В обучении'!$C:$C,${PCL}{r_}&\"\"))")
+    cell.font=Font(name='Times New Roman',size=14,bold=True); cell.alignment=Alignment(horizontal='center',vertical='center')
 sh.print_area=f"A1:{L(LASTD)}{sh.max_row}"       # печать как раньше, без новых столбцов
 
 # --- перечень госномеров по технике: слева пары (B,C) и (E,F), справа с 47-й строки пары через столбец
@@ -285,5 +296,7 @@ for _col,_w in (('B',18),('C',12),('D',4),('E',18),('F',12),('G',4)):
     sh.column_dimensions[_col]=ColumnDimension(sh,index=_col,width=_w,customWidth=True)
 print('LIST',len(items),'placed',placed)
 LISTINFO=(len(items),placed)
+wb.active=wb.sheetnames.index('Ежедневная сводка')        # при открытии файла сразу «Ежедневная сводка»
+for _w in wb.worksheets: _w.sheet_view.tabSelected=(_w.title=='Ежедневная сводка')
 wb.save(f'out/Свод_Диспетчер_{DATE_STR}.xlsx')
 print(len(types),len(depts),tr)

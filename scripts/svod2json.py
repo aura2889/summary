@@ -63,7 +63,9 @@ def convert(path):
         types.append(t)
     # ---- режимный лист
     wd = wb['Ежедневная сводка']
-    c0 = 15                                   # O
+    _h = {str(wd.cell(3, c).value or '').strip(): c for c in range(8, 22)}
+    c_day, c_night = _h.get('День', 13), _h.get('Ночь', 14)      # столбцы зависят от того, есть ли «Оқу»
+    c0 = c_night + 1                          # первый цех
     deps, cols = [], []
     c_end = next((c for c in range(c0, wd.max_column + 1) if str(wd.cell(2, c).value or '').startswith(('Откл. по цехам', 'В обучении'))), wd.max_column + 1)   # с этого столбца - отклонения по цехам, это не режимная таблица
     for c in range(c0, c_end):
@@ -74,7 +76,7 @@ def convert(path):
         name, plan = wd.cell(r, 9).value, wd.cell(r, 10).value
         if isinstance(name, str) and isinstance(plan, (int, float)):
             row = {'p': str(wd.cell(r, 8).value) if wd.cell(r, 8).value is not None else '', 'name': name, 'plan': num(plan), 'fact': num(wd.cell(r, 11).value), 'diff': num(wd.cell(r, 12).value),
-                   'day': num(wd.cell(r, 13).value), 'night': num(wd.cell(r, 14).value), 'cells': {}}
+                   'day': num(wd.cell(r, c_day).value), 'night': num(wd.cell(r, c_night).value), 'cells': {}}
             if row['p'] == '23': row['name'] = 'ТРАЛ с лебедкой'
             for dname, c in zip(deps, cols):
                 v = wd.cell(r, c).value
