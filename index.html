@@ -164,7 +164,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
 .cell small{color:var(--blue-ink);font-size:11.5px;font-weight:700;display:flex;justify-content:space-between;align-items:baseline;gap:4px;flex-wrap:wrap}
 .cell small u{text-decoration:none;font-size:10.5px;font-weight:600;background:var(--card);color:var(--brand2);border-radius:5px;padding:0 4px}
 .cell b{font-size:16px;line-height:1.2;font-variant-numeric:tabular-nums;white-space:nowrap}
-.cc .stats{grid-template-columns:repeat(6,1fr)}.stat b.yl{color:#b7791f}.cc{padding:9px 11px;margin-bottom:8px}.cc h3{margin:0 0 6px;font-size:14px}.cc .stats{gap:4px;margin-bottom:6px}.cc .stat{padding:3px 2px}.cc .stat b{font-size:15px}.cc .stat span{font-size:10px}
+.cc .stats{grid-template-columns:repeat(6,1fr)}.xl th.oqu,.xl td.oqu{width:34px;min-width:0;max-width:40px;padding:2px;text-align:center}.xl td.oqu{background:#fde68a;font-weight:700;color:#7c5a0a}.xl th.oqu{background:#f5c518;color:#5b4208}.stat b.yl{color:#b7791f}.cc{padding:9px 11px;margin-bottom:8px}.cc h3{margin:0 0 6px;font-size:14px}.cc .stats{gap:4px;margin-bottom:6px}.cc .stat{padding:3px 2px}.cc .stat b{font-size:15px}.cc .stat span{font-size:10px}
 .cell i{font-style:normal;font-size:12px;color:var(--muted)}
 .cell i u{text-decoration:none;background:var(--card);border-radius:5px;padding:0 5px;margin-left:4px;color:var(--brand2);font-weight:600}
 .lrow{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:7px 0;border-bottom:1px solid var(--line)}
@@ -687,9 +687,9 @@ table tr.dvr td{border-top:0;padding-top:0}
   }
   function citsPC(){
     var D=DATA.daily,deps=D.deps;
-    var h='<div class="xlw"><table class="xl"><thead><tr><th>№</th><th style="text-align:left">Техника</th><th class="pl">План</th><th class="fa">Факт</th><th>Откл</th><th>В обуч.</th>'+deps.map(function(d){return '<th>'+esc(d)+'</th>'}).join('')+'</tr></thead><tbody>';
+    var h='<div class="xlw"><table class="xl"><thead><tr><th>№</th><th style="text-align:left">Техника</th><th class="pl">План</th><th class="fa">Факт</th><th>Откл</th><th class="oqu">Оқу</th>'+deps.map(function(d){return '<th>'+esc(d)+'</th>'}).join('')+'</tr></thead><tbody>';
     D.rows.forEach(function(r,ri){
-      var tn=trRow(r).length, tc=tn?'<td class="tr sep tapc" rowspan="2" data-ctr="'+ri+'" role="button" tabindex="0">'+tn+'</td>':'<td class="tr sep" rowspan="2"></td>';
+      var tn=trRow(r).length, tc=tn?'<td class="tr oqu sep tapc" rowspan="2" data-ctr="'+ri+'" role="button" tabindex="0">'+tn+'</td>':'<td class="tr oqu sep" rowspan="2"></td>';
       var u=deps.map(function(d){var c=r.cells[d];return '<td class="u">'+(c&&c.u?'утт-'+c.u:'')+'</td>'}).join('');
       var X5=isCrane(r)?x55():{};
       var v=deps.map(function(d){var c=r.cells[d],k=X5[d];return (c||k)?'<td class="v tapc" data-cc="'+ri+'|'+esc(d)+'" role="button" tabindex="0">'+(c?esc(String(xlCell(c))):'')+(k?k55(k,!c):'')+'</td>':'<td class="v"></td>'}).join('');
