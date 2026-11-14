@@ -65,7 +65,7 @@ def convert(path):
     wd = wb['Ежедневная сводка']
     c0 = 15                                   # O
     deps, cols = [], []
-    c_end = next((c for c in range(c0, wd.max_column + 1) if str(wd.cell(2, c).value or '').startswith('Откл. по цехам')), wd.max_column + 1)   # с этого столбца - отклонения по цехам, это не режимная таблица
+    c_end = next((c for c in range(c0, wd.max_column + 1) if str(wd.cell(2, c).value or '').startswith(('Откл. по цехам', 'В обучении'))), wd.max_column + 1)   # с этого столбца - отклонения по цехам, это не режимная таблица
     for c in range(c0, c_end):
         v = wd.cell(3, c).value
         if v: deps.append(_cl(v)); cols.append(c)

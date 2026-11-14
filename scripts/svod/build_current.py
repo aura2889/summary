@@ -193,28 +193,32 @@ for r_ in PREF:
         sh.cell(r_,colI[nm],f'=IFERROR({f},"")' if nm in ('План','Факт','Откл') else f'=IFERROR(IF({f}=0,"",{f}),"")')
         sh.cell(r_,colI[nm]).number_format='General'
 
-# --- отклонение от плана по цехам (факт - план), столбцы справа от таблицы: AE, AF, ... ; в 3-й строке название цеха
+# --- «В обучении»: столбец AE справа от таблицы (число машин этого типа в обучении; нет - пусто). Список машин - на листе «В обучении»
+import re as _re
 _codes=[str(sh.cell(r_,PC).value) for r_ in PREF if sh.cell(r_,PC).value is not None]
-_fact=collections.Counter()
-for x in ALL: _fact[(x['dept'],x['code'])]+=x['day']+x['night']
-DV=[d for d in depts if any(sum((PD['plan'].get(c) or {}).get(d) or [0,0]) or _fact[(d,c)] for c in _codes)]
 DV0=LASTD+1
-_hs=sh.cell(3,LASTD); _bs=sh.cell(5,LASTD)
-sh.cell(2,DV0,'Откл. по цехам (факт − план)'); sh.cell(2,DV0).font=Font(name='Times New Roman',size=12,bold=True)
-sh.cell(2,DV0).alignment=Alignment(horizontal='left',vertical='center')
-for j,d in enumerate(DV):
-    c_=DV0+j; cl=L(c_)
-    h=sh.cell(3,c_,LBL.get(d,d))
-    h.font=Font(name='Times New Roman',size=11,bold=True); h.fill=copy(_hs.fill); h.alignment=Alignment(horizontal='center',vertical='center',shrink_to_fit=True)
-    sh.column_dimensions[cl].width=9
-    i=depts.index(d); c1=D0+4*i
-    for r_ in PREF:
-        if sh.cell(r_,PC).value is None: continue
-        m=f"MATCH(${PCL}{r_}&\"\",'Выход ТС'!$A:$A,0)"
-        ix=lambda col:f"INDEX('Выход ТС'!${L(col)}:${L(col)},{m})"
-        cell=sh.cell(r_,c_,f'=IFERROR({ix(c1+2)}+{ix(c1+3)}-{ix(c1)}-{ix(c1+1)},"")')
-        cell.font=Font(name='Times New Roman',size=14,bold=True)
-        cell.alignment=Alignment(horizontal='center',vertical='center'); cell.number_format='[Color10]+0;[Red]-0;;'
+for c_ in range(DV0,sh.max_column+1):                 # старый блок «Откл. по цехам» убран полностью
+    for r_ in range(1,sh.max_row+1):
+        sh.cell(r_,c_).value=None
+    sh.column_dimensions[L(c_)].hidden=False
+_wt=wb.create_sheet('В обучении')
+_wt.append(['Отдел','Номер','Префикс','Диспетчер'])
+for _c in _wt[1]: _c.font=Font(bold=True)
+for e in EXC:
+    if 'обучение' not in str(e[4]): continue
+    _pl=_re.split(r'\s{2,}',e[2].strip())[0].strip(); _m=_re.match(r'(\d{2}(?:[.,]\d)?)\s*[-\s]',_pl)
+    _p=_m.group(1).replace(',','.') if _m else '?'
+    _wt.append([e[3],_pl,'28' if _p=='30' else _p,e[0]])
+_wt.column_dimensions['A'].width=14; _wt.column_dimensions['B'].width=20; _wt.column_dimensions['C'].width=9; _wt.column_dimensions['D'].width=12
+sh.cell(2,DV0,'В обучении'); sh.cell(2,DV0).font=Font(name='Times New Roman',size=12,bold=True)
+sh.cell(2,DV0).alignment=Alignment(horizontal='center',vertical='center')
+_h=sh.cell(3,DV0,'В обуч.'); _hs=sh.cell(3,LASTD)
+_h.font=Font(name='Times New Roman',size=11,bold=True); _h.fill=copy(_hs.fill); _h.alignment=Alignment(horizontal='center',vertical='center',shrink_to_fit=True)
+sh.column_dimensions[L(DV0)].width=10
+for r_ in PREF:
+    if sh.cell(r_,PC).value is None: continue
+    cell=sh.cell(r_,DV0,f"=IF(COUNTIF('В обучении'!$C:$C,${PCL}{r_}&\"\")=0,\"\",COUNTIF('В обучении'!$C:$C,${PCL}{r_}&\"\"))")
+    cell.font=Font(name='Times New Roman',size=14,bold=True,color='B7791F'); cell.alignment=Alignment(horizontal='center',vertical='center')
 sh.print_area=f"A1:{L(LASTD)}{sh.max_row}"       # печать как раньше, без новых столбцов
 
 # --- перечень госномеров по технике: слева пары (B,C) и (E,F), справа с 47-й строки пары через столбец

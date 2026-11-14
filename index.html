@@ -164,7 +164,7 @@ td.neg,.neg{color:var(--bad);font-weight:600}td.pos,.pos{color:var(--ok);font-we
 .cell small{color:var(--blue-ink);font-size:11.5px;font-weight:700;display:flex;justify-content:space-between;align-items:baseline;gap:4px;flex-wrap:wrap}
 .cell small u{text-decoration:none;font-size:10.5px;font-weight:600;background:var(--card);color:var(--brand2);border-radius:5px;padding:0 4px}
 .cell b{font-size:16px;line-height:1.2;font-variant-numeric:tabular-nums;white-space:nowrap}
-.cc{padding:9px 11px;margin-bottom:8px}.cc h3{margin:0 0 6px;font-size:14px}.cc .stats{gap:4px;margin-bottom:6px}.cc .stat{padding:3px 2px}.cc .stat b{font-size:15px}.cc .stat span{font-size:10px}
+.cc .stats{grid-template-columns:repeat(6,1fr)}.stat b.yl{color:#b7791f}.cc{padding:9px 11px;margin-bottom:8px}.cc h3{margin:0 0 6px;font-size:14px}.cc .stats{gap:4px;margin-bottom:6px}.cc .stat{padding:3px 2px}.cc .stat b{font-size:15px}.cc .stat span{font-size:10px}
 .cell i{font-style:normal;font-size:12px;color:var(--muted)}
 .cell i u{text-decoration:none;background:var(--card);border-radius:5px;padding:0 5px;margin-left:4px;color:var(--brand2);font-weight:600}
 .lrow{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:7px 0;border-bottom:1px solid var(--line)}
@@ -677,14 +677,23 @@ table tr.dvr td{border-top:0;padding-top:0}
   function x55(){var m={};(DATA.veh||[]).forEach(function(v){if(v.p==='30'&&(v.d||v.n))m[v.dep]=(m[v.dep]||0)+1});return m}
   function k55(n,alone){return '<span class="k55">'+(alone?'':'<i>+</i>')+n+'<sub>55</sub></span>'}
   function isCrane(r){return (r.p||PBYN[r.name])==='28'}
+  function trRow(r){      // машины в обучении этого типа (30 -> 28 автокран)
+    var p=r.p||PBYN[r.name];
+    return (DATA.trl||[]).filter(function(x){var m=String(x.num).match(/(\d{2}(?:[.,]\d)?)\s*[-\s]/),q=m?m[1].replace(',','.'):'?';if(q==='30')q='28';return q===p});
+  }
+  function trOpen(ri){
+    var r=DATA.daily.rows[ri]; if(!r) return; var L=trRow(r);
+    prSheet(esc(r.name)+' · в обучении '+L.length,L.length?L.map(function(x){return '<div class="dv-r"><div class="n">'+esc(x.num)+'<small>'+ed(x.dep)+' · '+esc(x.disp)+'</small></div></div>'}).join(''):'<div class="empty">Нет машин в обучении</div>');
+  }
   function citsPC(){
     var D=DATA.daily,deps=D.deps;
-    var h='<div class="xlw"><table class="xl"><thead><tr><th>№</th><th style="text-align:left">Техника</th><th class="pl">План</th><th class="fa">Факт</th><th>Откл</th>'+deps.map(function(d){return '<th>'+esc(d)+'</th>'}).join('')+'</tr></thead><tbody>';
+    var h='<div class="xlw"><table class="xl"><thead><tr><th>№</th><th style="text-align:left">Техника</th><th class="pl">План</th><th class="fa">Факт</th><th>Откл</th><th>В обуч.</th>'+deps.map(function(d){return '<th>'+esc(d)+'</th>'}).join('')+'</tr></thead><tbody>';
     D.rows.forEach(function(r,ri){
+      var tn=trRow(r).length, tc=tn?'<td class="tr sep tapc" rowspan="2" data-ctr="'+ri+'" role="button" tabindex="0">'+tn+'</td>':'<td class="tr sep" rowspan="2"></td>';
       var u=deps.map(function(d){var c=r.cells[d];return '<td class="u">'+(c&&c.u?'утт-'+c.u:'')+'</td>'}).join('');
       var X5=isCrane(r)?x55():{};
       var v=deps.map(function(d){var c=r.cells[d],k=X5[d];return (c||k)?'<td class="v tapc" data-cc="'+ri+'|'+esc(d)+'" role="button" tabindex="0">'+(c?esc(String(xlCell(c))):'')+(k?k55(k,!c):'')+'</td>':'<td class="v"></td>'}).join('');
-      h+='<tr class="blk"><td class="pn sep" rowspan="2">'+esc(r.p||'')+'</td><td class="nm sep" rowspan="2">'+esc(r.name)+'</td><td class="pl sep" rowspan="2">'+r.plan+'</td><td class="fa sep" rowspan="2">'+r.fact+'</td><td class="dv sep" rowspan="2">'+xlDev(r.diff)+'</td>'+u+'</tr><tr>'+v+'</tr>';
+      h+='<tr class="blk"><td class="pn sep" rowspan="2">'+esc(r.p||'')+'</td><td class="nm sep" rowspan="2">'+esc(r.name)+'</td><td class="pl sep" rowspan="2">'+r.plan+'</td><td class="fa sep" rowspan="2">'+r.fact+'</td><td class="dv sep" rowspan="2">'+xlDev(r.diff)+'</td>'+tc+u+'</tr><tr>'+v+'</tr>';
     });
     return h+'</tbody></table></div>';
   }
@@ -705,6 +714,7 @@ table tr.dvr td{border-top:0;padding-top:0}
           '<div class="stat plan"><b>'+r.plan+'</b><span>план</span></div>'+
           '<div class="stat fact"><b>'+r.fact+'</b><span>факт</span></div>'+
           '<div class="stat tapc" data-cdv="'+ri+'" role="button" tabindex="0"><b class="'+(r.diff<0?'neg':(r.diff>0?'pos':''))+'">'+sign(r.diff)+'</b><span>откл. ›</span></div>'+
+          (function(){var n=trRow(r).length;return '<div class="stat'+(n?' tapc':'')+'"'+(n?' data-ctr="'+ri+'" role="button" tabindex="0"':'')+'><b class="'+(n?'yl':'')+'">'+n+'</b><span>в обуч.'+(n?' ›':'')+'</span></div>'})()+
           '<div class="stat"><b>'+r.day+'</b><span>день</span></div>'+
           '<div class="stat"><b>'+r.night+'</b><span>ночь</span></div></div>';
         if(keys.length){
@@ -947,7 +957,7 @@ table tr.dvr td{border-top:0;padding-top:0}
     getJ('prod/'+d+'.json').then(function(x){x.date=d;PC[d]=x;go(x)}).catch(function(){go(null)});
   }
   document.addEventListener('click',function(e){var q=e.target.closest&&e.target.closest('[data-tdv]');if(q&&DATA){e.stopPropagation();var tp=(DATA.types||[]).filter(function(x){return x.p===q.dataset.tdv})[0];if(tp)prSheet(esc(tp.p+' · '+tp.name)+' · '+sg(tp.diff),'<div class="tot6"><div><b>'+tp.plan+'</b><span>план</span></div><div><b>'+tp.fact+'</b><span>факт</span></div><div><b class="'+sgc(tp.diff)+'">'+sg(tp.diff)+'</b><span>откл.</span></div></div><div class="ph">По цехам</div>'+dpRows(tp.p));return}});
-  document.addEventListener('click',function(e){var t=e.target.closest&&e.target.closest('[data-cdv]');if(t&&DATA){e.stopPropagation();cdOpen(+t.dataset.cdv)}});
+  document.addEventListener('click',function(e){var q=e.target.closest&&e.target.closest('[data-ctr]');if(q&&DATA&&DATA.daily){e.stopPropagation();trOpen(+q.dataset.ctr);return}var t=e.target.closest&&e.target.closest('[data-cdv]');if(t&&DATA){e.stopPropagation();cdOpen(+t.dataset.cdv)}});
   function prAllTypes(){var r=[];PRX.aks.forEach(function(a){a.types.forEach(function(t){r.push([t,a.n])})});return r}
   function prSearch(){
     var ws=pq.toLowerCase().replace(/ак\s*(\d)/g,'ак$1').split(/\s+/).filter(Boolean),akn=0,tw=[];
