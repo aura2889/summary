@@ -80,6 +80,7 @@ main{padding:12px 12px 40px;max-width:760px;margin:0 auto}
 .seg button.on{background:var(--brand2);color:#fff}
 .seg.s3 button{font-size:13px;padding:8px 2px}.seg.s4 button{font-size:13px;padding:8px 2px}
 .xlw{overflow:auto;max-height:calc(100vh - 170px);border:1px solid var(--line);border-radius:10px;background:var(--card);-webkit-overflow-scrolling:touch}
+.xlw.xall{max-height:calc(100vh - var(--hh) - 10px);scroll-margin-top:calc(var(--hh) + 4px)}
 .xl{border-collapse:separate;border-spacing:0;font-variant-numeric:tabular-nums;font-size:14px;width:max-content;min-width:100%}
 .xl th,.xl td{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:3px 4px;text-align:center;white-space:nowrap}
 .xl thead th{position:sticky;top:0;z-index:3;background:var(--brand);color:#fff;font-weight:800;padding:8px 4px;font-size:13px}
@@ -296,7 +297,7 @@ table tr.dvr td{border-top:0;padding-top:0}
     gs.setAttribute('data-goatcounter','https://'+GC_CODE+'.goatcounter.com/count');document.head.appendChild(gs)}catch(e){}}
   function track(p){try{if(window.goatcounter&&window.goatcounter.count)window.goatcounter.count({path:p,title:p,event:true})}catch(e){}}
   var searched=false;
-  var DATA=null, DRV=null, DATES=null, curDay='', top='all', sub='deps', csub='type', cpf='', dep=null, shift='d', q='', dq='', cq='', cdisp=0;
+  var goAll=false, DATA=null, DRV=null, DATES=null, curDay='', top='all', sub='deps', csub='type', cpf='', dep=null, shift='d', q='', dq='', cq='', cdisp=0;
   // порядок типов техники внутри отдела (по префиксам); остальное — после, по количеству
   var ORDER=['35','35.1','35.2','31','28','30','63','29','22','23','22.1','34','47','46','49','62','27','50','53','13','13.1','20'];
   var LAT={A:'А',B:'В',C:'С',E:'Е',H:'Н',K:'К',M:'М',O:'О',P:'Р',T:'Т',X:'Х',Y:'У'};
@@ -703,7 +704,7 @@ table tr.dvr td{border-top:0;padding-top:0}
   }
   function citsAll(){
     var X=dpx(), deps=(DATA.depOrder||[]).filter(function(d){return X.D[d]}), ts=(DATA.types||[]).filter(function(t){return t.plan||t.fact}).sort(function(a,b){return (parseFloat(a.p)||999)-(parseFloat(b.p)||999)||(a.p<b.p?-1:1)});
-    var h='<div class="xlw"><table class="xl"><thead><tr><th>№</th><th style="text-align:left">Техника</th><th class="pl">План</th><th class="fa">Факт</th><th>Откл</th><th class="oqu">Оқу</th>'+deps.map(function(d){return '<th>'+esc(d)+'</th>'}).join('')+'</tr></thead><tbody>',tot={};
+    var h='<div class="xlw xall"><table class="xl"><thead><tr><th>№</th><th style="text-align:left">Техника</th><th class="pl">План</th><th class="fa">Факт</th><th>Откл</th><th class="oqu">Оқу</th>'+deps.map(function(d){return '<th>'+esc(d)+'</th>'}).join('')+'</tr></thead><tbody>',tot={};
     ts.forEach(function(t){
       var df=t.fact-t.plan, tn=trRow(t).length, T=X.T[t.p]||{};
       h+='<tr class="blk"><td class="pn">'+esc(t.p)+'</td><td class="nm">'+esc(t.name)+'</td><td class="pl">'+t.plan+'</td><td class="fa">'+t.fact+'</td><td class="dv'+(df<0?' tapc':'')+'"'+(df<0?' data-tdv="'+esc(t.p)+'" role="button" tabindex="0"':'')+'>'+xlDev(df)+'</td>'+
@@ -1330,7 +1331,7 @@ table tr.dvr td{border-top:0;padding-top:0}
     else if(t.dataset.nsub){nsub=t.dataset.nsub;track('АК/'+nsub)}
     else if(t.dataset.nak){var n=+t.dataset.nak;nak=nak===n?0:n;track('АК/'+n)}
     else if(t.dataset.sub){sub=t.dataset.sub}
-    else if(t.dataset.csub){csub=t.dataset.csub}
+    else if(t.dataset.csub){csub=t.dataset.csub;goAll=csub==='all'}
     else if(t.dataset.cps){cps=t.dataset.cps;track('План по цехам/'+cps)}
     else if(t.dataset.cpd!==undefined){cpd=t.dataset.cpd}
     else if(t.dataset.psk!==undefined){psk=t.dataset.psk}
@@ -1343,6 +1344,7 @@ table tr.dvr td{border-top:0;padding-top:0}
       window.scrollTo(0,0);
     }else if(t.dataset.shift){shift=t.dataset.shift}
     render();
+    if(goAll){goAll=false;var xa=document.querySelector('.xall');if(xa)xa.scrollIntoView()}
   });
   document.addEventListener('keydown',function(e){if(e.key==='Escape')hidePop()});
   window.addEventListener('resize',hidePop);
