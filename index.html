@@ -78,7 +78,7 @@ main{padding:12px 12px 40px;max-width:760px;margin:0 auto}
 .seg{display:flex;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:3px;margin:4px 0 12px}
 .seg button{flex:1;border:0;background:none;color:var(--muted);border-radius:8px;padding:8px;font:inherit;font-weight:600}
 .seg button.on{background:var(--brand2);color:#fff}
-.seg.s3 button{font-size:13px;padding:8px 2px}
+.seg.s3 button{font-size:13px;padding:8px 2px}.seg.s4 button{font-size:13px;padding:8px 2px}
 .xlw{overflow:auto;max-height:calc(100vh - 170px);border:1px solid var(--line);border-radius:10px;background:var(--card);-webkit-overflow-scrolling:touch}
 .xl{border-collapse:separate;border-spacing:0;font-variant-numeric:tabular-nums;font-size:14px;width:max-content;min-width:100%}
 .xl th,.xl td{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:3px 4px;text-align:center;white-space:nowrap}
@@ -104,7 +104,7 @@ main{padding:12px 12px 40px;max-width:760px;margin:0 auto}
 .xl thead th:nth-child(1),.xl thead th:nth-child(2){z-index:5;background:var(--brand)}
 .xl td.u{color:var(--ok);font-size:11px;font-weight:700;height:15px;padding-top:1px;padding-bottom:0;border-bottom:0}
 .xlw.xw{display:block;max-width:820px}.xlw.xw .xl{min-width:100%}.xl th.pl,.xl td.pl{min-width:0}.xl.xs th:nth-child(1),.xl.xs td.nm{position:sticky;left:0;min-width:92px;width:92px;max-width:92px;padding:3px 4px;z-index:2;border-right:2px solid var(--line)}.xl.xs th:nth-child(2){left:auto;min-width:0;width:auto;max-width:none;position:sticky;top:0}.xl tr.blk td.sep{border-top:2px solid var(--line)}
-@media (min-width:760px){.seg.s3{max-width:620px}}
+@media (min-width:760px){.seg.s3{max-width:620px}.seg.s4{max-width:720px}}
 
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:10px}
 .card h3{margin:0 0 8px;font-size:15px;display:flex;gap:6px;align-items:baseline;flex-wrap:wrap}
@@ -682,7 +682,7 @@ table tr.dvr td{border-top:0;padding-top:0}
     return (DATA.trl||[]).filter(function(x){var m=String(x.num).match(/(\d{2}(?:[.,]\d)?)\s*[-\s]/),q=m?m[1].replace(',','.'):'?';if(q==='30')q='28';return q===p});
   }
   function trOpen(ri){
-    var r=DATA.daily.rows[ri]; if(!r) return; var L=trRow(r);
+    var r=typeof ri==='string'?{p:ri,name:dpTName(ri)}:DATA.daily.rows[ri]; if(!r) return; var L=trRow(r);
     prSheet(esc(r.name)+' · в обучении '+L.length,L.length?L.map(function(x){return '<div class="dv-r"><div class="n">'+esc(x.num)+'<small>'+ed(x.dep)+' · '+esc(x.disp)+'</small></div></div>'}).join(''):'<div class="empty">Нет машин в обучении</div>');
   }
   function citsPC(){
@@ -693,7 +693,7 @@ table tr.dvr td{border-top:0;padding-top:0}
       var u=deps.map(function(d){var c=r.cells[d];return '<td class="u">'+(c&&c.u?'утт-'+c.u:'')+'</td>'}).join('');
       var X5=isCrane(r)?x55():{};
       var v=deps.map(function(d){var c=r.cells[d],k=X5[d];return (c||k)?'<td class="v tapc" data-cc="'+ri+'|'+esc(d)+'" role="button" tabindex="0">'+(c?esc(String(xlCell(c))):'')+(k?k55(k,!c):'')+'</td>':'<td class="v"></td>'}).join('');
-      h+='<tr class="blk"><td class="pn sep" rowspan="2">'+esc(r.p||'')+'</td><td class="nm sep" rowspan="2">'+esc(r.name)+'</td><td class="pl sep" rowspan="2">'+r.plan+'</td><td class="fa sep" rowspan="2">'+r.fact+'</td><td class="dv sep" rowspan="2">'+xlDev(r.diff)+'</td>'+tc+u+'</tr><tr>'+v+'</tr>';
+      h+='<tr class="blk"><td class="pn sep" rowspan="2">'+esc(r.p||'')+'</td><td class="nm sep" rowspan="2">'+esc(r.name)+'</td><td class="pl sep" rowspan="2">'+r.plan+'</td><td class="fa sep" rowspan="2">'+r.fact+'</td><td class="dv sep'+(r.diff<0?' tapc':'')+'" rowspan="2"'+(r.diff<0?' data-cdv="'+ri+'" role="button" tabindex="0"':'')+'>'+xlDev(r.diff)+'</td>'+tc+u+'</tr><tr>'+v+'</tr>';
     });
     return h+'</tbody></table></div>';
   }
@@ -701,9 +701,23 @@ table tr.dvr td{border-top:0;padding-top:0}
     var D=DATA.daily; if(!D||!D.rows.length) return '<div class="empty">Нет данных режимного листа</div>';
     return '<input class="search" id="cq" type="search" inputmode="search" enterkeyhint="search" placeholder="Поиск: номер машины, тип техники, отдел или водитель" value="'+esc(cq)+'"><div id="cbody">'+citsBody()+'</div>';
   }
+  function citsAll(){
+    var X=dpx(), deps=(DATA.depOrder||[]).filter(function(d){return X.D[d]}), ts=(DATA.types||[]).filter(function(t){return t.plan||t.fact}).sort(function(a,b){return (parseFloat(a.p)||999)-(parseFloat(b.p)||999)||(a.p<b.p?-1:1)});
+    var h='<div class="xlw"><table class="xl"><thead><tr><th>№</th><th style="text-align:left">Техника</th><th class="pl">План</th><th class="fa">Факт</th><th>Откл</th><th class="oqu">Оқу</th>'+deps.map(function(d){return '<th>'+esc(d)+'</th>'}).join('')+'</tr></thead><tbody>',tot={};
+    ts.forEach(function(t){
+      var df=t.fact-t.plan, tn=trRow(t).length, T=X.T[t.p]||{};
+      h+='<tr class="blk"><td class="pn">'+esc(t.p)+'</td><td class="nm">'+esc(t.name)+'</td><td class="pl">'+t.plan+'</td><td class="fa">'+t.fact+'</td><td class="dv'+(df<0?' tapc':'')+'"'+(df<0?' data-tdv="'+esc(t.p)+'" role="button" tabindex="0"':'')+'>'+xlDev(df)+'</td>'+
+        (tn?'<td class="oqu tapc" data-ctr="p'+esc(t.p)+'" role="button" tabindex="0">'+tn+'</td>':'<td class="oqu"></td>')+
+        deps.map(function(d){var b=T[d],v='';if(b&&(b.fd||b.fn)){v=b.fn===0?String(b.fd):(b.fd===0?'0+'+b.fn+'='+b.fn:b.fd+'+'+b.fn+'='+(b.fd+b.fn));tot[d]=(tot[d]||0)+b.fd+b.fn}
+          return v?'<td class="v tapc" data-cc="p:'+esc(t.p)+'|'+esc(d)+'" role="button" tabindex="0">'+v+'</td>':'<td class="v"></td>'}).join('')+'</tr>';
+    });
+    var P=0,F=0,O=0;ts.forEach(function(t){P+=t.plan;F+=t.fact;O+=trRow(t).length});
+    h+='<tr class="blk"><td></td><td class="nm"><b>ИТОГО</b></td><td class="pl">'+P+'</td><td class="fa">'+F+'</td><td class="dv">'+xlDev(F-P)+'</td><td class="oqu">'+(O||'')+'</td>'+deps.map(function(d){return '<td class="v"><b>'+(tot[d]||'')+'</b></td>'}).join('')+'</tr>';
+    return h+'</tbody></table></div><div class="empty" style="padding:6px;text-align:left"><small>Все типы техники по цехам (факт). День+ночь=всего. Нажмите на число - увидите машины; на минус - причину; на Оқу - машины в обучении.</small></div>';
+  }
   function citsBody(){
     var D=DATA.daily;
-    var h=seg('data-csub',[['type','По технике'],['dep','План по цехам'],['pc','Для ПК']],csub).replace('class="seg"','class="seg s3"');
+    var h=seg('data-csub',[['type','По технике'],['dep','План по цехам'],['pc','Для ПК'],['all','Все']],csub).replace('class="seg"','class="seg s4"');
     if(cq.trim()) return h+viewSearch(cq.trim(),[],true);
     if(csub==='type'){
       h+='<div class="pq" style="grid-template-columns:repeat('+(D.rows.length>10?Math.ceil(D.rows.length/2):D.rows.length)+',minmax(0,1fr))">'+D.rows.map(function(r,ri){return '<button class="pqb" data-cgo="'+ri+'">'+esc(r.p||PBYN[r.name]||'?')+'</button>'}).join('')+'</div>';
@@ -729,6 +743,8 @@ table tr.dvr td{border-top:0;padding-top:0}
       h+='</div>';
     }else if(csub==='pc'){
       h+=citsPC();
+    }else if(csub==='all'){
+      h+=citsAll();
     }else{
       h+=citsPlan();
     }
@@ -942,6 +958,8 @@ table tr.dvr td{border-top:0;padding-top:0}
       gs.forEach(function(g){pl+=g.plan;fa+=g.fact;dv+=g.dev;Object.keys(g.c).forEach(function(k){c[k]=(c[k]||0)+g.c[k]});g.parts.forEach(function(q){parts.push(q)})});
       parts.sort(function(a,b){return a.n-b.n});
       var h='<div class="tot6"><div><b>'+r.plan+'</b><span>план</span></div><div><b>'+r.fact+'</b><span>факт</span></div><div><b class="'+sgc(r.diff)+'">'+sg(r.diff)+'</b><span>откл. сводка</span></div><div><b class="'+sgc(dv)+'">'+sg(dv)+'</b><span>откл. файл</span></div></div>';
+      var tnq=trRow({p:pp,name:r.name}).length;
+      if(r.diff<0&&tnq) h+='<div class="prs tapc" data-ctr="'+ri+'" role="button" tabindex="0">Из отклонения <b>'+sg(r.diff)+'</b>: <b>'+tnq+'</b> в обучении (Оқу) - нажмите, чтобы увидеть машины. Остальное - по данным «Өндіріс ақпары» ниже.</div>';
       var X=dpx();
       if(X.has){var tb=X.T[pp]||{},tk=Object.keys(tb).filter(function(k){return dpP(tb[k])||dpF(tb[k])}).sort(function(a,b){return (dpF(tb[a])-dpP(tb[a]))-(dpF(tb[b])-dpP(tb[b]))});
         h+='<div class="ph">По цехам: план → факт</div>'+tk.map(function(k){var v=dpF(tb[k])-dpP(tb[k]);return '<div class="prr"><div class="prt">'+esc(k)+' <small>день '+tb[k].pd+' · ночь '+tb[k].pn+'</small></div><div class="prn"><span>'+dpP(tb[k])+' → '+dpF(tb[k])+'</span>'+pdv(v)+'</div></div>'}).join('')}
@@ -957,7 +975,7 @@ table tr.dvr td{border-top:0;padding-top:0}
     getJ('prod/'+d+'.json').then(function(x){x.date=d;PC[d]=x;go(x)}).catch(function(){go(null)});
   }
   document.addEventListener('click',function(e){var q=e.target.closest&&e.target.closest('[data-tdv]');if(q&&DATA){e.stopPropagation();var tp=(DATA.types||[]).filter(function(x){return x.p===q.dataset.tdv})[0];if(tp)prSheet(esc(tp.p+' · '+tp.name)+' · '+sg(tp.diff),'<div class="tot6"><div><b>'+tp.plan+'</b><span>план</span></div><div><b>'+tp.fact+'</b><span>факт</span></div><div><b class="'+sgc(tp.diff)+'">'+sg(tp.diff)+'</b><span>откл.</span></div></div><div class="ph">По цехам</div>'+dpRows(tp.p));return}});
-  document.addEventListener('click',function(e){var q=e.target.closest&&e.target.closest('[data-ctr]');if(q&&DATA&&DATA.daily){e.stopPropagation();trOpen(+q.dataset.ctr);return}var t=e.target.closest&&e.target.closest('[data-cdv]');if(t&&DATA){e.stopPropagation();cdOpen(+t.dataset.cdv)}});
+  document.addEventListener('click',function(e){var q=e.target.closest&&e.target.closest('[data-ctr]');if(q&&DATA&&DATA.daily){e.stopPropagation();trOpen(q.dataset.ctr.charAt(0)==='p'?q.dataset.ctr.slice(1):+q.dataset.ctr);return}var t=e.target.closest&&e.target.closest('[data-cdv]');if(t&&DATA){e.stopPropagation();cdOpen(+t.dataset.cdv)}});
   function prAllTypes(){var r=[];PRX.aks.forEach(function(a){a.types.forEach(function(t){r.push([t,a.n])})});return r}
   function prSearch(){
     var ws=pq.toLowerCase().replace(/ак\s*(\d)/g,'ак$1').split(/\s+/).filter(Boolean),akn=0,tw=[];
@@ -1489,7 +1507,7 @@ table tr.dvr td{border-top:0;padding-top:0}
   });
   // ---- «Для ЦИТС»: нажатие на ячейку (отдел × тип техники) - какие именно машины и водители
   function ccOpen(key){
-    var i=key.indexOf('|'), r=DATA.daily.rows[+key.slice(0,i)], d=key.slice(i+1); if(!r) return;
+    var i=key.indexOf('|'), k0=key.slice(0,i), r=k0.slice(0,2)==='p:'?{p:k0.slice(2),name:dpTName(k0.slice(2)),cells:{}}:DATA.daily.rows[+k0], d=key.slice(i+1); if(!r) return;
     var pp=r.p||PBYN[r.name], vs=DATA.veh.filter(function(v){return v.dep===d&&(v.p===pp||(pp==='28'&&v.p==='30'&&(v.d||v.n)))});
     var c=r.cells[d]||{}, el=devShell(), h='';
     h+='<div class="sh"><div class="shh"><b>'+esc(r.name)+' · '+ed(d)+'</b><button class="shx" data-devx="1" aria-label="Закрыть">×</button></div>'+
