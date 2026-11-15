@@ -1,5 +1,5 @@
 """Сборка drivers.json: водители из экспорта путевых листов + телефоны из data/contacts.json и data/mobil.json."""
-import sys, os
+import datetime, sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from common import *
 
@@ -127,12 +127,43 @@ def build(data, export_path, contacts, mobil):
     hh = [str(x or '').strip() for x in allrows[0]]
     cd = next((i for i, x in enumerate(hh) if x == 'Дата' or x.startswith('Дата путевого')), None)
     exrows = [r for r in allrows[1:] if len(r) > cp and r[cp]]
+    # --- какая из строк по одному госномеру актуальна (после пересменки/перевахтовки номер встречается дважды+).
+    # Смотрим не на положение строки, а на «Дату ввода операции» (если её нет - на «Время ввода операции»); «Дата путевого листа» не используется.
+    # Колонки ищем по заголовкам: порядок в выгрузке меняется.
+    hn = [str(x or '').replace('\xa0', ' ').strip().lower() for x in allrows[0]]
+    c_dt = next((i for i, x in enumerate(hn) if x.startswith('дата ввода')), None)
+    c_tm = next((i for i, x in enumerate(hn) if x.startswith('время ввода')), None)
+    c_jr = next((i for i, x in enumerate(hn) if x.startswith('№ журнала') or x == 'номер журнала'), None)
+    def _tm(v):
+        if v is None or v == '': return None
+        if hasattr(v, 'hour') and not hasattr(v, 'year'): return v.hour * 3600 + v.minute * 60 + getattr(v, 'second', 0)
+        if hasattr(v, 'year'): return (v.hour * 3600 + v.minute * 60 + v.second) if (v.hour or v.minute or v.second) else None
+        m = re.match(r'(\d{1,2})[:.](\d{2})(?::(\d{2}))?', str(v).strip())
+        return int(m.group(1)) * 3600 + int(m.group(2)) * 60 + int(m.group(3) or 0) if m else None
+    def _dt(v):
+        if hasattr(v, 'toordinal'): return v.toordinal()
+        m = re.match(r'(\d{4})-(\d{2})-(\d{2})', str(v or ''))
+        if m: return datetime.date(int(m.group(1)), int(m.group(2)), int(m.group(3))).toordinal()
+        m = re.match(r'(\d{1,2})[./](\d{1,2})[./](\d{4})', str(v or ''))
+        return datetime.date(int(m.group(3)), int(m.group(2)), int(m.group(1))).toordinal() if m else None
+    def entry_key(r):
+        d = _dt(r[c_dt]) if c_dt is not None and len(r) > c_dt else None
+        t = _tm(r[c_tm]) if c_tm is not None and len(r) > c_tm else (_tm(r[c_dt]) if d is not None else None)
+        if d is None and t is not None:       # даты нет, только время: обед 11:00-15:00 (перевахтовка) - свежее, утро до 11 - дальше, после 15:00 - вчерашний вечер
+            tier = 3 if 11 * 3600 <= t <= 15 * 3600 else (2 if t < 11 * 3600 else 1)
+            return (0, tier, t, jr_of(r))
+        return (d or 0, 0, t or 0, jr_of(r))
+    def jr_of(r):
+        try: return int(r[c_jr]) if c_jr is not None and r[c_jr] not in (None, '') else 0
+        except (TypeError, ValueError): return 0
     E = collections.defaultdict(list)
-    EP = collections.OrderedDict()
+    EP = collections.OrderedDict(); best = {}
     for r in exrows:
         plate = str(r[cp]).strip(); pp = parse_plate(plate)
         names = [str(x).strip() for x in (r[c1], r[c2] if c2 is not None else None) if x and str(x).strip()]
-        # если госномер повторяется (утренняя и дневная выгрузка после пересменки) - берём НИЖНЮЮ строку, предыдущие отбрасываем
+        ek = entry_key(r); k = ek[:3] + (1 if names else 0, ek[3])      # свежая дата, потом время; при равенстве - строка с водителем, потом больший № журнала
+        if plate in best and best[plate] > k: continue
+        best[plate] = k
         inf = EP[plate] = {'pp': pp, 'status': set(), 'names': []}
         inf['status'].add(r[cs] if cs is not None else None)
         for n in names:
