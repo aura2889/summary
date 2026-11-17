@@ -158,10 +158,15 @@ def build(data, export_path, contacts, mobil):
         except (TypeError, ValueError): return 0
     E = collections.defaultdict(list)
     EP = collections.OrderedDict(); best = {}
-    for r in exrows:
+    import datetime as _d
+    _now = _d.datetime.utcnow() + _d.timedelta(hours=5)           # Актау/Актобе UTC+5
+    morning = (_now.hour < 12) if not os.environ.get('EXPORT_PART') else os.environ['EXPORT_PART'] == 'morning'
+    for ri, r in enumerate(exrows):
         plate = str(r[cp]).strip(); pp = parse_plate(plate)
         names = [str(x).strip() for x in (r[c1], r[c2] if c2 is not None else None) if x and str(x).strip()]
-        ek = entry_key(r); k = ek[:3] + (1 if names else 0, ek[3])      # свежая дата, потом время; при равенстве - строка с водителем, потом больший № журнала
+        ek = entry_key(r)
+        pos = -ri if morning else ri       # одна и та же дата: утром (до 12:00) верхняя строка файла, после обеда - нижняя
+        k = (ek[0], ek[1], 1 if names else 0, pos) if ek[0] == 0 else (ek[0], 0, 1 if names else 0, pos)      # свежая дата, потом время; при равенстве - строка с водителем, потом больший № журнала
         if plate in best and best[plate] > k: continue
         best[plate] = k
         inf = EP[plate] = {'pp': pp, 'status': set(), 'names': []}
