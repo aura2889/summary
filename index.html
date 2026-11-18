@@ -128,6 +128,7 @@ main{padding:12px 12px 40px;max-width:760px;margin:0 auto}
 .dep.hitdep{border-color:var(--brand2)}
 .chip.nd{background:#fff3b0;border-color:#e0b800;color:#222}.chip.nd.on{background:#ffe14d;color:#222}
 .dep.nd{background:#fff3b0;border-color:#e0b800;color:#222}.dep.nd span{color:#5a4a00}.dep .ndn{display:block;font-size:12px;font-weight:600;margin-top:2px}
+.xlcp{display:flex;justify-content:flex-end;margin:4px 0}.xlcp button{border:1px solid var(--blue-line);background:var(--blue-bg);color:var(--blue-ink);border-radius:8px;padding:5px 10px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}.xlcp button:active{opacity:.7}
 .xlw.xp{max-height:none;overflow-x:auto}.xlw.xp .xl{font-size:13px}.xlw.xp .xl th,.xlw.xp .xl td{padding-left:2px;padding-right:2px}.xlw.xp .xl thead th{font-size:12px;padding:7px 2px}.xlw.xp .xl.xs th:nth-child(1),.xlw.xp .xl.xs td.nm{min-width:74px;width:74px;max-width:74px}
 .xl th.ndh{background:#ffe14d!important;color:#222!important}
 .sbh{margin:12px 2px 4px;font-weight:700;font-size:14px;color:var(--muted);border-bottom:2px solid var(--line);padding-bottom:3px}
@@ -1345,7 +1346,49 @@ table tr.dvr td{border-top:0;padding-top:0}
         if(ar.left<cr.left||ar.right>cr.right) nc.scrollLeft=Math.max(0,L-(nc.clientWidth-ar.width)/2)}
     }
         if(keepQ){var el=$('#q')||$('#rq')||$('#dq')||$('#cq');if(el){el.focus();el.setSelectionRange(kq.length,kq.length)}}
+    xlBtns();
   }
+  /* ---------- «Скопировать в Excel»: кнопка над каждой таблицей ---------- */
+  function xlBtns(){
+    document.querySelectorAll('#app table.xl, #app table.xt').forEach(function(t){
+      var w=t.closest('.xlw')||t; if(w.previousElementSibling&&w.previousElementSibling.classList.contains('xlcp')) return;
+      var b=document.createElement('div'); b.className='xlcp'; b.innerHTML='<button type="button" data-xlc="1">📋 Скопировать в Excel</button>';
+      w.parentNode.insertBefore(b,w);
+    });
+  }
+  function xlClone(t){      // чистая копия таблицы для вставки в Excel: без липких стилей, текст ячеек без скрытой вёрстки
+    var c=document.createElement('table'); c.setAttribute('border','1'); c.setAttribute('cellspacing','0');
+    t.querySelectorAll('tr').forEach(function(tr){
+      var r=document.createElement('tr');
+      tr.querySelectorAll('th,td').forEach(function(x){
+        var y=x.cloneNode(true); y.querySelectorAll('sub').forEach(function(u){u.textContent='('+u.textContent+')'});
+        var txt=(y.textContent||'').replace(/\u00a0/g,' ').replace(/\s+/g,' ').trim(), n=document.createElement(x.tagName.toLowerCase());
+        n.textContent=txt; if(x.colSpan>1)n.colSpan=x.colSpan; if(x.rowSpan>1)n.rowSpan=x.rowSpan;
+        if(/^[\d.]+\/[\d.]+$/.test(txt)||/^\d+\+\d+/.test(txt)||/^\d+\.\d+$/.test(txt)&&x.classList.contains('pn')) n.setAttribute('style','mso-number-format:"\\@"');      // «9/4» не должно превращаться в дату
+        if(x.tagName==='TH') n.style.fontWeight='bold';
+        r.appendChild(n);
+      });
+      c.appendChild(r);
+    });
+    return c;
+  }
+  function xlCopy(btn){
+    var w=btn.parentNode.nextElementSibling, t=w&&(w.tagName==='TABLE'?w:w.querySelector('table')); if(!t) return;
+    var c=xlClone(t), tsv=[].map.call(c.rows,function(r){return [].map.call(r.cells,function(x){return x.textContent}).join('\t')}).join('\n');
+    function done(ok){var o=btn.textContent;btn.textContent=ok?'✓ Скопировано - вставьте в Excel':'Не удалось скопировать';setTimeout(function(){btn.textContent='📋 Скопировать в Excel'},2200)}
+    function legacy(){
+      var h=document.createElement('div'); h.style.cssText='position:fixed;left:-9999px;top:0;background:#fff;color:#000'; h.appendChild(c); document.body.appendChild(h);
+      var r=document.createRange(); r.selectNodeContents(h); var sel=getSelection(); sel.removeAllRanges(); sel.addRange(r);
+      var ok=false; try{ok=document.execCommand('copy')}catch(_){} sel.removeAllRanges(); document.body.removeChild(h); done(ok);
+    }
+    try{
+      if(navigator.clipboard&&window.ClipboardItem){
+        navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([c.outerHTML],{type:'text/html'}),'text/plain':new Blob([tsv],{type:'text/plain'})})]).then(function(){done(true)},legacy);
+      } else legacy();
+    }catch(_){legacy()}
+    try{track('копировать в Excel')}catch(_){}
+  }
+  document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-xlc]');if(b){e.preventDefault();e.stopPropagation();xlCopy(b)}},true);
 
   document.addEventListener('click',function(e){
     if(!DATA) return;
