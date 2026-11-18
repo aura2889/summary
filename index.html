@@ -643,15 +643,16 @@ table tr.dvr td{border-top:0;padding-top:0}
     var ds=Object.keys(set).sort(function(x,y){var ix=ord.indexOf(x),iy=ord.indexOf(y);return (ix<0?999:ix)-(iy<0?999:iy)});
     function add(t,x){if(x){t[0]+=x[0];t[1]+=x[1]}}
     function self(p){return /самовожд/i.test(dpTName(p))}
-    var tg1=[0,0],tg2=[0,0],tm=[0,0],P=0,F=0,TS=0,TV=0,h='';
+    function fm(x){return x&&(x[0]||x[1])?x[0]+'+'+x[1]+'='+(x[0]+x[1]):''}
+    var tg1=[0,0],tg2=[0,0],tm=[0,0],P=0,F=0,TS=[0,0],TV=[0,0],h='';
     h+='<div class="xlw xw xp"><table class="xl xs"><thead><tr><th style="text-align:left">Цех</th><th class="pl">План</th><th class="fa">Факт</th><th>Откл</th><th>Гараж 1</th><th>Гараж 2</th><th>Мобил</th><th>Самовожд.</th><th>С водит.</th></tr></thead><tbody>';
     ds.forEach(function(d){
-      var g1=[0,0],g2=[0,0],m=[0,0],pl=0,fa=0,sv=0,vd=0;
-      pl_.forEach(function(p){var rw=R[p],sg_=(rw&&rw.sg&&rw.sg[d])||{};add(g1,sg_['Гараж 1']);add(g2,sg_['Гараж 2']);add(m,PLAN.mobil&&PLAN.mobil[p]&&PLAN.mobil[p].shops[d]);var b=(X.T[p]||{})[d];if(b){pl+=dpP(b);fa+=dpF(b);if(self(p))sv+=dpF(b);else vd+=dpF(b)}});
-      add(tg1,g1);add(tg2,g2);add(tm,m);P+=pl;F+=fa;TS+=sv;TV+=vd;
-      h+='<tr class="blk"><td class="nm"'+(isND(d)?' style="background:#fff3b0"':'')+'>'+ed(d)+'</td><td class="pl">'+pl+'</td><td class="fa">'+fa+'</td><td class="dv">'+xlDev(fa-pl)+'</td><td class="v">'+dn(g1)+'</td><td class="v">'+dn(g2)+'</td><td class="v'+((m[0]||m[1])?' mb':'')+'">'+dn(m)+'</td><td class="v">'+(sv||'')+'</td><td class="v">'+(vd||'')+'</td></tr>';
+      var g1=[0,0],g2=[0,0],m=[0,0],pl=0,fa=0,sv=[0,0],vd=[0,0];
+      pl_.forEach(function(p){var rw=R[p],sg_=(rw&&rw.sg&&rw.sg[d])||{};add(g1,sg_['Гараж 1']);add(g2,sg_['Гараж 2']);add(m,PLAN.mobil&&PLAN.mobil[p]&&PLAN.mobil[p].shops[d]);var b=(X.T[p]||{})[d];if(b){pl+=dpP(b);fa+=dpF(b);add(self(p)?sv:vd,[b.fd||0,b.fn||0])}});
+      add(tg1,g1);add(tg2,g2);add(tm,m);P+=pl;F+=fa;add(TS,sv);add(TV,vd);
+      h+='<tr class="blk"><td class="nm"'+(isND(d)?' style="background:#fff3b0"':'')+'>'+ed(d)+'</td><td class="pl">'+pl+'</td><td class="fa">'+fa+'</td><td class="dv">'+xlDev(fa-pl)+'</td><td class="v">'+fm(g1)+'</td><td class="v">'+fm(g2)+'</td><td class="v'+((m[0]||m[1])?' mb':'')+'">'+fm(m)+'</td><td class="v">'+fm(sv)+'</td><td class="v">'+fm(vd)+'</td></tr>';
     });
-    h+='<tr class="blk"><td class="nm"><b>ИТОГО</b></td><td class="pl">'+P+'</td><td class="fa">'+F+'</td><td class="dv">'+xlDev(F-P)+'</td><td class="v"><b>'+dn(tg1)+'</b></td><td class="v"><b>'+dn(tg2)+'</b></td><td class="v"><b>'+dn(tm)+'</b></td><td class="v"><b>'+(TS||'')+'</b></td><td class="v"><b>'+(TV||'')+'</b></td></tr></tbody></table></div>';
+    h+='<tr class="blk"><td class="nm"><b>ИТОГО</b></td><td class="pl">'+P+'</td><td class="fa">'+F+'</td><td class="dv">'+xlDev(F-P)+'</td><td class="v"><b>'+fm(tg1)+'</b></td><td class="v"><b>'+fm(tg2)+'</b></td><td class="v"><b>'+fm(tm)+'</b></td><td class="v"><b>'+fm(TS)+'</b></td><td class="v"><b>'+fm(TV)+'</b></td></tr></tbody></table></div>';
     return h;
   }
   function citsPlanPre(){
@@ -663,7 +664,7 @@ table tr.dvr td{border-top:0;padding-top:0}
     var sel=cpS.slice().sort(function(a,b){return parseFloat(a)-parseFloat(b)||(a<b?-1:1)});
     h+='<button class="pqb" data-cpf="" style="margin:6px 0;width:auto;padding:6px 12px">✕ сбросить выбор</button>';
     h+='<div class="sbh" style="margin-top:10px">Выбрано: '+esc(sel.join(', '))+'</div>'+preTable(sel);
-    h+='<div class="empty" style="padding:6px;text-align:left"><small>В ячейке: день/ночь. Гараж 1, Гараж 2 и Мобил Сервис - откуда выходит план цеха. Самовождение и с водителем - факт по выбранным типам.</small></div>';
+    h+='<div class="empty" style="padding:6px;text-align:left"><small>В ячейке: день+ночь=всего. Гараж 1, Гараж 2 и Мобил - откуда выходит план цеха; самовождение и с водителем - факт по выбранным типам.</small></div>';
     return h;
   }
   function planSrc(rw,d,m){      // откуда выходит план: гараж 1 / гараж 2 / Мобил Сервис
