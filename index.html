@@ -126,6 +126,7 @@ main{padding:12px 12px 40px;max-width:760px;margin:0 auto}
 .dep span{color:var(--muted);font-size:13px}
 .dep .tot{font-size:24px;font-weight:700;color:var(--brand2);display:block;margin:2px 0}
 .dep.hitdep{border-color:var(--brand2)}
+.chip.nd{background:#fff3b0;border-color:#e0b800;color:#222}.chip.nd.on{background:#ffe14d;color:#222}
 .dep.nd{background:#fff3b0;border-color:#e0b800;color:#222}.dep.nd span{color:#5a4a00}.dep .ndn{display:block;font-size:12px;font-weight:600;margin-top:2px}
 .xl th.ndh{background:#ffe14d!important;color:#222!important}
 .sbh{margin:12px 2px 4px;font-weight:700;font-size:14px;color:var(--muted);border-bottom:2px solid var(--line);padding-bottom:3px}
@@ -421,7 +422,7 @@ table tr.dvr td{border-top:0;padding-top:0}
     html+='<div class="chips">';
     html+='<button class="chip'+(dep===null?' on':'')+'" data-dep="">Все</button>';
     list.forEach(function(x){
-      html+='<button class="chip'+(dep===x.name?' on':'')+'" data-dep="'+esc(x.name)+'">'+esc(x.name)+'<small>'+x.cnt+'</small></button>';
+      html+='<button class="chip'+(dep===x.name?' on':'')+(isND(x.name)?' nd':'')+'" data-dep="'+esc(x.name)+'">'+esc(x.name)+'<small>'+x.cnt+'</small></button>';
     });
     html+='</div>';
     if(dep===null){
@@ -656,7 +657,7 @@ table tr.dvr td{border-top:0;padding-top:0}
   function citsPlanShop(){
     var X=dpx(); if(!X.has) return '<div class="empty">План по цехам для этого дня не загружен</div>';
     var deps=planDeps().filter(function(d){return X.D[d]});
-    var h='<div class="chips">'+deps.map(function(d){return '<button class="chip'+(d===cpd?' on':'')+'" data-cpd="'+(d===cpd?'':esc(d))+'">'+esc(d)+'</button>'}).join('')+'</div>';
+    var h='<div class="chips">'+deps.map(function(d){return '<button class="chip'+(d===cpd?' on':'')+(isND(d)?' nd':'')+'" data-cpd="'+(d===cpd?'':esc(d))+'">'+esc(d)+'</button>'}).join('')+'</div>';
     if(deps.indexOf(cpd)<0){
       var P=0,F=0;
       h+='<div class="xlw xw"><table class="xl xs"><thead><tr><th style="text-align:left">Цех</th><th class="pl">План</th><th class="fa">Факт</th><th>Откл</th></tr></thead><tbody>'+deps.map(function(d){var T=X.D[d],pl=0,fa=0;Object.keys(T).forEach(function(p){pl+=dpP(T[p]);fa+=dpF(T[p])});P+=pl;F+=fa;
