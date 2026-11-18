@@ -7,7 +7,7 @@ ws = wb['ТС КБМ по цехам']; lst = wb['Список (для филь�
 DEPS = json.load(open(os.path.join(ROOT, 'data.json'), encoding='utf-8')).get('depOrder', [])
 # названия цехов как на сайте (в Excel они иначе); несколько столбцов Excel -> один цех суммируются
 ALIAS = {'Эл.Цех': 'ЭЦ', 'ППД': 'ЦППД', 'ОКС, ДРиСУ': 'ОКС', 'МГ': 'МГС', 'ГАПиТ': 'ГАПиИТ', 'оппоIR': 'IR',
-         'Диспетчерская группа': 'ЦИТС', 'СӨС': 'ОБиОТ', 'Нейрон': 'ОБиОТ', 'БД': 'ОБиОТ', 'Чакур': 'ОБиОТ', 'СМУ УТТ': 'ПРЦЭО', 'ОРП': 'Отделкадр', 'ДТТ-1': 'Гараж-1', 'ДТТ-2': 'Гараж-2'}
+         'Диспетчерская группа': 'ЦИТС', 'СӨС': 'ОБиОТ', 'Нейрон': 'ОБиОТ', 'БД': 'ОБиОТ', 'Чакур': 'ОБиОТ', 'ТБ': 'ОБиОТ', 'СМУ УТТ': 'ПРЦЭО', 'ОРП': 'Отделкадр', 'ДТТ-1': 'Гараж-1', 'ДТТ-2': 'Гараж-2'}
 def clean(s): return re.sub(r'\s+', ' ', str(s or '')).strip().replace('Cедельный', 'Седельный')
 def pk(v):
     s = str(v); return s[:-2] if s.endswith('.0') else s
@@ -46,6 +46,9 @@ for s in shops:
     if k not in order: order.append(k)
 # Мобил Сервис (третья сторона): зафиксированный план по цехам и типам
 mob = json.load(open(os.path.join(ROOT, 'data', 'plan_mobil.json'), encoding='utf-8'))['rows']
+for _k, _sh in mob.items():          # ТБ объединён с ОБиОТ (18.11)
+    if 'ТБ' in _sh:
+        _x = _sh.setdefault('ОБиОТ', [0, 0]); _t = _sh.pop('ТБ'); _x[0] += _t[0]; _x[1] += _t[1]
 known = {r['k'] for r in rows}
 for k in mob:
     if k not in known:      # тип есть только у Мобила (например, автокран 100т)
@@ -69,6 +72,6 @@ for r in rows:
     if sh: plan[k] = sh
     total[k] = sum(v[0] + v[1] for v in sh.values())
 old['plan'] = plan; old['total'] = total
-old['depts'] = [d for d in old['depts'] if d not in ('БД', 'СМУ УТТ', 'Нейрон')]
+old['depts'] = [d for d in old['depts'] if d not in ('БД', 'СМУ УТТ', 'Нейрон', 'ТБ')]
 json.dump(old, open(pdp, 'w', encoding='utf-8'), ensure_ascii=False)
 print('plan_dept', sum(total.values()))

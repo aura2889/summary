@@ -30,6 +30,9 @@ def convert(path):
         if not r[4]: continue
         nm = re.sub(r'^[СC]\s*(?=\d)', '', str(r[4]).strip())
         v = {'dep': str(r[3]), 'num': nm, 'p': str(r[5]), 't': str(r[6]), 'd': num(r[8]), 'n': num(r[9])}
+        if v['dep'] == 'ОБиОТ':                     # откуда машина пришла в объединённый ОБиОТ (шапка в файле диспетчера): ТБ, ПЧ, БД, Чакур, Нейрон
+            h = re.sub(r'[\s.]', '', str(r[2] or '')).upper()
+            v['sub'] = 'ТБ' if h.startswith('ТБ') else 'ПЧ' if h.startswith('ПЧ') else 'БД' if h == 'БД' else 'Чакур' if h.startswith('ЧАКУР') else 'Нейрон' if h.startswith('НЕЙРОН') else (str(r[2] or '').strip() or 'ПЧ')
         src = str(r[1] or '')
         name = disp_name(src)
         if name:                                    # «Добавлено вручную» (пожарные) в диспетчеры не входит
@@ -94,7 +97,8 @@ def convert(path):
                     if mu: cell['u'] = int(mu.group(1))
                 row['cells'][dname] = cell
             rows.append(row)
-    out = {'date': date, 'totals': totals, 'depOrder': depOrder, 'types': types, 'veh': veh, 'disp': disp, 'daily': {'deps': deps, 'rows': rows}}
+    nd = [_cl(ws.cell(1, c).value) for c in range(11, ws.max_column + 1, 4) if ws.cell(1, c).value and str(ws.cell(1, c).fill.fgColor.rgb or '').upper().endswith('FFC000')]     # новые отделы вне плана (оранжевая шапка)
+    out = {'date': date, 'totals': totals, 'depOrder': depOrder, 'nd': nd, 'types': types, 'veh': veh, 'disp': disp, 'daily': {'deps': deps, 'rows': rows}}
     add_tral_winch(out)
     return out
 

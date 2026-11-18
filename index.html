@@ -126,6 +126,10 @@ main{padding:12px 12px 40px;max-width:760px;margin:0 auto}
 .dep span{color:var(--muted);font-size:13px}
 .dep .tot{font-size:24px;font-weight:700;color:var(--brand2);display:block;margin:2px 0}
 .dep.hitdep{border-color:var(--brand2)}
+.dep.nd{background:#fff3b0;border-color:#e0b800;color:#222}.dep.nd span{color:#5a4a00}.dep .ndn{display:block;font-size:12px;font-weight:600;margin-top:2px}
+.xl th.ndh{background:#ffe14d!important;color:#222!important}
+.sbh{margin:12px 2px 4px;font-weight:700;font-size:14px;color:var(--muted);border-bottom:2px solid var(--line);padding-bottom:3px}
+.sbh em{font-style:normal;font-weight:600}
 table{width:100%;border-collapse:collapse;font-size:14px}
 th,td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums}
 th:first-child,td:first-child,th:nth-child(2),td:nth-child(2){text-align:left}
@@ -303,8 +307,14 @@ table tr.dvr td{border-top:0;padding-top:0}
   var ORDER=['35','35.1','35.2','31','28','30','63','29','22','23','22.1','34','47','46','49','62','27','50','53','13','13.1','20'];
   var LAT={A:'А',B:'В',C:'С',E:'Е',H:'Н',K:'К',M:'М',O:'О',P:'Р',T:'Т',X:'Х',Y:'У'};
   var $=function(s){return document.querySelector(s)};
-  var DLB={'ОБиОТ':'ОБиОТ (ПЧ+БД+Чакур)','ПРЦЭО':'ПРЦЭО (+СМУ УТТ)','ОКС':'ОКС (+ДРиСУ)'};
+  var DLB={'ОБиОТ':'ОБиОТ (ТБ+ПЧ+БД+Чакур)','ПРЦЭО':'ПРЦЭО (+СМУ УТТ)','ОКС':'ОКС (+ДРиСУ)'};
   function ed(d){return esc(DLB[d]||d)}
+  var SUBS=['ТБ','ПЧ','БД','Чакур','Нейрон'];      // откуда машина в объединённом ОБиОТ
+  function subGroups(a){var m={},k=[];a.forEach(function(v){var s=v.sub||'';if(!m[s]){m[s]=[];k.push(s)}m[s].push(v)});
+    if(k.length===1&&k[0]==='') return [['',a]];
+    k.sort(function(x,y){var ix=SUBS.indexOf(x),iy=SUBS.indexOf(y);return (ix<0?99:ix)-(iy<0?99:iy)});
+    return k.map(function(s){return [s,m[s]]})}
+  function isND(d){return (DATA.nd||[]).indexOf(d)>-1}
   function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
   function store(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}}
   function fmtDate(iso){var p=iso.split('-');return p[2]+'.'+p[1]+'.'+p[0]}
@@ -417,7 +427,7 @@ table tr.dvr td{border-top:0;padding-top:0}
     if(dep===null){
       html+='<div class="depgrid">';
       list.forEach(function(x){
-        html+='<button class="dep" data-dep="'+esc(x.name)+'"><b>'+esc(x.name)+'</b><span class="tot">'+x.cnt+'</span><span>день '+x.d+' · ночь '+x.n+'</span>'+'</button>';
+        html+='<button class="dep'+(isND(x.name)?' nd':'')+'" data-dep="'+esc(x.name)+'"><b>'+ed(x.name)+'</b><span class="tot">'+x.cnt+'</span><span>день '+x.d+' · ночь '+x.n+'</span>'+(isND(x.name)?'<span class="ndn">передано в помощь</span>':'')+'</button>';
       });
       return html+'</div>';
     }
@@ -427,17 +437,21 @@ table tr.dvr td{border-top:0;padding-top:0}
     var f=vs.filter(function(v){return shift==='all'||(shift==='d'?v.d:v.n)});
     if(!f.length) return html+'<div class="empty">В этой смене техники нет</div>';
     html+=legend();
-    var g={},keys=[];
-    f.forEach(function(v){var k=v.p;if(!g[k]){g[k]={p:v.p,t:v.t,a:[]};keys.push(k)}g[k].a.push(v)});
-    function rank(k){var i=ORDER.indexOf(k);return i>-1?i:1000-g[k].a.length}
-    keys.sort(function(a,b){return rank(a)-rank(b)});
-    html+='<div class="cg">';
-    keys.forEach(function(k){
-      var x=g[k];
-      x.a.sort(function(a,b){return a.num.localeCompare(b.num,'ru',{numeric:true})});
-      html+='<div class="card"><h3>'+esc(x.t)+'<em>— '+x.a.length+' ед.</em>'+'</h3><div class="nums">'+x.a.map(numChip).join('')+'</div></div>';
+    subGroups(f).forEach(function(sg){
+      var g={},keys=[];
+      sg[1].forEach(function(v){var k=v.p;if(!g[k]){g[k]={p:v.p,t:v.t,a:[]};keys.push(k)}g[k].a.push(v)});
+      function rank(k){var i=ORDER.indexOf(k);return i>-1?i:1000-g[k].a.length}
+      keys.sort(function(a,b){return rank(a)-rank(b)});
+      if(sg[0]) html+='<div class="sbh">'+esc(sg[0])+' <em>— '+sg[1].length+' ед.</em></div>';
+      html+='<div class="cg">';
+      keys.forEach(function(k){
+        var x=g[k];
+        x.a.sort(function(a,b){return a.num.localeCompare(b.num,'ru',{numeric:true})});
+        html+='<div class="card"><h3>'+esc(x.t)+'<em>— '+x.a.length+' ед.</em>'+'</h3><div class="nums">'+x.a.map(numChip).join('')+'</div></div>';
+      });
+      html+='</div>';
     });
-    return html+'</div>';
+    return html;
   }
 
   function driverHits(toks){
@@ -606,7 +620,7 @@ table tr.dvr td{border-top:0;padding-top:0}
   // главная: таблица как в Excel «ТС КБМ по цехам» (КБМ + Мобил)
   function planMatrix(){
     var deps=planDeps(), rows=xtData().filter(function(w){return w.r&&w.plan});
-    var h='<div class="xlw"><table class="xl"><thead><tr><th>№</th><th style="text-align:left">Техника</th><th class="pl">План</th><th class="fa">Факт</th>'+deps.map(function(d){return '<th>'+ed(d)+'</th>'}).join('')+'</tr></thead><tbody>';
+    var h='<div class="xlw"><table class="xl"><thead><tr><th>№</th><th style="text-align:left">Техника</th><th class="pl">План</th><th class="fa">Факт</th>'+deps.map(function(d){return '<th'+(isND(d)?' class="ndh"':'')+'>'+ed(d)+'</th>'}).join('')+'</tr></thead><tbody>';
     var tot={};
     rows.forEach(function(w){
       var r=w.r;
@@ -689,7 +703,7 @@ table tr.dvr td{border-top:0;padding-top:0}
   }
   function citsPC(){
     var D=DATA.daily,deps=D.deps;
-    var h='<div class="xlw"><table class="xl"><thead><tr><th>№</th><th style="text-align:left">Техника</th><th class="pl">План</th><th class="fa">Факт</th><th>Откл</th><th class="oqu">Оқу</th>'+deps.map(function(d){return '<th>'+esc(d)+'</th>'}).join('')+'</tr></thead><tbody>';
+    var h='<div class="xlw"><table class="xl"><thead><tr><th>№</th><th style="text-align:left">Техника</th><th class="pl">План</th><th class="fa">Факт</th><th>Откл</th><th class="oqu">Оқу</th>'+deps.map(function(d){return '<th'+(isND(d)?' class="ndh"':'')+'>'+esc(d)+'</th>'}).join('')+'</tr></thead><tbody>';
     D.rows.forEach(function(r,ri){
       var tn=trRow(r).length, tc=tn?'<td class="tr oqu sep tapc" rowspan="2" data-ctr="'+ri+'" role="button" tabindex="0">'+tn+'</td>':'<td class="tr oqu sep" rowspan="2"></td>';
       var u=deps.map(function(d){var c=r.cells[d];return '<td class="u">'+(c&&c.u?'утт-'+c.u:'')+'</td>'}).join('');
@@ -705,7 +719,7 @@ table tr.dvr td{border-top:0;padding-top:0}
   }
   function citsAll(){
     var X=dpx(), deps=(DATA.depOrder||[]).filter(function(d){return X.D[d]}), ts=(DATA.types||[]).filter(function(t){return t.plan||t.fact}).sort(function(a,b){return (parseFloat(a.p)||999)-(parseFloat(b.p)||999)||(a.p<b.p?-1:1)});
-    var h='<div class="xlw xall"><table class="xl"><thead><tr><th>№</th><th style="text-align:left">Техника</th><th class="pl">План</th><th class="fa">Факт</th><th>Откл</th><th class="oqu">Оқу</th>'+deps.map(function(d){return '<th>'+esc(d)+'</th>'}).join('')+'</tr></thead><tbody>',tot={};
+    var h='<div class="xlw xall"><table class="xl"><thead><tr><th>№</th><th style="text-align:left">Техника</th><th class="pl">План</th><th class="fa">Факт</th><th>Откл</th><th class="oqu">Оқу</th>'+deps.map(function(d){return '<th'+(isND(d)?' class="ndh"':'')+'>'+esc(d)+'</th>'}).join('')+'</tr></thead><tbody>',tot={};
     ts.forEach(function(t){
       var df=t.fact-t.plan, tn=trRow(t).length, T=X.T[t.p]||{};
       h+='<tr class="blk"><td class="pn">'+esc(t.p)+'</td><td class="nm">'+esc(t.name)+'</td><td class="pl">'+t.plan+'</td><td class="fa">'+t.fact+'</td><td class="dv'+(df<0?' tapc':'')+'"'+(df<0?' data-tdv="'+esc(t.p)+'" role="button" tabindex="0"':'')+'>'+xlDev(df)+'</td>'+
@@ -777,13 +791,17 @@ table tr.dvr td{border-top:0;padding-top:0}
     var byDep={}; vs.forEach(function(v){(byDep[v.dep]=byDep[v.dep]||[]).push(v)});
     h+='<div class="cg">';
     depList().map(function(x){return x.name}).filter(function(n){return byDep[n]}).forEach(function(d){
-      var a=byDep[d], g={}, keys=[];
-      a.forEach(function(v){var k=v.p;if(!g[k]){g[k]={t:v.t,a:[]};keys.push(k)}g[k].a.push(v)});
-      keys.sort(function(x,y){var rx=ORDER.indexOf(x),ry=ORDER.indexOf(y);return (rx>-1?rx:1000-g[x].a.length)-(ry>-1?ry:1000-g[y].a.length)});
+      var a=byDep[d];
       h+='<div class="card"><h3>'+ed(d)+'<em>— '+a.length+' ед.</em></h3>';
-      keys.forEach(function(k){
-        var x=g[k]; x.a.sort(function(p,q){return p.num.localeCompare(q.num,'ru',{numeric:true})});
-        h+='<div class="tl">'+esc(x.t)+' — '+x.a.length+'</div><div class="nums">'+x.a.map(numChip).join('')+'</div>';
+      subGroups(a).forEach(function(sg){
+        var g={}, keys=[];
+        sg[1].forEach(function(v){var k=v.p;if(!g[k]){g[k]={t:v.t,a:[]};keys.push(k)}g[k].a.push(v)});
+        keys.sort(function(x,y){var rx=ORDER.indexOf(x),ry=ORDER.indexOf(y);return (rx>-1?rx:1000-g[x].a.length)-(ry>-1?ry:1000-g[y].a.length)});
+        if(sg[0]) h+='<div class="sbh">'+esc(sg[0])+' <em>— '+sg[1].length+' ед.</em></div>';
+        keys.forEach(function(k){
+          var x=g[k]; x.a.sort(function(p,q){return p.num.localeCompare(q.num,'ru',{numeric:true})});
+          h+='<div class="tl">'+esc(x.t)+' — '+x.a.length+'</div><div class="nums">'+x.a.map(numChip).join('')+'</div>';
+        });
       });
       h+='</div>';
     });
@@ -1513,8 +1531,10 @@ table tr.dvr td{border-top:0;padding-top:0}
     h+='<div class="sh"><div class="shh"><b>'+esc(r.name)+' · '+ed(d)+'</b><button class="shx" data-devx="1" aria-label="Закрыть">×</button></div>'+
        '<div class="shs"><small style="color:var(--muted)">'+vs.length+' ед.'+(c.e?' ('+esc(c.e)+')':'')+'</small></div><div class="shb">';
     if(!vs.length) h+='<div class="empty">Нет данных по машинам</div>';
+    var _sg=subGroups(vs); vs=[].concat.apply([],_sg.map(function(x){return x[1]})); var _lastSub=null;
     vs.forEach(function(v){
       var sh=v.d&&v.n?'день + ночь':(v.d?'день':'ночь'), cls=v.d&&v.n?'vdn':(v.d?'vd':'vn');
+      if(_sg.length>1&&(v.sub||'')!==_lastSub){_lastSub=v.sub||'';h+='<div class="sbh">'+esc(_lastSub||'—')+'</div>'}
       h+='<div class="ccv"><div class="cp"><span class="v '+cls+'">'+esc(v.num)+'</span><small>'+esc(v.t)+' · '+sh+'</small></div>';
       var list=DRV&&DRV.map?DRV.map[v.num]:undefined;
       if(!DRV) h+='<div class="cn">Данные по водителям не загружены</div>';

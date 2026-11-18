@@ -4,7 +4,7 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter as L
 DATE_STR=sys.argv[1] if len(sys.argv)>1 else '05.10.2026'
 ALL,EXC,NOTES=pickle.load(open('res.pkl','rb'))
-FINAL={'ПЧ-Семсер':'ОБиОТ','ПЧ':'ОБиОТ','ЧАКУР мед':'ОБиОТ','ЧАКУР мед.':'ОБиОТ','БД':'ОБиОТ','Нейрон':'ОБиОТ','СМУ УТТ':'ПРЦЭО','УПТОК':'БМТС','ГУ':'ГЦ','БПО 2':'ЦПКРС-2','РМУ 2':'Гараж-2','ЦИТС.':'ЦИТС','Газ.цех':'ГЦ','РСУ':'РСЦ','Экология':'ГООС','оппоIR':'IR'}
+FINAL={'ПЧ-Семсер':'ОБиОТ','ПЧ':'ОБиОТ','ЧАКУР мед':'ОБиОТ','ЧАКУР мед.':'ОБиОТ','БД':'ОБиОТ','Нейрон':'ОБиОТ','ТБ':'ОБиОТ','СМУ УТТ':'ПРЦЭО','УПТОК':'БМТС','ГУ':'ГЦ','БПО 2':'ЦПКРС-2','РМУ 2':'Гараж-2','ЦИТС.':'ЦИТС','Газ.цех':'ГЦ','РСУ':'РСЦ','Экология':'ГООС','оппоIR':'IR'}
 for _x in ALL: _x['dept']=FINAL.get(_x['dept'],_x['dept'])
 for _i in range(6): ALL.append(dict(cell='—',src='MAN',srcname='Добавлено вручную (пожарные машины)',hdr='ПЧ',dept='ОБиОТ',plate='Пожарная машина %d'%(_i+1),code='10',day=1 if _i<3 else 0,night=0 if _i<3 else 1,note='пожарные: 3 день + 3 ночь (по указанию, в диспетчерских файлах нет)',raw='',pid=''))
 TPLF="resources/template_first_day.xlsm"
@@ -34,8 +34,9 @@ types.remove('23'); types.insert(types.index('50')+1,'23')
 types[14:]=sorted(types[14:],key=lambda c:float(c))   # строки 17 и ниже - по возрастанию номера позиции
 dvol=collections.Counter()
 for x in ALL: dvol[x['dept']]+=x['day']+x['night']
-LBL={'ОБиОТ':'ОБиОТ (ПЧ+БД+Чакур)','ПРЦЭО':'ПРЦЭО (+СМУ УТТ)','ОКС':'ОКС (+ДРиСУ)'}     # подписи цехов с объединёнными отделами
-depts=[d for d in PD['depts'] if d!='ОБиОТ']+[d for d,_ in dvol.most_common() if d not in PD['depts'] and d!='ОБиОТ']+['ОБиОТ']
+LBL={'ОБиОТ':'ОБиОТ (ТБ+ПЧ+БД+Чакур)','ПРЦЭО':'ПРЦЭО (+СМУ УТТ)','ОКС':'ОКС (+ДРиСУ)'}     # подписи цехов с объединёнными отделами
+NEWD=[d for d,_ in dvol.most_common() if d not in PD['depts'] and d!='ОБиОТ']          # отделы вне плана (например «Акшук» - техника передана в помощь): первыми, перед ЦДН-1, шапка оранжевая
+depts=NEWD+[d for d in PD['depts'] if d!='ОБиОТ']+['ОБиОТ']
 PRI={'34','47','49','28','22','27','31','35','50'}
 thin=Side(style='thin'); B=Border(left=thin,right=thin,top=thin,bottom=thin)
 YEL=PatternFill('solid',fgColor='FFFF00'); ORG=PatternFill('solid',fgColor='FFC000'); GRY=PatternFill('solid',fgColor='F2F2F2')
@@ -74,7 +75,7 @@ for i,d in enumerate(depts):
     ws.cell(1,c1+2,LBL.get(d,d)); ws.merge_cells(start_row=1,start_column=c1+2,end_row=1,end_column=c1+3)
     for k,t in enumerate(('Д','Н','Д','Н')): ws.cell(2,c1+k,t)
     for c in (c1,c1+1): sty(ws.cell(1,c),GRN,True,True); sty(ws.cell(2,c),GRN,True,True)
-    for c in (c1+2,c1+3): sty(ws.cell(1,c),YEL,True,True); sty(ws.cell(2,c),YEL,True,True)
+    for c in (c1+2,c1+3): sty(ws.cell(1,c),ORG if d in NEWD else YEL,True,True); sty(ws.cell(2,c),ORG if d in NEWD else YEL,True,True)
 r0=3; last_col=D0-1+4*len(depts); LC=L(last_col)
 PL=[L(D0+4*i+k) for i in range(len(depts)) for k in (0,1)]      # столбцы плана
 FDc=[L(D0+4*i+2) for i in range(len(depts))]; FNc=[L(D0+4*i+3) for i in range(len(depts))]   # факт день / ночь
