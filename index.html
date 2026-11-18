@@ -129,7 +129,10 @@ main{padding:12px 12px 40px;max-width:760px;margin:0 auto}
 .chip.nd{background:#fff3b0;border-color:#e0b800;color:#222}.chip.nd.on{background:#ffe14d;color:#222}
 .dep.nd{background:#fff3b0;border-color:#e0b800;color:#222}.dep.nd span{color:#5a4a00}.dep .ndn{display:block;font-size:12px;font-weight:600;margin-top:2px}
 .xlcp{display:flex;justify-content:flex-end;margin:4px 0}.xlcp button{border:1px solid var(--blue-line);background:var(--blue-bg);color:var(--blue-ink);border-radius:8px;padding:5px 10px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}.xlcp button:active{opacity:.7}
-.xl.xg th.gs,.xl.xg td.gs{border-left:2px solid var(--line)}.xl.xg th.h2{font-size:11px;padding:3px 1px}.xl.xg td.v{min-width:22px;padding:3px 3px;font-size:13px}.xl.xg td.tt{background:var(--blue-bg);font-weight:900}
+.xl.xg th.gs,.xl.xg td.gs{border-left:2px solid var(--line)}.xl.xg th.h2{font-size:11px;padding:3px 1px}.xl.xg td.v,.xl.xg th.h2{box-sizing:border-box;width:30px;min-width:30px;max-width:30px;padding:3px 0;font-size:13px;text-align:center}.xl.xg th.h2{font-size:12px}.xl.xg td.tt,.xl.xg th.ti{width:40px;min-width:40px;max-width:40px}.xl.xg td.tt{background:var(--blue-bg);font-weight:900}.xl.xg th.ti{background:#2f6fb0}
+.xlw.xw.xp .xl.xg{min-width:0;width:max-content}
+.xl.xg thead tr+tr th:nth-child(1){left:auto!important;min-width:30px!important;width:30px!important;max-width:30px!important;padding:3px 0!important;z-index:3!important;background:var(--brand)!important}
+.xlw.xp .xl.xg td.pl,.xlw.xp .xl.xg td.fa,.xlw.xp .xl.xg td.dv{text-align:center;padding-left:0;padding-right:0}.xlw.xp .xl.xg thead th:first-child{text-align:center!important}
 .xlw.xp{max-height:none;overflow-x:auto}.xlw.xp .xl{font-size:13px}.xlw.xp .xl th,.xlw.xp .xl td{padding-left:2px;padding-right:2px}.xlw.xp .xl thead th{font-size:12px;padding:7px 2px}.xlw.xp .xl.xs th:nth-child(1),.xlw.xp .xl.xs td.nm{min-width:64px;width:64px;max-width:64px;font-size:10.5px}
 .xl th.ndh{background:#ffe14d!important;color:#222!important}
 .sbh{margin:12px 2px 4px;font-weight:700;font-size:14px;color:var(--muted);border-bottom:2px solid var(--line);padding-bottom:3px}
@@ -648,7 +651,7 @@ table tr.dvr td{border-top:0;padding-top:0}
       var c=bold?'<b>':'',e=bold?'</b>':'';return '<td class="v gs">'+c+(x[0]||'')+e+'</td><td class="v">'+c+(x[1]||'')+e+'</td><td class="v tt">'+c+(x[0]+x[1])+e+'</td>'}
     var tg1=[0,0],tg2=[0,0],tm=[0,0],P=0,F=0,TS=[0,0],TV=[0,0],h='';
     var GR=['Гараж 1','Гараж 2','Мобил','Самовожд.','С водит.'];
-    h+='<div class="xlw xw xp"><table class="xl xs xg"><thead><tr><th rowspan="2" style="text-align:left">Цех</th><th rowspan="2" class="pl">План</th><th rowspan="2" class="fa">Факт</th><th rowspan="2">Откл</th>'+GR.map(function(g){return '<th colspan="3" class="gs">'+g+'</th>'}).join('')+'</tr><tr>'+GR.map(function(){return '<th class="gs h2">Д</th><th class="h2">Н</th><th class="h2">Σ</th>'}).join('')+'</tr></thead><tbody>';
+    h+='<div class="xlw xw xp"><table class="xl xs xg"><thead><tr><th rowspan="2">Цех</th><th rowspan="2" class="pl">План</th><th rowspan="2" class="fa">Факт</th><th rowspan="2">Откл</th>'+GR.map(function(g){return '<th colspan="3" class="gs">'+g+'</th>'}).join('')+'</tr><tr>'+GR.map(function(){return '<th class="gs h2">Д</th><th class="h2">Н</th><th class="h2 ti">И</th>'}).join('')+'</tr></thead><tbody>';
     ds.forEach(function(d){
       var g1=[0,0],g2=[0,0],m=[0,0],pl=0,fa=0,sv=[0,0],vd=[0,0];
       pl_.forEach(function(p){var rw=R[p],sg_=(rw&&rw.sg&&rw.sg[d])||{};add(g1,sg_['Гараж 1']);add(g2,sg_['Гараж 2']);add(m,PLAN.mobil&&PLAN.mobil[p]&&PLAN.mobil[p].shops[d]);var b=(X.T[p]||{})[d];if(b){pl+=dpP(b);fa+=dpF(b);add(self(p)?sv:vd,[b.fd||0,b.fn||0])}});
@@ -667,7 +670,7 @@ table tr.dvr td{border-top:0;padding-top:0}
     var sel=cpS.slice().sort(function(a,b){return parseFloat(a)-parseFloat(b)||(a<b?-1:1)});
     h+='<button class="pqb" data-cpf="" style="margin:6px 0;width:auto;padding:6px 12px">✕ сбросить выбор</button>';
     h+='<div class="sbh" style="margin-top:10px">Выбрано: '+esc(sel.join(', '))+'</div>'+preTable(sel);
-    h+='<div class="empty" style="padding:6px;text-align:left"><small>Д - день, Н - ночь, Σ - всего. Гараж 1, Гараж 2 и Мобил - откуда выходит план цеха; самовождение и с водителем - факт по выбранным типам.</small></div>';
+    h+='<div class="empty" style="padding:6px;text-align:left"><small>Д - день, Н - ночь, И - итого. Гараж 1, Гараж 2 и Мобил - откуда выходит план цеха; самовождение и с водителем - факт по выбранным типам.</small></div>';
     return h;
   }
   function planSrc(rw,d,m){      // откуда выходит план: гараж 1 / гараж 2 / Мобил Сервис
