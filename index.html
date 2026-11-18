@@ -128,6 +128,7 @@ main{padding:12px 12px 40px;max-width:760px;margin:0 auto}
 .dep.hitdep{border-color:var(--brand2)}
 .chip.nd{background:#fff3b0;border-color:#e0b800;color:#222}.chip.nd.on{background:#ffe14d;color:#222}
 .dep.nd{background:#fff3b0;border-color:#e0b800;color:#222}.dep.nd span{color:#5a4a00}.dep .ndn{display:block;font-size:12px;font-weight:600;margin-top:2px}
+.xlw.xp{max-height:none;overflow-x:auto}.xlw.xp .xl{font-size:13px}.xlw.xp .xl th,.xlw.xp .xl td{padding-left:2px;padding-right:2px}.xlw.xp .xl thead th{font-size:12px;padding:7px 2px}.xlw.xp .xl.xs th:nth-child(1),.xlw.xp .xl.xs td.nm{min-width:74px;width:74px;max-width:74px}
 .xl th.ndh{background:#ffe14d!important;color:#222!important}
 .sbh{margin:12px 2px 4px;font-weight:700;font-size:14px;color:var(--muted);border-bottom:2px solid var(--line);padding-bottom:3px}
 .sbh em{font-style:normal;font-weight:600}
@@ -633,17 +634,36 @@ table tr.dvr td{border-top:0;padding-top:0}
     h+='<tr class="blk"><td></td><td class="nm"><b>ИТОГО</b></td><td class="pl">'+P+'</td><td class="fa">'+F+'</td>'+deps.map(function(d){var t=tot[d]||[0,0];return '<td class="v"><b>'+t[0]+'/'+t[1]+'</b></td>'}).join('')+'</tr>';
     return h+'</tbody></table></div><div class="empty" style="padding:6px;text-align:left"><small>В ячейке: день/ночь. <span class="mbk">Голубым</span> - есть техника Мобил Сервис. Нажмите на число или на префикс, чтобы открыть тип.</small></div>';
   }
+  var cpS=[];      // выбранные префиксы (можно несколько)
+  function preTable(pl_,title){      // таблица: цеха × (Гараж 1, Гараж 2, Мобил Сервис, план, факт, откл) по выбранным префиксам
+    var X=dpx(), R={};PLAN.rows.forEach(function(r){R[r.k]=r});
+    var ord=DATA.depOrder||[], set={};
+    pl_.forEach(function(p){Object.keys(X.T[p]||{}).forEach(function(d){var b=X.T[p][d];if(dpP(b)||dpF(b))set[d]=1})});
+    var ds=Object.keys(set).sort(function(x,y){var ix=ord.indexOf(x),iy=ord.indexOf(y);return (ix<0?999:ix)-(iy<0?999:iy)});
+    function add(t,x){if(x){t[0]+=x[0];t[1]+=x[1]}}
+    var tg1=[0,0],tg2=[0,0],tm=[0,0],P=0,F=0,h='';
+    if(title) h+='<div class="sbh" style="margin-top:14px">'+esc(title)+'</div>';
+    h+='<div class="xlw xw xp"><table class="xl xs"><thead><tr><th style="text-align:left">Цех</th><th>Гараж 1</th><th>Гараж 2</th><th>Мобил</th><th class="pl">План</th><th class="fa">Факт</th><th>Откл</th></tr></thead><tbody>';
+    ds.forEach(function(d){
+      var g1=[0,0],g2=[0,0],m=[0,0],pl=0,fa=0;
+      pl_.forEach(function(p){var rw=R[p],sg_=(rw&&rw.sg&&rw.sg[d])||{};add(g1,sg_['Гараж 1']);add(g2,sg_['Гараж 2']);add(m,PLAN.mobil&&PLAN.mobil[p]&&PLAN.mobil[p].shops[d]);var b=(X.T[p]||{})[d];if(b){pl+=dpP(b);fa+=dpF(b)}});
+      add(tg1,g1);add(tg2,g2);add(tm,m);P+=pl;F+=fa;
+      h+='<tr class="blk"><td class="nm"'+(isND(d)?' style="background:#fff3b0"':'')+'>'+ed(d)+'</td><td class="v">'+dn(g1)+'</td><td class="v">'+dn(g2)+'</td><td class="v'+((m[0]||m[1])?' mb':'')+'">'+dn(m)+'</td><td class="pl">'+pl+'</td><td class="fa">'+fa+'</td><td class="dv">'+xlDev(fa-pl)+'</td></tr>';
+    });
+    h+='<tr class="blk"><td class="nm"><b>ИТОГО</b></td><td class="v"><b>'+dn(tg1)+'</b></td><td class="v"><b>'+dn(tg2)+'</b></td><td class="v"><b>'+dn(tm)+'</b></td><td class="pl">'+P+'</td><td class="fa">'+F+'</td><td class="dv">'+xlDev(F-P)+'</td></tr></tbody></table></div>';
+    return h;
+  }
   function citsPlanPre(){
     var X=dpx(); if(!X.has) return '<div class="empty">План по цехам для этого дня не загружен</div>';
     var ps=Object.keys(X.T).filter(function(p){return Object.keys(X.T[p]).some(function(d){var b=X.T[p][d];return dpP(b)||dpF(b)})}).sort(function(a,b){return parseFloat(a)-parseFloat(b)||(a<b?-1:1)});
-    var h='<div class="pq" style="grid-template-columns:repeat('+Math.ceil(ps.length/4)+',minmax(0,1fr))">'+ps.map(function(p){return '<button class="pqb'+(p===cpf?' on':'')+'" data-cpf="'+esc(p)+'">'+esc(p)+'</button>'}).join('')+'</div>';
-    if(!cpf||ps.indexOf(cpf)<0) return h+planMatrix();
-    h+='<button class="pqb" data-cpf="" style="margin:6px 0;width:auto;padding:6px 12px">← таблица по всем типам</button>';
-    var a=X.T[cpf]||{},ord=DATA.depOrder||[],ds=Object.keys(a).filter(function(d){return dpP(a[d])||dpF(a[d])}).sort(function(x,y){var ix=ord.indexOf(x),iy=ord.indexOf(y);return (ix<0?999:ix)-(iy<0?999:iy)});
-    var pl=0,fa=0;ds.forEach(function(d){pl+=dpP(a[d]);fa+=dpF(a[d])});
-    var rw=PLAN.rows.filter(function(r){return r.k===cpf})[0], mo=(PLAN.mobil&&PLAN.mobil[cpf])||null;
-    h+='<div class="card"><h3>'+esc(cpf+' · '+dpTName(cpf))+'</h3><div class="stats"><div class="stat plan"><b>'+pl+'</b><span>план</span></div><div class="stat fact"><b>'+fa+'</b><span>факт</span></div><div class="stat"><b class="'+sgc(fa-pl)+'">'+sg(fa-pl)+'</b><span>откл.</span></div></div>';
-    h+=ds.map(function(d){var b=a[d],v=dpF(b)-dpP(b),m=mo&&mo.shops[d]?mo.shops[d]:null,src=planSrc(rw,d,m);return '<div class="dv-r"><div class="n">'+ed(d)+'<small>план: день '+b.pd+' · ночь '+b.pn+' — факт: день '+b.fd+' · ночь '+b.fn+(src?'<br>'+src:'')+'</small></div><div class="d">'+dpP(b)+' → '+dpF(b)+' <span class="'+sgc(v)+'">'+(v?sg(v):'')+'</span></div></div>'}).join('')+'</div>';
+    cpS=cpS.filter(function(p){return ps.indexOf(p)>-1});
+    var h='<div class="pq" style="grid-template-columns:repeat('+Math.ceil(ps.length/4)+',minmax(0,1fr))">'+ps.map(function(p){return '<button class="pqb'+(cpS.indexOf(p)>-1?' on':'')+'" data-cpf="'+esc(p)+'">'+esc(p)+'</button>'}).join('')+'</div>';
+    if(!cpS.length) return h+'<div class="empty" style="padding:6px;text-align:left"><small>Нажмите на один или несколько префиксов - ниже появится таблица по цехам.</small></div>'+planMatrix();
+    var sel=cpS.slice().sort(function(a,b){return parseFloat(a)-parseFloat(b)||(a<b?-1:1)});
+    h+='<button class="pqb" data-cpf="" style="margin:6px 0;width:auto;padding:6px 12px">✕ сбросить выбор</button>';
+    if(sel.length>1) h+=preTable(sel,'Выбрано: '+sel.join(', ')+' - итого');
+    sel.forEach(function(p){h+=preTable([p],sel.length>1||true?p+' · '+dpTName(p):'')});
+    h+='<div class="empty" style="padding:6px;text-align:left"><small>В ячейке: день/ночь. Гараж 1, Гараж 2 и Мобил Сервис - откуда выходит план цеха.</small></div>';
     return h;
   }
   function planSrc(rw,d,m){      // откуда выходит план: гараж 1 / гараж 2 / Мобил Сервис
@@ -1352,7 +1372,7 @@ table tr.dvr td{border-top:0;padding-top:0}
     else if(t.dataset.cps){cps=t.dataset.cps;track('План по цехам/'+cps)}
     else if(t.dataset.cpd!==undefined){cpd=t.dataset.cpd}
     else if(t.dataset.psk!==undefined){psk=t.dataset.psk}
-    else if(t.dataset.cpf!==undefined){cpf=t.dataset.cpf;window.scrollTo(0,0)}
+    else if(t.dataset.cpf!==undefined){var _p=t.dataset.cpf;if(!_p)cpS=[];else{var _i=cpS.indexOf(_p);if(_i>-1)cpS.splice(_i,1);else cpS.push(_p)}if(cps!=='pre')cps='pre'}
     else if(t.dataset.dep!==undefined){
       dep=t.dataset.dep||null; q='';if(dep)track('отдел/'+dep);
       if(dep) fixShift(); else shift='d';
