@@ -143,6 +143,12 @@ def fleet_block(data):
         if pp[2]: c = [x for x in c if x[2] == pp[2]]
         if len(c) != 1: continue
         if R[c[0]]: out[num] = R[c[0]]
+    mob = ld('mileage_mobil.json')       # пикапы Мобил Сервис (60-...): пробег за октябрь
+    if mob:
+        CY = str.maketrans('АВЕКМНОРСТУХ', 'ABEKMHOPCTYX'); MP = mob.get('plates', {})
+        for v in data['veh']:
+            m = re.match(r'60-\d+-(\d{3}[A-Z]{2,3}\d{2})', re.sub(r'\s+', '', v['num'].upper().translate(CY)))
+            if m and m.group(1) in MP: out[v['num']] = {'ok': MP[m.group(1)]['km'], 'o': 'Мобил'}
     out['_'] = {'base': (base or {}).get('asof'), 'mil': (mil or {}).get('period')}
     return out
 

@@ -701,12 +701,12 @@ table tr.dvr td{border-top:0;padding-top:0}
     var F=DRV&&DRV.fleet;
     if(!DRV) return '<div class="empty">Данные пробега загружаются…</div>';
     if(!F||!F._||!F._.mil) return '<div class="empty">Данных по пробегу нет</div>';
-    var all=(DATA.veh||[]).filter(function(v){return v.num.indexOf('60-')!==0&&v.num.indexOf('-')>0});
+    var all=(DATA.veh||[]).filter(function(v){return v.num.indexOf('-')>0&&(v.num.indexOf('60-')!==0||(F[v.num]&&F[v.num].ok!=null))});
     var pset={};all.forEach(function(v){pset[v.p]=1});
     var ps=Object.keys(pset).sort(function(a,b){return parseFloat(a)-parseFloat(b)||(a<b?-1:1)});
     milS=milS.filter(function(p){return pset[p]});
     var h='<div class="pq" style="grid-template-columns:repeat('+Math.ceil(ps.length/4)+',minmax(0,1fr))">'+ps.map(function(p){return '<button class="pqb'+(milS.indexOf(p)>-1?' on':'')+'" data-cmf="'+esc(p)+'">'+esc(p)+'</button>'}).join('')+'</div>';
-    h+='<div class="empty" style="padding:6px;text-align:left"><small>Анализ за октябрь 2026 г.: сумма пробега по путевым листам; за сутки - пробег за октябрь, делённый на 31 день; на 1 выход - то же, но у машин, которые сегодня выходят и днём, и ночью (2 выхода), делится ещё на 2. Эти данные не обновляются. Цех, гараж и водитель - на дату сводки. Мобил Сервис не входит.</small></div>';
+    h+='<div class="empty" style="padding:6px;text-align:left"><small>Анализ за октябрь 2026 г.: сумма пробега по путевым листам; за сутки - пробег за октябрь, делённый на 31 день; на 1 выход - то же, но у машин, которые сегодня выходят и днём, и ночью (2 выхода), делится ещё на 2. Эти данные не обновляются. Цех, гараж и водитель - на дату сводки. Пикапы Мобил Сервис (60-…) - по данным их файла за октябрь.</small></div>';
     var sel=milS.length?milS.slice().sort(function(a,b){return parseFloat(a)-parseFloat(b)||(a<b?-1:1)}):ps;
     var vs=all.filter(function(v){return sel.indexOf(v.p)>-1}).map(function(v){var f=F[v.num]||{};return {v:v,km:f.ok==null?null:f.ok,n:f.on||0}});
     vs.sort(function(a,b){if(a.km==null&&b.km==null)return a.v.num.localeCompare(b.v.num,'ru',{numeric:true});if(a.km==null)return 1;if(b.km==null)return -1;return a.km-b.km||a.v.num.localeCompare(b.v.num,'ru',{numeric:true})});
