@@ -112,6 +112,40 @@ def export_cols(header):
     if plate is None or len(fio) < 1: return None
     return plate, fio[0], (fio[1] if len(fio) > 1 else None), pay
 
+def fleet_block(data):
+    """статичные данные парка: база КБМ (префикс 13: год выпуска, № а/к, пробег по одометру) и пробег по путевым листам за октябрь 2026.
+       -> {num: {'y','ak','km','o','m'(база), 'ok','on'(октябрь)}} по номерам из свода"""
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    def ld(n):
+        try: return json.load(open(os.path.join(root, 'data', n), encoding='utf-8'))
+        except Exception: return None
+    base, mil = ld('fleet_base.json'), ld('mileage_oct2026.json')
+    if not base and not mil: return {}
+    B = (base or {}).get('plates', {}); M = (mil or {}).get('plates', {})
+    R, Ef = {}, collections.defaultdict(list)          # R: (префикс, цифры, серия) -> запись; в базе и в путевых листах номер может быть написан по-разному (кириллица/латиница)
+    for pl in set(B) | set(M):
+        pp = parse_plate(pl)
+        if not pp: continue
+        k = pp[:3]; r = R.setdefault(k, {})
+        b = B.get(pl)
+        if b: r.update({'y': b.get('y'), 'ak': b.get('ak'), 'km': b.get('km'), 'o': b.get('o'), 'm': b.get('m')})
+        m = M.get(pl)
+        if m: r.update({'ok': m['km'], 'on': m['n']})
+        if k not in Ef[(pp[0], pp[1])]: Ef[(pp[0], pp[1])].append(k)
+    out = {}
+    for v in data['veh']:
+        num = v['num']
+        if num.startswith('60-') or '-' not in num: continue
+        al = ALIAS.get(num)
+        pp = parse_plate(al or num)
+        if not pp: continue
+        c = Ef.get((pp[0], pp[1]), [])
+        if pp[2]: c = [x for x in c if x[2] == pp[2]]
+        if len(c) != 1: continue
+        if R[c[0]]: out[num] = R[c[0]]
+    out['_'] = {'base': (base or {}).get('asof'), 'mil': (mil or {}).get('period')}
+    return out
+
 def build(data, export_path, contacts, mobil):
     """data - dict из svod2json; contacts - содержимое contacts.json; mobil - содержимое mobil.json
     -> (drivers_dict, список строк отчёта, список имён без телефона)"""
@@ -225,6 +259,8 @@ def build(data, export_path, contacts, mobil):
             if len(ph) > 1: d['t2'] = ph[1]
             out.append(d)
         drv['map'][num] = out; mob_added += 1
+    try: drv['fleet'] = fleet_block(data)
+    except Exception as e: print('fleet:', e)
     veh = data['veh']; mp = drv['map']
     allrec = sum(len(l) for l in mp.values()); withp = sum(1 for l in mp.values() for d in l if d.get('t'))
     nofind = [v['num'] for v in veh if v['num'] not in mp and '-' in v['num']]

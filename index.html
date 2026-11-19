@@ -131,11 +131,15 @@ main{padding:12px 12px 40px;max-width:760px;margin:0 auto}
 .xlcp{display:flex;justify-content:flex-end;margin:4px 0}.xlcp button{border:1px solid var(--blue-line);background:var(--blue-bg);color:var(--blue-ink);border-radius:8px;padding:5px 10px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}.xlcp button:active{opacity:.7}
 .xl.xg th.gs,.xl.xg td.gs{border-left:2px solid var(--line)}.xl.xg th.h2{font-size:11px;padding:3px 1px}.xl.xg td.v,.xl.xg th.h2{box-sizing:border-box;width:30px;min-width:30px;max-width:30px;padding:3px 0;font-size:13px;text-align:center}.xl.xg th.h2{font-size:12px}.xl.xg td.tt,.xl.xg th.ti{width:40px;min-width:40px;max-width:40px}.xl.xg td.tt{background:var(--blue-bg);font-weight:900}.xl.xg th.ti{background:#2f6fb0}
 .xlw.xw.xp .xl.xg{min-width:0;width:max-content}
+.xlw.xp .xl.xg thead tr+tr th{top:var(--th1,34px)}
 .xl.xg thead tr:first-child th:first-child{z-index:7!important;background:var(--brand)!important}
-@media(min-width:900px){.xlw.xw.xp{max-width:none}.xlw.xp .xl.xg{zoom:1.4}}
+@media(min-width:900px){.xlw.xw.xp{max-width:none;max-height:none;overflow:visible}.xlw.xp .xl.xg{zoom:1.4}
+.xlw.xp .xl.xg thead tr:first-child th{top:calc((var(--hh,0px) + var(--pqh,0px)) / 1.4)}
+.xlw.xp .xl.xg thead tr+tr th{top:calc((var(--hh,0px) + var(--pqh,0px)) / 1.4 + var(--th1,34px))}}
+.xl.xm th,.xl.xm td{padding:5px 4px;font-size:12px}.xl.xm td.km{text-align:right;font-weight:800;font-size:13px;color:var(--blue-ink)}.xl.xm td.mc{text-align:left;font-size:12px}.xl.xm td.dr{font-size:11px;min-width:110px}.xlw.xp .xl.xm.xs th:nth-child(1),.xlw.xp .xl.xm.xs td.nm{min-width:96px;width:96px;max-width:96px;font-size:11.5px}
 .xl.xg thead tr+tr th:nth-child(1){left:auto!important;min-width:30px!important;width:30px!important;max-width:30px!important;padding:3px 0!important;z-index:3!important;background:var(--brand)!important}
 .xlw.xp .xl.xg td.pl,.xlw.xp .xl.xg td.fa,.xlw.xp .xl.xg td.dv{text-align:center;padding-left:0;padding-right:0}.xlw.xp .xl.xg thead th:first-child{text-align:center!important}
-.xlw.xp{max-height:none;overflow-x:auto}.xlw.xp .xl{font-size:13px}.xlw.xp .xl th,.xlw.xp .xl td{padding-left:2px;padding-right:2px}.xlw.xp .xl thead th{font-size:12px;padding:7px 2px}.xlw.xp .xl.xs th:nth-child(1),.xlw.xp .xl.xs td.nm{min-width:64px;width:64px;max-width:64px;font-size:10.5px}
+.xlw.xp{max-height:calc(100vh - var(--hh,0px) - var(--pqh,0px) - 10px);overflow-x:auto}.xlw.xp .xl{font-size:13px}.xlw.xp .xl th,.xlw.xp .xl td{padding-left:2px;padding-right:2px}.xlw.xp .xl thead th{font-size:12px;padding:7px 2px}.xlw.xp .xl.xs th:nth-child(1),.xlw.xp .xl.xs td.nm{min-width:64px;width:64px;max-width:64px;font-size:10.5px}
 .xl th.ndh{background:#ffe14d!important;color:#222!important}
 .sbh{margin:12px 2px 4px;font-weight:700;font-size:14px;color:var(--muted);border-bottom:2px solid var(--line);padding-bottom:3px}
 .sbh em{font-style:normal;font-weight:600}
@@ -675,6 +679,35 @@ table tr.dvr td{border-top:0;padding-top:0}
     h+='<div class="empty" style="padding:6px;text-align:left"><small>Д - день, Н - ночь, И - итого. Гараж 1, Гараж 2 и Мобил - откуда выходит план цеха; самовождение и с водителем - факт по выбранным типам.</small></div>';
     return h;
   }
+  /* ---------- анализ пробега за октябрь 2026 (статичные данные, не обновляются) ---------- */
+  var milS=[];
+  function garOf(v){var n=((DATA.disp||[])[v.g]||{}).name||'';return n==='Диспетчер 7'||n==='Диспетчер 8'?'Гараж 2':(n==='Мобил Сервис'?'Мобил':'Гараж 1')}
+  function shortFio(n){var t=String(n||'').trim().split(/\s+/);return t.length<2?t.join(' '):t[0]+' '+t.slice(1).map(function(x){return x.charAt(0).toUpperCase()+'.'}).join('')}
+  function fmtKm(n){return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,'\u00a0')}
+  function citsMil(){
+    var F=DRV&&DRV.fleet;
+    if(!DRV) return '<div class="empty">Данные пробега загружаются…</div>';
+    if(!F||!F._||!F._.mil) return '<div class="empty">Данных по пробегу нет</div>';
+    var all=(DATA.veh||[]).filter(function(v){return v.num.indexOf('60-')!==0&&v.num.indexOf('-')>0});
+    var pset={};all.forEach(function(v){pset[v.p]=1});
+    var ps=Object.keys(pset).sort(function(a,b){return parseFloat(a)-parseFloat(b)||(a<b?-1:1)});
+    milS=milS.filter(function(p){return pset[p]});
+    var h='<div class="pq" style="grid-template-columns:repeat('+Math.ceil(ps.length/4)+',minmax(0,1fr))">'+ps.map(function(p){return '<button class="pqb'+(milS.indexOf(p)>-1?' on':'')+'" data-cmf="'+esc(p)+'">'+esc(p)+'</button>'}).join('')+'</div>';
+    h+='<div class="empty" style="padding:6px;text-align:left"><small>Анализ за октябрь 2026 г.: сумма пробега по путевым листам. Эти данные не обновляются. Цех, гараж и водитель - на дату сводки. Мобил Сервис не входит.</small></div>';
+    if(!milS.length) return h+'<div class="empty" style="padding:6px;text-align:left"><small>Нажмите на один или несколько префиксов - ниже появится таблица по возрастанию пробега.</small></div>';
+    var sel=milS.slice().sort(function(a,b){return parseFloat(a)-parseFloat(b)||(a<b?-1:1)});
+    var vs=all.filter(function(v){return sel.indexOf(v.p)>-1}).map(function(v){var f=F[v.num]||{};return {v:v,km:f.ok==null?null:f.ok,n:f.on||0}});
+    vs.sort(function(a,b){if(a.km==null&&b.km==null)return a.v.num.localeCompare(b.v.num,'ru',{numeric:true});if(a.km==null)return 1;if(b.km==null)return -1;return a.km-b.km||a.v.num.localeCompare(b.v.num,'ru',{numeric:true})});
+    var have=vs.filter(function(x){return x.km!=null}), sum=have.reduce(function(a,x){return a+x.km},0);
+    h+='<button class="pqb" data-cmf="" style="margin:6px 0;width:auto;padding:6px 12px">✕ сбросить выбор</button>';
+    h+='<div class="sbh" style="margin-top:6px">Выбрано: '+esc(sel.join(', '))+' <em>- '+vs.length+' ед., пробег за октябрь: всего '+fmtKm(sum)+' км'+(have.length?', в среднем '+fmtKm(Math.round(sum/have.length))+' км':'')+'</em></div>';
+    h+='<div class="xlw xw xp"><table class="xl xs xg xm"><thead><tr><th>Госномер</th><th>Пробег окт., км</th><th>Цех сейчас</th><th>Гараж</th><th>Самовожд.</th><th>С водителем</th></tr></thead><tbody>';
+    vs.forEach(function(x){
+      var v=x.v, selfd=/самовожд/i.test(v.t), L=DRV.map&&DRV.map[v.num], dn=(L||[]).map(function(d){return shortFio(d.n)}).join(', ');
+      h+='<tr class="blk"><td class="nm">'+esc(v.num)+'</td><td class="km">'+(x.km==null?'<small>нет данных</small>':fmtKm(x.km))+'</td><td class="mc">'+ed(v.dep)+'</td><td class="mc">'+garOf(v)+'</td><td class="mc">'+(selfd?'●':'')+'</td><td class="mc dr">'+(selfd?'':esc(dn))+'</td></tr>';
+    });
+    return h+'</tbody></table></div>';
+  }
   function planSrc(rw,d,m){      // откуда выходит план: гараж 1 / гараж 2 / Мобил Сервис
     var p=[];
     if(rw&&rw.sg&&rw.sg[d])Object.keys(rw.sg[d]).sort().forEach(function(g){var x=rw.sg[d][g];p.push(g+': '+(x[0]+x[1]))});
@@ -714,7 +747,7 @@ table tr.dvr td{border-top:0;padding-top:0}
   }
   function citsPlan(){
     if(!PLAN){planLoad();return '<div class="empty">Загрузка плана…</div>'}
-    return seg('data-cps',[['shop','По цехам'],['pre','По префиксам']],cps)+(cps==='shop'?citsPlanShop():citsPlanPre());
+    return seg('data-cps',[['shop','По цехам'],['pre','По префиксам'],['mil','Пробег окт. 2026']],cps)+(cps==='shop'?citsPlanShop():cps==='mil'?citsMil():citsPlanPre());
   }
 
   function xlDev(v){return v?'<span class="'+(v<0?'neg':'pos')+'">'+(v>0?'+':'')+v+'</span>':''}
@@ -1301,6 +1334,12 @@ table tr.dvr td{border-top:0;padding-top:0}
 
   /* ---------- окошко с водителем ---------- */
   function hidePop(){var p=$('#pop');p.style.display='none';p.innerHTML=''}
+  function fleetInfo(num){      // база парка КБМ (префикс 13): год выпуска, № автоколонны, пробег по одометру на дату выгрузки базы
+    var f=DRV&&DRV.fleet&&DRV.fleet[num]; if(!f||(f.y==null&&f.km==null&&!f.ak)) return '';
+    var a=[]; if(f.y) a.push('выпуск '+f.y); if(f.ak) a.push('а/к №'+esc(f.ak));
+    if(f.km!=null) a.push('пробег '+String(f.km).replace(/\B(?=(\d{3})+(?!\d))/g,'\u00a0')+'\u00a0км'+(DRV.fleet._&&DRV.fleet._.base?' на '+fmtDate(DRV.fleet._.base):''));
+    return a.join(' · ');
+  }
   function tel(t){return '<a href="tel:'+esc(String(t).replace(/[^\d+]/g,''))+'">'+esc(t)+'</a>'}
   function showPop(el){
     var v=DATA.veh[+el.dataset.i], p=$('#pop'), h='';
@@ -1313,6 +1352,7 @@ table tr.dvr td{border-top:0;padding-top:0}
     else list.forEach(function(d){
       h+='<div class="dr">'+esc(d.n)+(d.t?'<br>'+tel(d.t)+(d.t2?tel(d.t2):'')+(d.s?' <small style="opacity:.6">(общий номер)</small>':''):'')+'</div>';
     });
+    var _fi=fleetInfo(v.num); if(_fi) h+='<div class="pf" style="opacity:.75">'+_fi+'</div>';
     if(DRV&&DRV.date) h+='<div class="pf">по путевым листам на '+fmtDate(DRV.date)+'</div>';
     p.innerHTML=h; p.classList.remove('below'); p.style.display='block'; p.style.left='0px'; p.style.top='0px';
     var r=el.getBoundingClientRect(), pw=p.offsetWidth, ph=p.offsetHeight, vw=document.documentElement.clientWidth;
@@ -1357,7 +1397,13 @@ table tr.dvr td{border-top:0;padding-top:0}
     xlBtns();
   }
   /* ---------- «Скопировать в Excel»: кнопка над каждой таблицей ---------- */
+  function pqVars(){      // высота закреплённых префиксов и первой строки шапки таблицы - для закрепления шапки при прокрутке страницы
+    var q=document.querySelector('.pq'), r=document.querySelector('.xg thead tr'), z=window.innerWidth>=900?1.4:1, d=document.documentElement.style;
+    d.setProperty('--pqh',(q?q.offsetHeight:0)+'px'); if(r) d.setProperty('--th1',(r.getBoundingClientRect().height/z)+'px');
+  }
+  window.addEventListener('resize',pqVars);
   function xlBtns(){
+    pqVars();
     document.querySelectorAll('#app table.xl, #app table.xt').forEach(function(t){
       var w=t.closest('.xlw')||t; if(w.previousElementSibling&&w.previousElementSibling.classList.contains('xlcp')) return;
       var b=document.createElement('div'); b.className='xlcp'; b.innerHTML='<button type="button" data-xlc="1">📋 Скопировать в Excel</button>';
@@ -1405,7 +1451,7 @@ table tr.dvr td{border-top:0;padding-top:0}
       if(!open){showPop(pl);$('#pop').dataset.for=pl.dataset.i;track('окно водителя')}else $('#pop').dataset.for='';return}
     if(!e.target.closest('#pop')) hidePop();
     if(e.target.closest('[data-dl]')) return;
-    var t=e.target.closest('[data-top],[data-sub],[data-csub],[data-dep],[data-shift],[data-disp],[data-nsub],[data-nak],[data-npref],[data-psub],[data-pd],[data-pfl],[data-tsub],[data-cpf],[data-cps],[data-cpd],[data-psk]'); if(!t) return;
+    var t=e.target.closest('[data-top],[data-sub],[data-csub],[data-dep],[data-shift],[data-disp],[data-nsub],[data-nak],[data-npref],[data-psub],[data-pd],[data-pfl],[data-tsub],[data-cpf],[data-cmf],[data-cps],[data-cpd],[data-psk]'); if(!t) return;
     if(t.dataset.top){
       top=t.dataset.top;track('вкладка/'+top);
       document.querySelectorAll('.tab').forEach(function(b){b.classList.toggle('on',b.dataset.top===top)});
@@ -1421,6 +1467,7 @@ table tr.dvr td{border-top:0;padding-top:0}
     else if(t.dataset.sub){sub=t.dataset.sub}
     else if(t.dataset.csub){csub=t.dataset.csub;goAll=csub==='all'}
     else if(t.dataset.cps){cps=t.dataset.cps;track('План по цехам/'+cps)}
+    else if(t.dataset.cmf!==undefined){var _m=t.dataset.cmf;if(!_m)milS=[];else{var _j=milS.indexOf(_m);if(_j>-1)milS.splice(_j,1);else milS.push(_m)}cps='mil'}
     else if(t.dataset.cpd!==undefined){cpd=t.dataset.cpd}
     else if(t.dataset.psk!==undefined){psk=t.dataset.psk}
     else if(t.dataset.cpf!==undefined){var _p=t.dataset.cpf;if(!_p)cpS=[];else{var _i=cpS.indexOf(_p);if(_i>-1)cpS.splice(_i,1);else cpS.push(_p)}if(cps!=='pre')cps='pre'}
@@ -1613,6 +1660,7 @@ table tr.dvr td{border-top:0;padding-top:0}
       else if(list===undefined) h+='<div class="cn">Водитель не найден (номера нет в экспорте путевых листов)</div>';
       else if(!list.length) h+='<div class="cn">Водитель не указан (в экспорте без водителя)</div>';
       else list.forEach(function(x){h+='<div class="cd"><b>'+esc(x.n)+'</b>'+(x.t?tel(x.t)+(x.t2?tel(x.t2):''):'')+(x.s?' <small style="opacity:.6">(общий номер)</small>':'')+'</div>'});
+      var _f2=fleetInfo(v.num); if(_f2) h+='<div class="cn" style="opacity:.7;font-size:11px">'+_f2+'</div>';
       h+='</div>';
     });
     if(DRV&&DRV.date) h+='<div class="cn" style="padding-top:8px">по путевым листам на '+fmtDate(DRV.date)+'</div>';
