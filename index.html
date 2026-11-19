@@ -704,11 +704,11 @@ table tr.dvr td{border-top:0;padding-top:0}
     var have=vs.filter(function(x){return x.km!=null}), sum=have.reduce(function(a,x){return a+x.km},0);
     if(milS.length) h+='<button class="pqb" data-cmf="" style="margin:6px 0;width:auto;padding:6px 12px">✕ сбросить выбор</button>';
     h+='<div class="sbh" style="margin-top:6px">'+(milS.length?'Выбрано: '+esc(sel.join(', ')):'Все префиксы - нажмите на нужные, чтобы отфильтровать')+' <em>- '+vs.length+' ед., пробег за октябрь: всего '+fmtKm(sum)+' км'+(have.length?', в среднем '+fmtKm(Math.round(sum/have.length))+' км':'')+'</em></div>';
-    h+='<div class="xlw xw xp"><table class="xl xs xg xm"><thead><tr><th>Владелец</th><th>Госномер</th><th>Пробег окт., км</th><th>км за сутки</th><th>Цех сейчас</th><th>Гараж</th><th>Самовожд.</th><th>С водителем</th></tr></thead><tbody>';
+    h+='<div class="xlw xw xp"><table class="xl xs xg xm"><thead><tr><th>Владелец</th><th>Госномер</th><th>Марка</th><th>Год вып.</th><th>Общий пробег, км</th><th>Пробег окт., км</th><th>км за сутки</th><th>Цех сейчас</th><th>Гараж</th><th>Самовожд.</th><th>С водителем</th></tr></thead><tbody>';
     vs.forEach(function(x){
       var v=x.v, selfd=/самовожд/i.test(v.t), L=DRV.map&&DRV.map[v.num], dn=(L||[]).map(function(d){return shortFio(d.n)}).join(', ');
-      var ow=((F[v.num]||{}).o||'').replace('ATS','АТС');
-      h+='<tr class="blk"><td class="ow">'+esc(ow)+'</td><td class="nm">'+esc(v.num)+'</td><td class="km">'+(x.km==null?'<small>нет данных</small>':fmtKm(x.km))+'</td><td class="km kd">'+(x.km==null?'':fmtKm(Math.round(x.km/31)))+'</td><td class="mc">'+ed(v.dep)+'</td><td class="mc">'+garOf(v)+'</td><td class="mc">'+(selfd?'●':'')+'</td><td class="mc dr">'+(selfd?'':esc(dn))+'</td></tr>';
+      var fl=F[v.num]||{}, ow=(fl.o||'').replace('ATS','АТС');
+      h+='<tr class="blk"><td class="ow">'+esc(ow)+'</td><td class="nm">'+esc(v.num)+'</td><td class="mc">'+esc(fl.m||'')+'</td><td class="mc" style="text-align:center">'+(fl.y||'')+'</td><td class="km kd">'+(fl.km==null?'':fmtKm(fl.km))+'</td><td class="km">'+(x.km==null?'<small>нет данных</small>':fmtKm(x.km))+'</td><td class="km kd">'+(x.km==null?'':fmtKm(Math.round(x.km/31)))+'</td><td class="mc">'+ed(v.dep)+'</td><td class="mc">'+garOf(v)+'</td><td class="mc">'+(selfd?'●':'')+'</td><td class="mc dr">'+(selfd?'':esc(dn))+'</td></tr>';
     });
     return h+'</tbody></table></div>';
   }
@@ -1339,8 +1339,8 @@ table tr.dvr td{border-top:0;padding-top:0}
   /* ---------- окошко с водителем ---------- */
   function hidePop(){var p=$('#pop');p.style.display='none';p.innerHTML=''}
   function fleetInfo(num){      // база парка КБМ (префикс 13): год выпуска, № автоколонны, пробег по одометру на дату выгрузки базы
-    var f=DRV&&DRV.fleet&&DRV.fleet[num]; if(!f||(f.y==null&&f.km==null&&!f.ak)) return '';
-    var a=[]; if(f.y) a.push('выпуск '+f.y); if(f.ak) a.push('а/к №'+esc(f.ak));
+    var f=DRV&&DRV.fleet&&DRV.fleet[num]; if(!f||(f.y==null&&f.km==null&&!f.ak&&!f.m)) return '';
+    var a=[]; if(f.m) a.push(esc(f.m)); if(f.y) a.push('выпуск '+f.y); if(f.ak) a.push('а/к №'+esc(f.ak));
     if(f.km!=null) a.push('пробег '+String(f.km).replace(/\B(?=(\d{3})+(?!\d))/g,'\u00a0')+'\u00a0км'+(DRV.fleet._&&DRV.fleet._.base?' на '+fmtDate(DRV.fleet._.base):''));
     return a.join(' · ');
   }
