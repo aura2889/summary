@@ -128,6 +128,11 @@ main{padding:12px 12px 40px;max-width:760px;margin:0 auto}
 .dep.hitdep{border-color:var(--brand2)}
 .chip.nd{background:#fff3b0;border-color:#e0b800;color:#222}.chip.nd.on{background:#ffe14d;color:#222}
 .dep.nd{background:#fff3b0;border-color:#e0b800;color:#222}.dep.nd span{color:#5a4a00}.dep .ndn{display:block;font-size:12px;font-weight:600;margin-top:2px}
+.cpy{display:inline-block;margin-left:6px;padding:0 5px;border-radius:6px;font-size:12px;font-weight:600;line-height:18px;color:var(--ink);opacity:.45;cursor:pointer;user-select:none;vertical-align:middle;font-style:normal}.cpy:hover,.cpy.ok{opacity:1;background:rgba(127,127,127,.18)}
+.dep{position:relative}.dep>.cpy{position:absolute;top:6px;right:6px;margin:0}
+.cpbar{display:flex;gap:6px;flex-wrap:wrap;margin:2px 0 8px}.cpbar .cpy{margin:0;border:1px solid var(--line);opacity:.75;padding:2px 8px;line-height:20px}
+#pop .cpy{color:inherit}#date .cpy{margin-left:8px;color:#fff}
+#wat{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#1d2b36;color:#fff;padding:8px 14px;border-radius:10px;font-size:14px;z-index:99;display:none}
 .xlcp{display:flex;justify-content:flex-end;margin:4px 0}.xlcp button{border:1px solid var(--blue-line);background:var(--blue-bg);color:var(--blue-ink);border-radius:8px;padding:5px 10px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}.xlcp button:active{opacity:.7}
 .xl.xg th.gs,.xl.xg td.gs{border-left:2px solid var(--line)}.xl.xg th.h2{font-size:11px;padding:3px 1px}.xl.xg td.v,.xl.xg th.h2{box-sizing:border-box;width:30px;min-width:30px;max-width:30px;padding:3px 0;font-size:13px;text-align:center}.xl.xg th.h2{font-size:12px}.xl.xg td.tt,.xl.xg th.ti{width:40px;min-width:40px;max-width:40px}.xl.xg td.tt{background:var(--blue-bg);font-weight:900}.xl.xg th.ti{background:#2f6fb0}
 .xlw.xw.xp .xl.xg{min-width:0;width:max-content}
@@ -408,6 +413,7 @@ table tr.dvr td{border-top:0;padding-top:0}
       '<div class="kpi tapk'+(dv<0?' neg':'')+'" data-dev="1" role="button" tabindex="0"><b>'+(dv>0?'+':'')+dv+'</b><span>откл. ›</span></div>'+
       (tr?'<div class="kpi sm" data-dev="1" role="button" tabindex="0"><b>'+tr+'</b><span>в обучении</span></div>':'')+
       '<div class="kpi"><b>'+t.day+' / '+t.night+'</b><span>день / ночь</span></div>';
+    if(!de.querySelector('[data-cpy="tot"]')) de.insertAdjacentHTML('beforeend',cpb('tot','⧉ итоги'));
   }
 
   function numChip(v){
@@ -447,12 +453,13 @@ table tr.dvr td{border-top:0;padding-top:0}
     if(dep===null){
       html+='<div class="depgrid">';
       list.forEach(function(x){
-        html+='<button class="dep'+(isND(x.name)?' nd':'')+'" data-dep="'+esc(x.name)+'"><b>'+ed(x.name)+'</b><span class="tot">'+x.cnt+'</span><span>день '+x.d+' · ночь '+x.n+'</span>'+(isND(x.name)?'<span class="ndn">передано в помощь</span>':'')+'</button>';
+        html+='<button class="dep'+(isND(x.name)?' nd':'')+'" data-dep="'+esc(x.name)+'"><b>'+ed(x.name)+'</b><span class="tot">'+x.cnt+'</span><span>день '+x.d+' · ночь '+x.n+'</span>'+(isND(x.name)?'<span class="ndn">передано в помощь</span>':'')+cpb('dep|'+x.name)+'</button>';
       });
       return html+'</div>';
     }
     var vs=DATA.veh.filter(function(v){return v.dep===dep});
     var dcount=vs.filter(function(v){return v.d}).length, ncount=vs.filter(function(v){return v.n}).length;
+    html+='<div class="cpbar">'+cpb('dep|'+dep,'⧉ Отчёт по цеху')+cpb('depf|'+dep,'⧉ Со списком номеров')+'</div>';
     html+=seg('data-shift',[['d','День ('+dcount+')'],['n','Ночь ('+ncount+')'],['all','Все ('+(dcount+ncount)+')']],shift);
     var f=vs.filter(function(v){return shift==='all'||(shift==='d'?v.d:v.n)});
     var cnt=function(a){return shift==='all'?a.reduce(function(s,v){return s+(v.d?1:0)+(v.n?1:0)},0):a.length};
@@ -468,7 +475,7 @@ table tr.dvr td{border-top:0;padding-top:0}
       keys.forEach(function(k){
         var x=g[k];
         x.a.sort(function(a,b){return a.num.localeCompare(b.num,'ru',{numeric:true})});
-        html+='<div class="card"><h3>'+esc(x.t)+'<em>— '+cnt(x.a)+' ед.</em>'+'</h3><div class="nums">'+x.a.map(numChip).join('')+'</div></div>';
+        html+='<div class="card"><h3>'+esc(x.t)+'<em>— '+cnt(x.a)+' ед.</em>'+cpb('typ|'+dep+'|'+x.p)+'</h3><div class="nums">'+x.a.map(numChip).join('')+'</div></div>';
       });
       html+='</div>';
     });
@@ -816,7 +823,7 @@ table tr.dvr td{border-top:0;padding-top:0}
       h+='<div class="cg">';
       D.rows.forEach(function(r,ri){
         var X5=isCrane(r)?x55():{}, keys=D.deps.filter(function(d){return r.cells[d]||X5[d]});
-        h+='<div class="card cc" id="cc-'+ri+'"><h3>'+esc(r.name)+'</h3><div class="stats">'+
+        h+='<div class="card cc" id="cc-'+ri+'"><h3>'+esc(r.name)+cpb('cit|'+ri)+'</h3><div class="stats">'+
           '<div class="stat plan"><b>'+r.plan+'</b><span>план</span></div>'+
           '<div class="stat fact"><b>'+r.fact+'</b><span>факт</span></div>'+
           '<div class="stat tapc" data-cdv="'+ri+'" role="button" tabindex="0"><b class="'+(r.diff<0?'neg':(r.diff>0?'pos':''))+'">'+sign(r.diff)+'</b><span>откл. ›</span></div>'+
@@ -1357,7 +1364,7 @@ table tr.dvr td{border-top:0;padding-top:0}
   function showPop(el){
     var v=DATA.veh[+el.dataset.i], p=$('#pop'), h='';
     var sh=v.d&&v.n?'день + ночь':(v.d?'день':'ночь');
-    h+='<div class="pn">'+esc(v.num)+'</div><div class="pm">'+esc(v.t)+' · '+ed(v.dep)+' · '+sh+'</div>';
+    h+='<div class="pn">'+esc(v.num)+cpb('veh|'+v._i)+'</div><div class="pm">'+esc(v.t)+' · '+ed(v.dep)+' · '+sh+'</div>';
     var list=DRV&&DRV.map?DRV.map[v.num]:undefined;
     if(!DRV) h+='<div class="no">Данные по водителям не загружены</div>';
     else if(list===undefined) h+='<div class="no">Водитель не найден<br><small>номера нет в экспорте путевых листов</small></div>';
@@ -1423,7 +1430,7 @@ table tr.dvr td{border-top:0;padding-top:0}
     document.querySelectorAll('#app .xlw.xp').forEach(function(w){if(!(w.nextElementSibling&&w.nextElementSibling.classList.contains('xsp'))){var d=document.createElement('div');d.className='xsp';w.parentNode.insertBefore(d,w.nextSibling)}});      // запас снизу, чтобы закреплённая таблица не уезжала под префиксы
     document.querySelectorAll('#app table.xl, #app table.xt').forEach(function(t){
       var w=t.closest('.xlw')||t; if(w.previousElementSibling&&w.previousElementSibling.classList.contains('xlcp')) return;
-      var b=document.createElement('div'); b.className='xlcp'; b.innerHTML='<button type="button" data-xlc="1">📋 Скопировать в Excel</button>';
+      var b=document.createElement('div'); b.className='xlcp'; b.innerHTML='<button type="button" data-wac="1" style="margin-right:6px">⧉ Для WhatsApp</button><button type="button" data-xlc="1">📋 Скопировать в Excel</button>';
       w.parentNode.insertBefore(b,w);
     });
   }
@@ -1460,6 +1467,99 @@ table tr.dvr td{border-top:0;padding-top:0}
     try{track('копировать в Excel')}catch(_){}
   }
   document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-xlc]');if(b){e.preventDefault();e.stopPropagation();xlCopy(b)}},true);
+
+  /* ---------- копирование для WhatsApp: *жирный*, маркеры, абзацы ---------- */
+  function cpb(key,lab){return '<span class="cpy" data-cpy="'+esc(key)+'" role="button" tabindex="0" title="Копировать для WhatsApp">'+(lab||'⧉')+'</span>'}
+  function waToast(t){var e=$('#wat');if(!e){e=document.createElement('div');e.id='wat';document.body.appendChild(e)}e.textContent=t;e.style.display='block';clearTimeout(e._t);e._t=setTimeout(function(){e.style.display='none'},1600)}
+  function waCopy(text,btn){
+    function ok(){waToast('✓ Скопировано - вставьте в WhatsApp');if(btn){btn.classList.add('ok');setTimeout(function(){btn.classList.remove('ok')},1200)}}
+    function legacy(){var t=document.createElement('textarea');t.value=text;t.style.cssText='position:fixed;left:-9999px;top:0';document.body.appendChild(t);t.select();var r=false;try{r=document.execCommand('copy')}catch(_){}document.body.removeChild(t);r?ok():waToast('Не удалось скопировать')}
+    try{if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(text).then(ok,legacy);else legacy()}catch(_){legacy()}
+    try{track('копировать WhatsApp')}catch(_){}
+  }
+  function waSg(n){return n>0?'+'+n:(n<0?'−'+(-n):'0')}
+  function waShift(v){return v.d&&v.n?'день + ночь':(v.d?'день':'ночь')}
+  function waNums(a){      // номера, сгруппированные по смене
+    var d=[],n=[],b=[];a.forEach(function(v){(v.d&&v.n?b:(v.d?d:n)).push(v.num)});
+    var o=[]; if(d.length)o.push('*☀️ День ('+d.length+'):* '+d.join(', ')); if(n.length)o.push('*🌙 Ночь ('+n.length+'):* '+n.join(', ')); if(b.length)o.push('*☀️🌙 День + ночь ('+b.length+'):* '+b.join(', '));
+    return o.join('\n');
+  }
+  function waDepStat(name){
+    var vs=DATA.veh.filter(function(v){return v.dep===name}),d=0,n=0;vs.forEach(function(v){d+=v.d?1:0;n+=v.n?1:0});
+    var X=dpx(),pl=0,has=X.has&&X.D[name];if(has)Object.keys(X.D[name]).forEach(function(p){pl+=dpP(X.D[name][p])});
+    return {vs:vs,d:d,n:n,f:d+n,pl:has?pl:null};
+  }
+  function waTotals(){
+    var t=DATA.totals,tr=DATA.tr||0,dv=t.diff+tr,L=[];
+    L.push('🚛 *ВЫХОД ТС* · '+fmtDate(DATA.date),'','*📊 Итого*','• План: *'+t.plan+'*','• Факт: *'+(t.fact+tr)+'* (день '+t.day+' · ночь '+t.night+')','• Отклонение: *'+waSg(dv)+'*');
+    if(tr)L.push('• В обучении: '+tr);
+    L.push('','*🏭 По цехам*');
+    depList().forEach(function(x){var s=waDepStat(x.name);L.push('• '+(DLB[x.name]||x.name)+' — *'+s.f+'* (д '+s.d+' · н '+s.n+')'+(s.pl?' · план '+s.pl:'')+(isND(x.name)?' _передано в помощь_':''))});
+    return L.join('\n');
+  }
+  function waDep(name,full){
+    var s=waDepStat(name),L=[];
+    L.push('🏭 *'+(DLB[name]||name)+'* · '+fmtDate(DATA.date)+(isND(name)?' · _передано в помощь_':''),'','*📊 Выход*');
+    if(s.pl!=null)L.push('• План: '+s.pl+' · Факт: *'+s.f+'* · Откл: *'+waSg(s.f-s.pl)+'*'); else L.push('• Факт: *'+s.f+'*');
+    L.push('• День: '+s.d+' · Ночь: '+s.n,'','*🚜 Техника*');
+    var g={},k=[];s.vs.forEach(function(v){if(!g[v.p]){g[v.p]={t:v.t,p:v.p,a:[]};k.push(v.p)}g[v.p].a.push(v)});
+    function rank(p){var i=ORDER.indexOf(p);return i>-1?i:1000-g[p].a.length}
+    k.sort(function(a,b){return rank(a)-rank(b)});
+    k.forEach(function(p){var a=g[p].a,d=0,n=0;a.forEach(function(v){d+=v.d?1:0;n+=v.n?1:0});
+      L.push('• '+g[p].t+' — *'+(d+n)+'* (д '+d+' · н '+n+')');
+      if(full){a.sort(function(x,y){return x.num.localeCompare(y.num,'ru',{numeric:true})});L.push(waNums(a).split('\n').map(function(z){return '   '+z}).join('\n'))}
+    });
+    return L.join('\n');
+  }
+  function waType(dname,p){
+    var a=DATA.veh.filter(function(v){return v.dep===dname&&v.p===p});if(!a.length)return '';
+    a.sort(function(x,y){return x.num.localeCompare(y.num,'ru',{numeric:true})});var c=0;a.forEach(function(v){c+=(v.d?1:0)+(v.n?1:0)});
+    return '🚜 *'+a[0].t+'* · '+(DLB[dname]||dname)+' · '+fmtDate(DATA.date)+'\n\n*📋 '+c+' ед.*\n'+waNums(a);
+  }
+  function waCit(ri){
+    var r=DATA.daily.rows[ri];if(!r)return '';var L=['🚜 *'+r.name+'* · '+fmtDate(DATA.date),'','*📊 Выход*','• План: *'+r.plan+'* · Факт: *'+r.fact+'* · Откл: *'+waSg(r.diff)+'*','• День: '+r.day+' · Ночь: '+r.night];
+    var o=DATA.daily.deps.filter(function(d){return r.cells[d]});
+    if(o.length){L.push('','*🏭 По цехам*');o.forEach(function(d){var c=r.cells[d];L.push('• '+(DLB[d]||d)+' — *'+(c.e?c.e+'='+c.v:c.v)+'*')})}
+    return L.join('\n');
+  }
+  function waVeh(i){
+    var v=DATA.veh[i];if(!v)return '';var L=['🚗 *'+v.num+'*','📍 '+v.t+' · '+(DLB[v.dep]||v.dep)+' · '+waShift(v)];
+    var list=DRV&&DRV.map?DRV.map[v.num]:undefined;
+    if(list&&list.length){L.push('','*👷 Водитель*');list.forEach(function(d){L.push('• '+d.n);if(d.t)L.push('• 📞 '+d.t+(d.t2?', '+d.t2:''))})}
+    var fi=fleetInfo(v.num).replace(/&amp;/g,'&').replace(/ /g,' ');if(fi)L.push('','*ℹ️ Машина*','• '+fi.split(' · ').join('\n• '));
+    L.push('','_на '+fmtDate(DATA.date)+'_');return L.join('\n');
+  }
+  function waTable(btn){      // любая таблица на странице -> список «строка - показатель: значение»
+    var w=btn.parentNode.nextElementSibling,t=w&&(w.tagName==='TABLE'?w:w.querySelector('table'));if(!t)return;
+    var hr=[].slice.call(t.tHead?t.tHead.rows:[t.rows[0]]),cols=[],grid=[];
+    hr.forEach(function(tr,ri){var ci=0;grid[ri]=grid[ri]||[];[].forEach.call(tr.cells,function(c){while(grid[ri][ci]!==undefined)ci++;var tx=(c.textContent||'').replace(/ /g,' ').replace(/\s+/g,' ').trim();for(var a=0;a<c.rowSpan;a++)for(var b=0;b<c.colSpan;b++){(grid[ri+a]=grid[ri+a]||[])[ci+b]=tx}ci+=c.colSpan})});
+    var n=0;grid.forEach(function(r){n=Math.max(n,r.length)});
+    for(var j=0;j<n;j++){var p=[];grid.forEach(function(r){var x=r[j];if(x&&p.indexOf(x)<0)p.push(x)});cols[j]=p.join(' ')}
+    var rows=[].slice.call(t.tBodies.length?t.tBodies[0].rows:t.rows,t.tHead?0:1),L=['📋 *Выход ТС* · '+fmtDate(DATA.date),''];
+    rows.forEach(function(tr){
+      var cs=[].map.call(tr.cells,function(c){return (c.textContent||'').replace(/ /g,' ').replace(/\s+/g,' ').trim()});
+      var i=1,name=[cs[0]||''];if(/^\d+(\.\d)?$/.test(cs[0])&&cs[1]&&!/^[+−-]?\d/.test(cs[1])){name=[cs[0],cs[1]];i=2}
+      var pr=[];for(;i<cs.length;i++){if(cs[i]!==''&&cs[i]!=='0'&&cols[i])pr.push((cols[i]?cols[i]+': ':'')+'*'+cs[i]+'*')}
+      if(!name.join('')&&!pr.length)return; L.push('• *'+name.join(' ')+'*'+(pr.length?' — '+pr.join(' · '):''));
+    });
+    waCopy(L.join('\n'),btn);
+  }
+  function waByKey(k){
+    var p=k.split('|');
+    if(p[0]==='tot')return waTotals();
+    if(p[0]==='dep')return waDep(p[1],false);
+    if(p[0]==='depf')return waDep(p[1],true);
+    if(p[0]==='typ')return waType(p[1],p[2]);
+    if(p[0]==='cit')return waCit(+p[1]);
+    if(p[0]==='veh')return waVeh(+p[1]);
+    return '';
+  }
+  document.addEventListener('click',function(e){
+    var b=e.target.closest&&e.target.closest('[data-cpy],[data-wac]');if(!b)return;
+    e.preventDefault();e.stopPropagation();
+    if(b.dataset.wac){waTable(b);return}
+    var t=waByKey(b.dataset.cpy);if(t)waCopy(t,b);
+  },true);
 
   document.addEventListener('click',function(e){
     if(!DATA) return;
