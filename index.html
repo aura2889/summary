@@ -858,16 +858,17 @@ table tr.dvr td{border-top:0;padding-top:0}
   function dispBody(){
     var D=DATA.disp||[]; if(dq.trim()) return viewSearch(dq.trim(),[],true);
     if(cdisp<0||cdisp>=D.length) cdisp=0;
-    var cnt=D.map(function(x,i){return DATA.veh.filter(function(v){return v.g===i}).length});
+    var cntu=D.map(function(x,i){return DATA.veh.filter(function(v){return v.g===i}).reduce(function(s,v){return s+(v.d?1:0)+(v.n?1:0)},0)});
     var h='<div class="chips g4">'+D.map(function(x,i){
       var sp=(i===D.length-1&&4-(D.length-1)%4>1)?' style="grid-column:span '+(4-(D.length-1)%4)+'"':'';
-      return '<button class="chip'+(cdisp===i?' on':'')+((DATA.stale&&DATA.stale[x.name])||(DATA.absent&&DATA.absent.indexOf(x.name)>-1)?' st':'')+'"'+sp+' data-disp="'+i+'">'+esc(x.name)+'<small>'+cnt[i]+'</small></button>';
+      return '<button class="chip'+(cdisp===i?' on':'')+((DATA.stale&&DATA.stale[x.name])||(DATA.absent&&DATA.absent.indexOf(x.name)>-1)?' st':'')+'"'+sp+' data-disp="'+i+'">'+esc(x.name)+'<small>'+cntu[i]+'</small></button>';
     }).join('')+'</div>';
     var sd=DATA.stale&&DATA.stale[D[cdisp].name];
     if(sd) h+='<div class="pw"><b>Файл этого диспетчера за сегодня ещё не пришёл.</b> Показаны данные за '+dm2(sd)+'.</div>';
     var vs=DATA.veh.filter(function(v){return v.g===cdisp});
     var dn=vs.filter(function(v){return v.d}).length, nn=vs.filter(function(v){return v.n}).length;
-    h+='<div class="card"><div class="sum"><b>'+esc(D[cdisp].name)+'</b><span>'+vs.length+' ед. · день '+dn+' · ночь '+nn+'</span></div>'+
+    var cu=function(a){return a.reduce(function(s,v){return s+(v.d?1:0)+(v.n?1:0)},0)};
+    h+='<div class="card"><div class="sum"><b>'+esc(D[cdisp].name)+cpb('dsp|'+cdisp,'⧉ Итог')+'</b><span>'+(dn+nn)+' ед. · день '+dn+' · ночь '+nn+'</span></div>'+
        '<div class="src">Источник: '+esc(D[cdisp].src)+'</div></div>';
     if(!vs.length) return h+'<div class="empty">Нет техники</div>';
     h+=legend();
@@ -875,15 +876,15 @@ table tr.dvr td{border-top:0;padding-top:0}
     h+='<div class="cg">';
     depList().map(function(x){return x.name}).filter(function(n){return byDep[n]}).forEach(function(d){
       var a=byDep[d];
-      h+='<div class="card"><h3>'+ed(d)+'<em>— '+a.length+' ед.</em></h3>';
+      h+='<div class="card"><h3>'+ed(d)+'<em>— '+cu(a)+' ед.</em>'+cpb('dspd|'+cdisp+'|'+d)+'</h3>';
       subGroups(a).forEach(function(sg){
         var g={}, keys=[];
         sg[1].forEach(function(v){var k=v.p;if(!g[k]){g[k]={t:v.t,a:[]};keys.push(k)}g[k].a.push(v)});
         keys.sort(function(x,y){var rx=ORDER.indexOf(x),ry=ORDER.indexOf(y);return (rx>-1?rx:1000-g[x].a.length)-(ry>-1?ry:1000-g[y].a.length)});
-        if(sg[0]) h+='<div class="sbh">'+esc(sg[0])+' <em>— '+sg[1].length+' ед.</em></div>';
+        if(sg[0]) h+='<div class="sbh">'+esc(sg[0])+' <em>— '+cu(sg[1])+' ед.</em></div>';
         keys.forEach(function(k){
           var x=g[k]; x.a.sort(function(p,q){return p.num.localeCompare(q.num,'ru',{numeric:true})});
-          h+='<div class="tl">'+esc(x.t)+' — '+x.a.length+'</div><div class="nums">'+x.a.map(numChip).join('')+'</div>';
+          h+='<div class="tl">'+esc(x.t)+' — '+cu(x.a)+cpb('dspt|'+cdisp+'|'+d+'|'+k)+'</div><div class="nums">'+x.a.map(numChip).join('')+'</div>';
         });
       });
       h+='</div>';
@@ -1430,7 +1431,7 @@ table tr.dvr td{border-top:0;padding-top:0}
     document.querySelectorAll('#app .xlw.xp').forEach(function(w){if(!(w.nextElementSibling&&w.nextElementSibling.classList.contains('xsp'))){var d=document.createElement('div');d.className='xsp';w.parentNode.insertBefore(d,w.nextSibling)}});      // запас снизу, чтобы закреплённая таблица не уезжала под префиксы
     document.querySelectorAll('#app table.xl, #app table.xt').forEach(function(t){
       var w=t.closest('.xlw')||t; if(w.previousElementSibling&&w.previousElementSibling.classList.contains('xlcp')) return;
-      var b=document.createElement('div'); b.className='xlcp'; b.innerHTML=(top==='cits'&&csub==='pc'?'':'<button type="button" data-wac="1" style="margin-right:6px">⧉ Для WhatsApp</button>')+'<button type="button" data-xlc="1">📋 Скопировать в Excel</button>';
+      var b=document.createElement('div'); b.className='xlcp'; b.innerHTML=(top==='all'?'<button type="button" data-wac="1" style="margin-right:6px">⧉ Для WhatsApp</button>':'')+'<button type="button" data-xlc="1">📋 Скопировать в Excel</button>';
       w.parentNode.insertBefore(b,w);
     });
   }
@@ -1493,8 +1494,6 @@ table tr.dvr td{border-top:0;padding-top:0}
     var t=DATA.totals,tr=DATA.tr||0,dv=t.diff+tr,L=[];
     L.push('🚛 *ВЫХОД ТС* · '+fmtDate(DATA.date),'','*📊 Итого*','• План: *'+t.plan+'*','• Факт: *'+(t.fact+tr)+'* (день '+t.day+' · ночь '+t.night+')','• Отклонение: *'+waSg(dv)+'*');
     if(tr)L.push('• В обучении: '+tr);
-    L.push('','*🏭 По цехам*');
-    depList().forEach(function(x){var s=waDepStat(x.name);L.push('• '+(DLB[x.name]||x.name)+' — *'+s.f+'* (д '+s.d+' · н '+s.n+')'+(s.pl?' · план '+s.pl:'')+(isND(x.name)?' _передано в помощь_':''))});
     return L.join('\n');
   }
   function waDep(name,full){
@@ -1571,9 +1570,32 @@ table tr.dvr td{border-top:0;padding-top:0}
       new MutationObserver(function(){var h=el.querySelector('.shh');if(h&&!h.querySelector('[data-wacs]')){var x=h.querySelector('.shx');var s=document.createElement('span');s.className='cpy';s.setAttribute('data-wacs','1');s.setAttribute('role','button');s.title='Копировать для WhatsApp';s.textContent='⧉';h.insertBefore(s,x)}}).observe(el,{childList:true})}
     var o=devShell;devShell=function(){var e=o();add();return e};
   })();
+
+  function waDispVs(i,dep,p){return DATA.veh.filter(function(v){return v.g===i&&(dep==null||v.dep===dep)&&(p==null||v.p===p)})}
+  function waCnt(a){return a.reduce(function(s,v){return s+(v.d?1:0)+(v.n?1:0)},0)}
+  function waDisp(i){
+    var nm=(DATA.disp[i]||{}).name||'',vs=waDispVs(i),d=0,n=0;vs.forEach(function(v){d+=v.d?1:0;n+=v.n?1:0});
+    var L=['🧑‍💼 *'+nm+'* · '+fmtDate(DATA.date),'','*📊 Выход*','• Всего: *'+(d+n)+'* ед. (день '+d+' · ночь '+n+')','','*🏭 По цехам*'];
+    depList().forEach(function(x){var a=waDispVs(i,x.name);if(!a.length)return;var dd=0,nn=0;a.forEach(function(v){dd+=v.d?1:0;nn+=v.n?1:0});L.push('• '+(DLB[x.name]||x.name)+' — *'+(dd+nn)+'* (д '+dd+' · н '+nn+')')});
+    return L.join('\n');
+  }
+  function waDispDep(i,dep){
+    var nm=(DATA.disp[i]||{}).name||'',a=waDispVs(i,dep),L=['🏭 *'+(DLB[dep]||dep)+'* · '+nm+' · '+fmtDate(DATA.date),'','*📋 '+waCnt(a)+' ед.*'],g={},k=[];
+    a.forEach(function(v){if(!g[v.p]){g[v.p]=[];k.push(v.p)}g[v.p].push(v)});
+    k.sort(function(x,y){var rx=ORDER.indexOf(x),ry=ORDER.indexOf(y);return (rx>-1?rx:1000-g[x].length)-(ry>-1?ry:1000-g[y].length)});
+    k.forEach(function(p){var b=g[p];b.sort(function(x,y){return x.num.localeCompare(y.num,'ru',{numeric:true})});L.push('','*🚜 '+b[0].t+' — '+waCnt(b)+'*',waNums(b))});
+    return L.join('\n');
+  }
+  function waDispType(i,dep,p){
+    var nm=(DATA.disp[i]||{}).name||'',a=waDispVs(i,dep,p);if(!a.length)return '';a.sort(function(x,y){return x.num.localeCompare(y.num,'ru',{numeric:true})});
+    return '🚜 *'+a[0].t+'* · '+(DLB[dep]||dep)+' · '+nm+' · '+fmtDate(DATA.date)+'\n\n*📋 '+waCnt(a)+' ед.*\n'+waNums(a);
+  }
   function waByKey(k){
     var p=k.split('|');
     if(p[0]==='tot')return waTotals();
+    if(p[0]==='dsp')return waDisp(+p[1]);
+    if(p[0]==='dspd')return waDispDep(+p[1],p[2]);
+    if(p[0]==='dspt')return waDispType(+p[1],p[2],p[3]);
     if(p[0]==='dep')return waDep(p[1],false);
     if(p[0]==='depf')return waDep(p[1],true);
     if(p[0]==='typ')return waType(p[1],p[2]);
