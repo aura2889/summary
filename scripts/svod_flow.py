@@ -134,7 +134,12 @@ def _infos(names):
     infos, cur = [], None
     for i, n in enumerate(names):
         si = sheet_info(n)
-        if not si: continue
+        if not si:
+            # лист без даты в названии («пересменка», «күн-түн», «к/т»…) сразу за листом с датой - продолжение этого дня (пересменка/вторая смена)
+            rest = re.sub(r'[\s.,\-_/\\]', '', n)
+            if infos and infos[-1]['i'] == i - 1 and rest and not re.match(r'^(лист|sheet|тест|test)\d*$', rest, re.I):
+                l = infos[-1]; infos.append(dict(i=i, name=n, day=l['day'], mon=l['mon'], extra=True, xl=len(rest), inh=l.get('inh', False), tail=True))
+            continue
         x = dict(i=i, **si)
         if x['mon']: cur = x['mon']
         elif cur: x['mon'] = cur; x['inh'] = True
@@ -170,12 +175,12 @@ def _cands(names, ref):
     t = _typo_sheets(infos, ref)
     return (t, True) if t else ([], False)
 
-CUT = datetime.time(11, 45)          # до этого времени листы с припиской («10-2», «10 пер», «10 ауысым»…) - черновик на пересменку, не берём
+CUT = datetime.time(11, 0)          # до этого времени листы с припиской («10-2», «10 пер», «10 ауысым»…) - черновик на пересменку, не берём
 
 def is_late(arr, ref):
-    """файл роли пришёл сегодня после 11:45 (arr - 'YYYY-MM-DDTHH:MM' из state['t'])"""
+    """файл роли пришёл сегодня после 11:00 (arr - 'YYYY-MM-DDTHH:MM' из state['t'])"""
     now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=5)))
-    if now.date() == ref and now.time() >= CUT: return True       # после 11:45 лист с припиской («түскі ауысым», «пер»…) - уже текущая смена, даже если файл пришёл раньше
+    if now.date() == ref and now.time() >= CUT: return True       # после 11:00 лист с припиской («түскі ауысым», «пер»…) - уже текущая смена, даже если файл пришёл раньше
     try: t = datetime.datetime.strptime(arr, '%Y-%m-%dT%H:%M')
     except Exception: return False
     return t.date() == ref and t.time() >= CUT
