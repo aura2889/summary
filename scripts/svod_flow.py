@@ -174,6 +174,8 @@ CUT = datetime.time(11, 45)          # до этого времени листы
 
 def is_late(arr, ref):
     """файл роли пришёл сегодня после 11:45 (arr - 'YYYY-MM-DDTHH:MM' из state['t'])"""
+    now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=5)))
+    if now.date() == ref and now.time() >= CUT: return True       # после 11:45 лист с припиской («түскі ауысым», «пер»…) - уже текущая смена, даже если файл пришёл раньше
     try: t = datetime.datetime.strptime(arr, '%Y-%m-%dT%H:%M')
     except Exception: return False
     return t.date() == ref and t.time() >= CUT
