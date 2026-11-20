@@ -19,7 +19,7 @@ def parse_plate(raw):
     if '-' not in s: return None
     pref, rest = s.split('-', 1)
     pref = pref.replace(',', '.')                          # 35,2 -> 35.2
-    rest = re.sub(r'(d/n|д/н|д|н|d|n)$', '', rest)          # пометки смены у диспетчеров (строчные)
+    rest = re.sub(r'(d/n|д/н|к/т|д|н|к|т|d|n)$', '', rest)          # пометки смены у диспетчеров (строчные)
     rest = lat(rest.upper())
     rest = re.sub(r'[/\-_.]', '', rest)
     m = re.fullmatch(r'[HR]?(\d+)([A-Z]*?)(\d{2})?', rest)  # цифры [серия] [регион]

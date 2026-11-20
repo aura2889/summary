@@ -255,7 +255,7 @@ def build(data, export_path, contacts, mobil):
         if not num.startswith('60-'): continue
         m = re.match(r'60-[\d.]+-(.+)$', num)
         if not m: mob_miss.append(num); continue
-        rest = lat(re.sub(r'(д/н|д|н)$', '', m.group(1)).upper()).replace(' ', '')
+        rest = lat(re.sub(r'(д/н|к/т|д|н|к|т)$', '', m.group(1)).upper()).replace(' ', '')
         k = key_noreg(rest)
         if k not in mobil: mob_miss.append(num); continue
         out = []

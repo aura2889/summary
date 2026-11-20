@@ -188,11 +188,11 @@ def parse(cfg):
             if code in ('12','13') and cpref and not mob: code+='.1'
             if code=='57' and len(parts)>1 and parts[1].strip().startswith('25'): code='57.1'
             tail=s.strip()
-            both=bool(re.search(r'(д\s*/\s*н|d\s*/\s*n)\s*$',tail,re.I))
+            both=bool(re.search(r'(д\s*/\s*н|d\s*/\s*n)\s*$',tail,re.I)) or bool(re.search(r'(?<=[\d\s])к\s*/\s*т\s*$',tail))      # к/т = күн/түн (казахская запись д/н)
             nightm=False; daym=False
             if not both:
-                if re.search(r'(?:[нН]|(?<=[\d\s])[nN])\s*$',tail): nightm=True
-                elif re.search(r'(?:д|(?<=[\d\s])[dD])\s*$',tail): daym=True
+                if re.search(r'(?:[нН]|(?<=[\d\s])[nNт])\s*$',tail): nightm=True
+                elif re.search(r'(?:д|(?<=[\d\s])[dDк])\s*$',tail): daym=True
             gray=is_gray(cell)
             day=night=0; note=''
             if both: day=night=1
