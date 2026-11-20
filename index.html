@@ -1430,7 +1430,7 @@ table tr.dvr td{border-top:0;padding-top:0}
     document.querySelectorAll('#app .xlw.xp').forEach(function(w){if(!(w.nextElementSibling&&w.nextElementSibling.classList.contains('xsp'))){var d=document.createElement('div');d.className='xsp';w.parentNode.insertBefore(d,w.nextSibling)}});      // запас снизу, чтобы закреплённая таблица не уезжала под префиксы
     document.querySelectorAll('#app table.xl, #app table.xt').forEach(function(t){
       var w=t.closest('.xlw')||t; if(w.previousElementSibling&&w.previousElementSibling.classList.contains('xlcp')) return;
-      var b=document.createElement('div'); b.className='xlcp'; b.innerHTML='<button type="button" data-wac="1" style="margin-right:6px">⧉ Для WhatsApp</button><button type="button" data-xlc="1">📋 Скопировать в Excel</button>';
+      var b=document.createElement('div'); b.className='xlcp'; b.innerHTML=(top==='cits'&&csub==='pc'?'':'<button type="button" data-wac="1" style="margin-right:6px">⧉ Для WhatsApp</button>')+'<button type="button" data-xlc="1">📋 Скопировать в Excel</button>';
       w.parentNode.insertBefore(b,w);
     });
   }
@@ -1544,6 +1544,33 @@ table tr.dvr td{border-top:0;padding-top:0}
     });
     waCopy(L.join('\n'),btn);
   }
+
+  function waSheet(sh){      // окно (отклонение, ячейка цеха и др.) -> текст для WhatsApp
+    var T=function(e){return (e.textContent||'').replace(/ /g,' ').replace(/\s+/g,' ').trim()};
+    var L=['📊 *'+T(sh.querySelector('.shh b'))+'* · '+fmtDate(DATA.date)],sub=sh.querySelector('.shs small');if(sub)L.push('_'+T(sub)+'_');L.push('');
+    var b=sh.querySelector('.shb');if(!b)return L.join('\n');
+    b.querySelectorAll('.dv-big,.dv-t,.sbh,.dv-t2 tr,.dv-r,.dv-tl,.prs,.pcs,.ccv,.empty').forEach(function(e){
+      var c=e.className||'';
+      if(/\bdv-big\b/.test(c)){L.push('*'+T(e)+'*');return}
+      if(!/\bdv-r\b/.test(c)&&e.parentNode.closest&&e.parentNode.closest('.dv-r'))return;
+      if(/\bdv-t\b/.test(c)||/\bsbh\b/.test(c)){L.push('','*'+T(e)+'*');return}
+      if(e.tagName==='TR'){var td=e.cells;if(td.length>1)L.push('• '+T(td[0])+' — *'+T(td[1])+'*');return}
+      if(/\bdv-r\b/.test(c)){var n=e.querySelector('.n'),d=e.querySelector('.d');if(!n)return;
+        if(n.querySelector('.pcs,.vr,.prs')){var nb=n.querySelector('b');L.push('','• *'+T(nb)+'*'+(d?' — *'+T(d)+'*':''));n.querySelectorAll('.pcs').forEach(function(q){L.push('   '+[].map.call(q.querySelectorAll('.pcc'),T).join(' · '))});n.querySelectorAll('.prs').forEach(function(q){L.push('   _'+T(q)+'_')});n.querySelectorAll('.vr').forEach(function(q){var w=q.querySelector('.wk');L.push('   – '+T(q.querySelector('.pl')||q)+' · '+T(q.querySelector('.mk')||'')+(w?' ('+T(w)+')':''))});return}
+        var x=n.cloneNode(true);x.querySelectorAll('small').forEach(function(u){u.textContent=' ('+T(u)+')'});L.push('• '+T(x)+(d?' — *'+T(d)+'*':''));return}
+      if(/\bdv-tl\b/.test(c)){var t=e.querySelector('.tt'),v=e.querySelector('.tv'),z=e.querySelector('.ts');if(t)L.push('• '+T(t)+': *'+(v?T(v):'')+'*'+(z?' ('+T(z)+')':''));return}
+      if(/\bprs\b/.test(c)){L.push('_'+T(e)+'_');return}
+      if(/\bpcs\b/.test(c)){L.push('• '+[].map.call(e.querySelectorAll('.pcc'),T).join(' · '));return}
+      if(/\bccv\b/.test(c)){var cp=e.querySelector('.cp');var r=[].map.call(e.querySelectorAll('.dr'),function(q){return T(q)}).filter(Boolean);L.push('• *'+T(cp.querySelector('.v')||cp)+'* — '+T(cp.querySelector('small')||'')+(r.length?'\n   👷 '+r.join('; '):''));return}
+      if(/\bempty\b/.test(c)){L.push(T(e))}
+    });
+    return L.join('\n').replace(/\n{3,}/g,'\n\n');
+  }
+  (function(){      // кнопка «⧉» в шапке любого окна
+    function add(){var el=document.getElementById('dev');if(!el||el._wa)return;el._wa=1;
+      new MutationObserver(function(){var h=el.querySelector('.shh');if(h&&!h.querySelector('[data-wacs]')){var x=h.querySelector('.shx');var s=document.createElement('span');s.className='cpy';s.setAttribute('data-wacs','1');s.setAttribute('role','button');s.title='Копировать для WhatsApp';s.textContent='⧉';h.insertBefore(s,x)}}).observe(el,{childList:true})}
+    var o=devShell;devShell=function(){var e=o();add();return e};
+  })();
   function waByKey(k){
     var p=k.split('|');
     if(p[0]==='tot')return waTotals();
@@ -1555,8 +1582,9 @@ table tr.dvr td{border-top:0;padding-top:0}
     return '';
   }
   document.addEventListener('click',function(e){
-    var b=e.target.closest&&e.target.closest('[data-cpy],[data-wac]');if(!b)return;
+    var b=e.target.closest&&e.target.closest('[data-cpy],[data-wac],[data-wacs]');if(!b)return;
     e.preventDefault();e.stopPropagation();
+    if(b.dataset.wacs){waCopy(waSheet(b.closest('.sh')),b);return}
     if(b.dataset.wac){waTable(b);return}
     var t=waByKey(b.dataset.cpy);if(t)waCopy(t,b);
   },true);
