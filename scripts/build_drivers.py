@@ -147,8 +147,18 @@ def fleet_block(data):
     if mob:
         CY = str.maketrans('АВЕКМНОРСТУХ', 'ABEKMHOPCTYX'); MP = mob.get('plates', {})
         for v in data['veh']:
-            m = re.match(r'60-\d+-(\d{3}[A-Z]{2,3}\d{2})', re.sub(r'\s+', '', v['num'].upper().translate(CY)))
+            m = re.match(r'60-\d+-(\d{3}[A-Z]{2,3}(?:\d{2})?)', re.sub(r'\s+', '', v['num'].upper().translate(CY)))
             if m and m.group(1) in MP: out[v['num']] = {'ok': MP[m.group(1)]['km'], 'o': 'Мобил'}
+    mf = ld('mobil_fleet.json')          # марка / год / состояние техники Мобил Сервис (файл от 19.11.2026)
+    if mf:
+        CY = str.maketrans('АВЕКМНОРСТУХ', 'ABEKMHOPCTYX'); FP = mf.get('plates', {})
+        for v in data['veh']:
+            m = re.match(r'60-\d+-(\d{3}[A-Z]{2,3}(?:\d{2})?)', re.sub(r'\s+', '', v['num'].upper().translate(CY)))
+            if m and m.group(1) in FP:
+                e = out.setdefault(v['num'], {}); i = FP[m.group(1)]; e['o'] = 'Мобил'
+                if i.get('m'): e['m'] = i['m']
+                if i.get('y'): e['y'] = int(i['y'])
+                if i.get('st'): e['st'] = i['st']
     out['_'] = {'base': (base or {}).get('asof'), 'mil': (mil or {}).get('period')}
     return out
 

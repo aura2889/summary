@@ -1356,8 +1356,8 @@ table tr.dvr td{border-top:0;padding-top:0}
   /* ---------- окошко с водителем ---------- */
   function hidePop(){var p=$('#pop');p.style.display='none';p.innerHTML=''}
   function fleetInfo(num){      // база парка КБМ (префикс 13): год выпуска, № автоколонны, пробег по одометру на дату выгрузки базы
-    var f=DRV&&DRV.fleet&&DRV.fleet[num]; if(!f||(f.y==null&&f.km==null&&!f.ak&&!f.m)) return '';
-    var a=[]; if(f.m) a.push(esc(f.m)); if(f.y) a.push('выпуск '+f.y); if(f.ak) a.push('а/к №'+esc(f.ak));
+    var f=DRV&&DRV.fleet&&DRV.fleet[num]; if(!f||(f.y==null&&f.km==null&&!f.ak&&!f.m&&!f.st)) return '';
+    var a=[]; if(f.m) a.push(esc(f.m)); if(f.y) a.push('выпуск '+f.y); if(f.ak) a.push('а/к №'+esc(f.ak)); if(f.st) a.push('состояние: '+esc(f.st));
     if(f.km!=null) a.push('пробег '+String(f.km).replace(/\B(?=(\d{3})+(?!\d))/g,'\u00a0')+'\u00a0км'+(DRV.fleet._&&DRV.fleet._.base?' на '+fmtDate(DRV.fleet._.base):''));
     return a.join(' · ');
   }
