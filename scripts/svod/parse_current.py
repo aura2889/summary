@@ -51,8 +51,10 @@ def merge_dept(d):
 def norm_dept(raw, gar2=False):
     d=_norm_dept(raw,gar2)
     return merge_dept(FINAL.get(d,d))
+_L2C=str.maketrans('ABCEHKMOPTXYabcehkmopty','АВСЕНКМОРТХУавсенкморту')
 def _norm_dept(raw, gar2=False):
     s=re.sub(r'\s+',' ',str(raw)).strip()
+    if re.search('[А-Яа-я]',s): s=s.translate(_L2C)       # диспетчеры путают латинские буквы с кириллицей («ЦПC» с латинской C = ЦПС)
     U0=s.upper()
     if 'ПКРС' in U0 and 'УТТ' in U0: return 'ЦПКРС-2'
     if 'ПКРС' in U0 and 'ТМС' in U0: return 'ЦПКРС-1'
